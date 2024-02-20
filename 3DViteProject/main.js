@@ -29,18 +29,19 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
 const textureFontSize = 100;
-const fontScaleFactor = .3;
+const fontScaleFactor = 0.15;
 
 // Settings
 const fontName = 'Verdana';
 
 // String to show
-let string = 'Some text' + '\n' + 'to sample' + '\n' + 'with Canvas';
+let string = 'Example Harrison Oates \nAbout \nProjects';
 let dummy, particleGeometry, particleMaterial, instancedMesh
 let textureCoordinates;
-let mouse;
+const raycaster = new THREE.Raycaster();
 
-mouse = new THREE.Vector2(-200, 200);
+
+const mouse = new THREE.Vector2(-200, 200);
 
 
 let stringBox = {
@@ -73,14 +74,21 @@ function initEvents() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // document.addEventListener( 'mousemove', onMouseMove.bind( this ));
+  document.addEventListener( 'mousemove', (ev) => onMouseMove(ev));
 
-  // onMouseMove() { 
+  function onMouseMove(ev) { 
 
-  //   this.mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  //   this.mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    mouse.x = (ev.clientX / window.innerWidth ) * 2 - 1;
+    mouse.y = - (ev.clientY / window.innerHeight ) * 2 + 1;
 
-  // }
+    console.log("mouse x :" + mouse.x + " mouse y :" + mouse.y);
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(instancedMesh);
+    if (intersects.length > 0) {
+      console.log("Intersecting");
+    }
+
+  }
 
 }
 
