@@ -2,8 +2,9 @@ import './style.css'
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
-
+import { vertexShader } from './glsl/main.vert.js';
+import { fragmentShader } from './glsl/main.frag.js';
+import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 
 // Set up scene
 const scene = new THREE.Scene();
@@ -28,43 +29,26 @@ scene.add(directionalLight);
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
-const textureFontSize = 100;
-const fontScaleFactor = 0.15;
+renderer.setClearColor(0xffffff, 1);
 
-// Settings
-const fontName = 'Verdana';
-
-// String to show
-let string = 'Example Harrison Oates \nAbout \nProjects';
-let dummy, particleGeometry, particleMaterial, instancedMesh
-let textureCoordinates;
-const raycaster = new THREE.Raycaster();
+let objectToSample = new THREE.TorusKnotGeometry(10, 1, 2048, 64, 4);
+let meshToSample = new THREE.Mesh(objectToSample, new THREE.MeshBasicMaterial({color: 0x000000}));
 
 
-const mouse = new THREE.Vector2(-200, 200);
+const sampler = new MeshSurfaceSampler(meshToSample).build(); 
+const sampledGeo = new THREE.BufferGeometry().setFromPoints(new Array(10000).fill().map(_ => {
+  let point = new THREE.Vector3();
+  sampler.sample(point);
+  return point;
+}));
 
-
-let stringBox = {
-  wTexture: 0,
-  wScene: 0,
-  hTexture: 0,
-  hScene: 0
-};
-// Create canvas to sample the text
-const textCanvas = document.createElement('canvas');
-const textCtx = textCanvas.getContext('2d');
-document.body.appendChild(textCanvas);
-// Instanced geometry and material
-particleGeometry = new THREE.SphereGeometry(.1);
-particleMaterial = new THREE.MeshBasicMaterial({color: 0xffffff});
-
-dummy = new THREE.Object3D();
-
-
+let elapsedTime = {
+  time: {value: 1}
+}
 
 // ---------------------------------------------------------------
-refreshText();
 initEvents();
+setParticleGrid();
 
 
 function initEvents() {
@@ -72,123 +56,58 @@ function initEvents() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+
   });
 
-  document.addEventListener( 'mousemove', (ev) => onMouseMove(ev));
+  // document.addEventListener( 'mousemove', (ev) => onMouseMove(ev));
 
-  function onMouseMove(ev) { 
+  // function onMouseMove(ev) { 
 
-    mouse.x = (ev.clientX / window.innerWidth ) * 2 - 1;
-    mouse.y = - (ev.clientY / window.innerHeight ) * 2 + 1;
+  //   mouse.x = (ev.clientX / window.innerWidth ) * 2 - 1;
+  //   mouse.y = - (ev.clientY / window.innerHeight ) * 2 + 1;
 
-    console.log("mouse x :" + mouse.x + " mouse y :" + mouse.y);
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObject(instancedMesh);
-    if (intersects.length > 0) {
-      console.log("Intersecting");
-    }
+  //   console.log("mouse x :" + mouse.x + " mouse y :" + mouse.y);
+  //   raycaster.setFromCamera(mouse, camera);
+  //   const intersects = raycaster.intersectObject(instancedMesh);
+  //   if (intersects.length > 0) {
+  //     // console.log("Intersecting");
+  //   }
 
-  }
+  // }
 
 }
 
-function refreshText() {
-  sampleCoordinates();
-  textureCoordinates = textureCoordinates.map((c) => {
-    return { x: c.x * fontScaleFactor, y: c.y * fontScaleFactor };
+
+
+// ---------------------------------------------------------------
+function setParticleGrid() {
+  const material = new THREE.ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+    uniforms: {
+      size: {value: 3},
+      time: elapsedTime.time,
+    },
+    transparent: true,
+    depthWrite: false,
   });
-  const maxX = textureCoordinates.map((v) => v.x).sort((a, b) => b - a)[0];
-  const maxY = textureCoordinates.map((v) => v.y).sort((a, b) => b - a)[0];
-  stringBox.wScene = maxX;
-  stringBox.hScene = maxY;
+  // const material = new THREE.PointsMaterial({color: 0xffffff})
 
-  createInstancedMesh();
-  updateParticlesMatrices();
-}
-// ---------------------------------------------------------------
+  const mesh = new THREE.Points(sampledGeo, material);
 
-function sampleCoordinates() {
-  // Parse text
-  const lines = string.split(`\n`);
-  const linesMaxLength = [...lines].sort((a, b) => b.length - a.length)[0]
-    .length;
-  stringBox.wTexture = textureFontSize * 0.7 * linesMaxLength;
-  stringBox.hTexture = lines.length * textureFontSize;
-
-  // Draw text
-  const linesNumber = lines.length;
-  textCanvas.width = stringBox.wTexture;
-  textCanvas.height = stringBox.hTexture;
-  textCtx.font = "100 " + textureFontSize + "px " + fontName;
-  textCtx.fillStyle = "#2a9d8f";
-  textCtx.clearRect(0, 0, textCanvas.width, textCanvas.height);
-  for (let i = 0; i < linesNumber; i++) {
-    textCtx.fillText(
-      lines[i],
-      0,
-      ((i + 0.8) * stringBox.hTexture) / linesNumber
-    );
-  }
-
-  // Sample coordinates
-  textureCoordinates = [];
-  if (stringBox.wTexture > 0) {
-    const imageData = textCtx.getImageData(
-      0,
-      0,
-      textCanvas.width,
-      textCanvas.height
-    );
-    for (let i = 0; i < textCanvas.height; i++) {
-      for (let j = 0; j < textCanvas.width; j++) {
-        if (imageData.data[(j + i * textCanvas.width) * 4] > 0) {
-          textureCoordinates.push({
-            x: j,
-            y: i
-          });
-        }
-      }
-    }
-  }
-}
-
-// ---------------------------------------------------------------
-// Handle points
-
-
-function createInstancedMesh() {
-  instancedMesh = new THREE.InstancedMesh(particleGeometry, particleMaterial, textureCoordinates.length);
-  scene.add(instancedMesh);
-
-  // centralize it in the same way as before
-  instancedMesh.position.x = -.5 * stringBox.wScene;
-  instancedMesh.position.y = -.5 * stringBox.hScene;
-}
-
-function updateParticlesMatrices() {
-  let idx = 0;
-  textureCoordinates.forEach(p => {
-
-      // we apply samples coordinates like before + some random rotation
-      dummy.rotation.set(2 * Math.random(), 2 * Math.random(), 2 * Math.random());
-      dummy.position.set(p.x, stringBox.hScene - p.y, Math.random());
-
-      dummy.updateMatrix();
-      instancedMesh.setMatrixAt(idx, dummy.matrix);
-
-      idx ++;
-  })
-  instancedMesh.instanceMatrix.needsUpdate = true;
-}
-
-// Animation function
-function animate() {
-    requestAnimationFrame(animate);
-
-    controls.update();
-    renderer.render(scene, camera);
+  scene.add(mesh);
 }
 
 
-// Start animation
-animate();
+
+let clock = new THREE.Clock();
+
+renderer.setAnimationLoop((_) => {
+  let t = clock.getElapsedTime();
+  elapsedTime.time.value = t;
+
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+
