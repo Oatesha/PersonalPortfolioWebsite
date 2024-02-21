@@ -21,16 +21,13 @@ void main() {
 	#endif
 
 	#include <begin_vertex>
-	
 	#include <project_vertex>
-
-	gl_PointSize = size; 
 
 	vec3 wavePosition = vec3(modelMatrix * vec4(position, 1.0));
 
 	float t = time * 1.0;
 	wavePosition.y -= t;
-	float sinVal = sin(mod(wavePosition.y * 9.0, PI2)) * 0.5 + 0.5;
+	float sinVal = sin(mod(wavePosition.y, PI2)) * 0.5 + 0.5;
 	varyingWaveValue = sinVal;
 	float sizeChange = 1.0 + sinVal * 3.0;
 	gl_PointSize = size * sizeChange;

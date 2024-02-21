@@ -94,20 +94,21 @@ function setParticleGrid() {
   // const material = new THREE.PointsMaterial({color: 0xffffff})
 
   const mesh = new THREE.Points(sampledGeo, material);
-
   scene.add(mesh);
+
+  let clock = new THREE.Clock();
+  
+  renderer.setAnimationLoop((_) => {
+    let t = clock.getElapsedTime();
+    elapsedTime.time.value = t;
+    mesh.rotation.x = t * 0.3;
+    mesh.rotation.y = t * 0.3;
+    controls.update();
+    renderer.render(scene, camera);
+  });
 }
 
 
 
-let clock = new THREE.Clock();
-
-renderer.setAnimationLoop((_) => {
-  let t = clock.getElapsedTime();
-  elapsedTime.time.value = t;
-
-  controls.update();
-  renderer.render(scene, camera);
-});
 
 
