@@ -10,8 +10,8 @@ import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 const scene = new THREE.Scene();
 
 // Set up camera
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 100;
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
+camera.position.z = 30;
 
 // Set up renderer
 const renderer = new THREE.WebGLRenderer({
@@ -22,25 +22,27 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 const controls = new OrbitControls(camera, renderer.domElement);
 
 // Create lights
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(1, 1, 1).normalize();
-scene.add(directionalLight);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+const ambientLight = new THREE.AmbientLight(0xffff00, 0.5);
 scene.add(ambientLight);
 
-renderer.setClearColor(0xffffff, 1);
+renderer.setClearColor(0xDBE9EE, 1);
 
-let objectToSample = new THREE.TorusKnotGeometry(10, 1, 2048, 64, 4);
-let meshToSample = new THREE.Mesh(objectToSample, new THREE.MeshBasicMaterial({color: 0x000000}));
+
+let objectToSample = new THREE.SphereGeometry(10)
+let meshToSample = new THREE.Mesh(objectToSample, new THREE.MeshBasicMaterial());
 
 
 const sampler = new MeshSurfaceSampler(meshToSample).build(); 
-const sampledGeo = new THREE.BufferGeometry().setFromPoints(new Array(10000).fill().map(_ => {
+const sampledGeo = new THREE.BufferGeometry().setFromPoints(new Array(100000).fill().map(_ => {
   let point = new THREE.Vector3();
   sampler.sample(point);
   return point;
 }));
+
+
+
+
 
 let elapsedTime = {
   time: {value: 1}
@@ -58,6 +60,8 @@ function initEvents() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
   });
+
+  window.addEventListener('pointermove', onPointerMove);
 
   // document.addEventListener( 'mousemove', (ev) => onMouseMove(ev));
 
@@ -85,8 +89,12 @@ function setParticleGrid() {
     vertexShader,
     fragmentShader,
     uniforms: {
-      size: {value: 3},
+      size: {value: 2},
       time: elapsedTime.time,
+      sizeAttenuation: true,
+      uRadius: {value: 2},
+      
+      
     },
     transparent: true,
     depthWrite: false,
@@ -101,8 +109,6 @@ function setParticleGrid() {
   renderer.setAnimationLoop((_) => {
     let t = clock.getElapsedTime();
     elapsedTime.time.value = t;
-    mesh.rotation.x = t * 0.3;
-    mesh.rotation.y = t * 0.3;
     controls.update();
     renderer.render(scene, camera);
   });

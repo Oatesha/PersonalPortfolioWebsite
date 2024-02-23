@@ -1,4 +1,4 @@
-export const vertexShader = /* glsl */`
+export const vertSimShader = /* glsl */`
 uniform float size;
 uniform float scale;
 uniform float time;

@@ -1,4 +1,4 @@
-export const fragmentShader = /* glsl */`
+export const fragSimShader = /* glsl */`
 
 
 
