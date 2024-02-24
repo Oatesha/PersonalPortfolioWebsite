@@ -12,7 +12,6 @@ import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { GPUComputationRenderer } from 'three/addons/misc/GPUComputationRenderer.js';
 
 
-
 // Set up scene
 const scene = new THREE.Scene();
 
