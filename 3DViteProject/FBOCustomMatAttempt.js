@@ -19,9 +19,16 @@ const scene = new THREE.Scene();
 
 // Set up camera
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-camera.position.z = 3;
+camera.position.z = 50;
+//4 create a target texture
+var options = {
+  minFilter: THREE.NearestFilter,//important as we want to sample square pixels
+  magFilter: THREE.NearestFilter,//
+  format: THREE.RGBFormat,//could be RGBAFormat 
+  type:THREE.FloatType//important as we need precise coordinates (not ints)
+};
 
-
+const rtt = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, options);
 
 
 
@@ -184,23 +191,24 @@ function initialiseVertices() {
   }
 }
 
-
+let clock = new THREE.Clock();
 renderer.setAnimationLoop((_) => {
   
 
   controls.update();
-  
-  // renderer.setRenderTarget(FBO);
-  // renderer.render(FBOscene, FBOcamera);
-  // particles.material.uniforms.uPositions.value = FBO.texture;
+  simMat.uniforms.time.value = clock.getElapsedTime();
+  particles.material.uniforms.time.value = clock.getElapsedTime();
+  // simMat.uniforms.uPositions.value = FBO1.texture;
+  // renderMat.uniforms.uPositions.value = FBO.texture
+  renderer.setRenderTarget(rtt);
+  renderer.render(FBOscene, FBOcamera);
+  particles.material.uniforms.uPositions.value = rtt.texture;
 
-  // renderer.setRenderTarget(null);
+  renderer.setRenderTarget(null);
   renderer.render(scene, camera);
 
-
   
   
-  ;
 });
 initEvents();
 setupFBO();

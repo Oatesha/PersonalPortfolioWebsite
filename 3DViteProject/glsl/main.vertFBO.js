@@ -1,22 +1,20 @@
 export const vertexShader = /* glsl */`
 
-//float texture containing the positions of each particle
 uniform sampler2D uPositions;
-
-varying vec2 vUv;
-
-//size
-uniform float pointSize;
+uniform float time;
 
 void main() {
-    vUv = uv;
-    //the mesh is a nomrliazed square so the uvs = the xy positions of the vertices
-    vec4 pos = texture2D( uPositions, uv );
+  vec3 pos = texture2D(uPositions, position.xy).xyz;
 
-    //pos now contains the position of a point in space taht can be transformed
-    gl_Position = projectionMatrix * modelViewMatrix * vec4( pos.xyz, 1.0 );
+  vec4 modelPosition = modelMatrix * vec4(pos, 1.0);
+  vec4 viewPosition = viewMatrix * modelPosition;
+  vec4 projectedPosition = projectionMatrix * viewPosition;
 
-    gl_PointSize = 3.0;
+  gl_Position = projectedPosition;
+
+  gl_PointSize = 3.0;
+  // Size attenuation;
+  gl_PointSize *= step(1.0 - (1.0/64.0), position.x) + 0.5;
 }
 
 
