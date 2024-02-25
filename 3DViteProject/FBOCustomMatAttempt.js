@@ -8,7 +8,6 @@ import { simvertFBO } from './glsl/simvertFBO';
 import { simfragFBO } from './glsl/simfragFBO';
 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
-import { GPUComputationRenderer } from 'three/addons/misc/GPUComputationRenderer.js';
 
 import SimMaterial from './FBOSimMaterial.js';
 import FBOMaterial from './FBOSimMaterial.js';
@@ -19,12 +18,12 @@ const scene = new THREE.Scene();
 
 // Set up camera
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-camera.position.z = 50;
+camera.position.z = 5;
 //4 create a target texture
 var options = {
   minFilter: THREE.NearestFilter,//important as we want to sample square pixels
   magFilter: THREE.NearestFilter,//
-  format: THREE.RGBFormat,//could be RGBAFormat 
+  format: THREE.RGBAFormat,//could be RGBAFormat 
   type:THREE.FloatType//important as we need precise coordinates (not ints)
 };
 
@@ -50,7 +49,7 @@ const spotLight = new THREE.SpotLight(0xffff00, 5);
 spotLight.position.set(0, 2, 0);
 scene.add(spotLight);
 
-renderer.setClearColor(0xDBE9EE, 1);
+renderer.setClearColor(0x000000, 1);
 
 
 function initEvents() {
@@ -65,14 +64,7 @@ function initEvents() {
   
 }
 
-let gpuCompute;
-let velocityVariable;
-let positionVariable;
-let positionUniforms;
-let velocityUniforms;
-let materialUniforms;
 let FBO, FBO1, FBOscene, FBOcamera, geometry, renderMat, simMat, FBOMesh, textureWidth, data, FBODataTexture, vertices, particles;
-let lastTime = performance.now();
 let mouseX = 0, mouseY = 0;
 
 
@@ -93,7 +85,6 @@ function setupFBO() {
 
   // get render target for texture that will be rendered off screen and proper render screen target
   FBO = initRenderTarget();
-  FBO1 = initRenderTarget();
   FBOscene = new THREE.Scene();
   FBOcamera = new THREE.OrthographicCamera(-1, 1 ,1 ,-1, -1 ,1);
   // console.log(FBO);
@@ -104,7 +95,7 @@ function setupFBO() {
     for (let j = 0; j < textureWidth; j++) {
       let dataIndex = (i + j * textureWidth) * 4;
       let theta = Math.random() * Math.PI * 2;
-      let r = 0.5 + 0.5 * Math.random()
+      let r = 50 + 50 * Math.random()
 
       data[dataIndex] = r * Math.cos(theta);
       data[dataIndex + 1] = r * Math.sin(theta);
@@ -178,25 +169,12 @@ scene.add(particles);
   
 }
 
-
-
-
-function initialiseVertices() {
-  vertices = new Float32Array( (textureWidth * textureWidth) * 3 );
-  for ( var i = 0; i < (textureWidth * textureWidth); i++ ) {
-
-      var i3 = i * 3;
-      vertices[ i3 ] = ( i % textureWidth ) / textureWidth ;
-      vertices[ i3 + 1 ] = ( i / textureWidth ) / textureWidth;
-  }
-}
-
 let clock = new THREE.Clock();
 renderer.setAnimationLoop((_) => {
   
 
   controls.update();
-  simMat.uniforms.time.value = clock.getElapsedTime();
+  simMat.uniforms.time.value = clock.getElapsedTime() * 0.5;
   particles.material.uniforms.time.value = clock.getElapsedTime();
   // simMat.uniforms.uPositions.value = FBO1.texture;
   // renderMat.uniforms.uPositions.value = FBO.texture
