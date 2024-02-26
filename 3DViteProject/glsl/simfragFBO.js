@@ -1,5 +1,4 @@
 export const simfragFBO = /* glsl */`
-precision mediump float;
 
   uniform sampler2D posTex;
 

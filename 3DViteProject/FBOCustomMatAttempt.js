@@ -67,8 +67,8 @@ dataTex.minFilter = THREE.NearestFilter;
 dataTex.magFilter = THREE.NearestFilter;
 dataTex.needsUpdate = true;
 
-let simMaterial = new THREE.RawShaderMaterial({
-  uniforms: { posTex: { type: 't', value: dataTex }, },
+let simMaterial = new THREE.ShaderMaterial({
+  uniforms: { posTex: { value: dataTex }, },
   vertexShader: simvertFBO,
   fragmentShader: simfragFBO,
 });
@@ -110,7 +110,7 @@ renderer.render(fbo.scene, fbo.camera),
 renderer.setRenderTarget(null)
 
 
-var renderMaterial = new THREE.RawShaderMaterial({
+var renderMaterial = new THREE.ShaderMaterial({
   uniforms: { posTex: { value: null }, },
   vertexShader: vertexShader,
   fragmentShader: fragmentShader,

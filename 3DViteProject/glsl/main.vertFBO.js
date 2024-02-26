@@ -1,12 +1,7 @@
 export const vertexShader = /* glsl */`
 
- precision mediump float;
 
   uniform sampler2D posTex; // contains positional data read from sim-fs
-  uniform mat4 projectionMatrix;
-  uniform mat4 modelViewMatrix;
-
-  attribute vec2 position;
 
   void main() {
 
