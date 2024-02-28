@@ -1,8 +1,18 @@
-canvas {
+body {
+  font-family: 'Courier New', Courier, monospace;
+  overflow: hidden;
+
+  margin: 0%;
+}
+
+h1 {
   position: fixed;
-  top: 0;
-  left: 0;
+  width: 100%;
+  text-align: center;
+  color: white;
+  
 }
-p {
-  position:absolute;
-}
+
+
+
+

@@ -5,10 +5,10 @@ export const simfragFBO = /* glsl */`
   varying vec2 vUv;
 
   vec3 thomasAttractor(vec3 pos) {
-    float b = 0.5;
+    float b = 0.2;
     
     // Timestep 
-    float dt = 0.05;
+    float dt = 0.025;
     
     float x = pos.x;
     float y = pos.y;
@@ -49,7 +49,7 @@ export const simfragFBO = /* glsl */`
 
     // read the supplied x,y,z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    vec3 dpos = lorezAttractor(pos);
+    vec3 dpos = thomasAttractor(pos);
 
     pos.x += dpos.x;
     pos.y += dpos.y;
