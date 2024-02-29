@@ -25,12 +25,19 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.autoRotate = true;
 
-renderer.setClearColor(0x0b0c10);
 
+
+controls.addEventListener('change',  ()=> {
+  console.log(camera.position);
+})
+
+
+// renderer.setClearColor(0x1F2833);
+renderer.setClearColor(0x181f1c);
 camera.position.set(0, 0, -15);
 
+controls.target.set(5, 0, 0);
 
 
 
@@ -70,7 +77,7 @@ function initFBO() {
       let index = (i + j * w) * 4;
 
       let theta = Math.random() * Math.PI * 4.;
-      let r = 0.5 + 0.5 * Math.random();
+      let r = -3.5 + 3.5 * Math.random();
 
       initPos[index] = r * Math.cos(theta);
       initPos[index + 1] = r * Math.sin(theta);
@@ -179,6 +186,7 @@ function render() {
   // Request the next frame
   requestAnimationFrame(render);
   controls.update();
+
 }
 
 initEvents();
