@@ -43,11 +43,16 @@ h6 {
   padding: 0;
 }
 
+
+
 .IntroTextCont {
   position: absolute;
   top: 30%;
   left: 10%;
+
+  
 }
+
 
 .ScrollIndicator {
   position: absolute;

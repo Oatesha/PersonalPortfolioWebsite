@@ -25,7 +25,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
 const controls = new OrbitControls(camera, renderer.domElement);
-
+controls.enableZoom = false;
 
 
 controls.addEventListener('change',  ()=> {
@@ -34,12 +34,12 @@ controls.addEventListener('change',  ()=> {
 
 
 // renderer.setClearColor(0x1F2833);
-renderer.setClearColor(0x181f1c);
+renderer.setClearColor(0x181f);
 camera.position.set(0, 0, -15);
 
-controls.target.set(5, 0, 0);
+controls.target.set(0, 0, 0);
 
-
+controls.autoRotate = true;
 
 function initEvents() {
   window.addEventListener( 'resize', onWindowResize, false );
