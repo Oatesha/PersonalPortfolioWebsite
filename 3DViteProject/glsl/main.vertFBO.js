@@ -13,7 +13,7 @@ export const vertexShader = /* glsl */`
     gl_Position = projectionMatrix * mvPosition;
 
     // set the size of each particle
-    gl_PointSize = 0.3 / -mvPosition.z;
+    gl_PointSize = 30.0 / -mvPosition.z;
   }
 
 

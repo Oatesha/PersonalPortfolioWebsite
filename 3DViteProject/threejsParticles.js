@@ -24,22 +24,31 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableZoom = false;
+// const controls = new OrbitControls(camera, renderer.domElement);
+// controls.enableZoom = false;
 
 
-controls.addEventListener('change',  ()=> {
-  console.log(camera.position);
-})
+// controls.addEventListener('change',  ()=> {
+//   console.log(camera.position);
+// })
 
 
-// renderer.setClearColor(0x1F2833);
-renderer.setClearColor(0x181f);
-camera.position.set(0, 0, -15);
+renderer.setClearColor(0x001011);
+// renderer.setClearColor(0x000000);
 
-controls.target.set(0, 0, 0);
 
-controls.autoRotate = true;
+const camArm = new THREE.Group();
+camArm.add(camera);
+camera.position.set(-5, 0, 15);
+scene.add(camArm);
+
+
+const pointer = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+const dummyObject = new THREE.PlaneGeometry(512, 512);
+const dummyMat = new THREE.MeshToonMaterial();
+
+scene.add(new THREE.Mesh(dummyObject, dummyMat));
 
 function initEvents() {
   window.addEventListener( 'resize', onWindowResize, false );
@@ -52,6 +61,17 @@ function initEvents() {
     renderer.setSize( window.innerWidth, window.innerHeight );
 
   }
+
+  document.addEventListener( 'pointermove', onPointerMove );
+
+  function onPointerMove( event ) {
+
+    pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+
+  }
+
   initFBO();
   
 }  
@@ -185,7 +205,7 @@ function render() {
   renderer.render(scene, camera);
   // Request the next frame
   requestAnimationFrame(render);
-  controls.update();
+  camArm.rotation.y += (0.005);
 
 }
 
