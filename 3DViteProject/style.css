@@ -2,13 +2,13 @@
 
 body {
   font-family: 'Epilogue-Bold';
-  overflow: hidden;
-  margin: 0%;
+  margin: 0;
+  overflow-x: hidden;
+  position: relative;
 }
 
 h1 {
   color: #66fcf1;
-  /* color: #006d77; */
   text-align: left;
   font-size: 7.993rem;
   margin: 0;
@@ -18,13 +18,13 @@ h1 {
 h2 {
   color: #FFFAFB;
   font-size: 5.653rem;
-  
 }
+
 h3 {
   color: #FFFAFB;
   font-size: 3.998rem;
-  
 }
+
 h4 {
   color: white;
   font-size: 2.827rem;
@@ -37,7 +37,7 @@ h5 {
 }
 
 h6 {
-  position: inherit;
+
   color: white;
   font-size: 1.414rem;
   margin: 0;
@@ -51,20 +51,23 @@ p {
   padding: 0;
 }
 
-
-
 .IntroTextCont {
   position: absolute;
-  top: 30%;
+  top: 35%;
   left: 5%;
   display: inline-block;
   text-wrap: wrap;
-
   max-width: 625px;
-
-  
 }
 
+.AboutMeSection {
+  visibility: hidden;
+  height: 100vh;
+}
+
+.IntroSection {
+  height: 100vh;
+}
 
 .ScrollIndicator {
   position: absolute;
@@ -75,4 +78,17 @@ p {
   display: inline-block;
 }
 
+.scroll-container {
+  height: 100vh;
+  perspective: 1px;
 
+}
+
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}

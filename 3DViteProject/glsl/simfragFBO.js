@@ -95,32 +95,21 @@ export const simfragFBO = /* glsl */`
     pos.y += dpos.y;
     pos.z += dpos.z;
 
-    // Calculate mouse position in 3D space
-    vec3 mousePos3D = vec3(mouse.xy, 0.0);
 
-    // Define the ellipsoidal region around the mouse position
-    float sphereRadiusXY = 2.0; // Radius in the xy plane
-    float sphereRadiusZ = 10.0; // Radius along the z-axis
-    vec3 sphereCenter = mousePos3D; // Center of the ellipsoid is the mouse position
+    vec3 mousePos3D = vec3(mouse.xy, 0.0);
+    float ellipsoidRadiusXY = 2.0;
+    float ellipsoidRadiusZ = 10.0; 
 
     // Calculate the distance from the particle position to the ellipsoid center
-    vec3 distVec = pos - sphereCenter;
-    float distToEllipsoid = length(vec3(distVec.x / sphereRadiusXY, distVec.y / sphereRadiusXY, distVec.z / sphereRadiusZ));
+    vec3 distVec = pos - mousePos3D;
+    float distToEllipsoid = length(vec3(distVec.x / ellipsoidRadiusXY, distVec.y / ellipsoidRadiusXY, distVec.z / ellipsoidRadiusZ));
 
-    // Check if the particle is within the ellipsoidal region
     if (distToEllipsoid < 1.0) {
-        // Calculate the direction from the particle to the ellipsoid center
-        vec3 dirToEllipsoid = normalize(distVec / vec3(sphereRadiusXY, sphereRadiusXY, sphereRadiusZ));
 
-        // Apply the mouse position effect within the ellipsoidal region
-        float effect = smoothstep(1.0, 0.0, distToEllipsoid);
-        pos += dirToEllipsoid * 0.3 * effect;
+        vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
+        pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
     }
 
-
-
-
-    // render the new positional attributes
     gl_FragColor = vec4(pos, 1.0);
 
   }

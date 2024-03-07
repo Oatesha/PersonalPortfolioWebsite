@@ -10,11 +10,11 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 
 
 
-// Create an instance of the Stats object
-const stats = new Stats();
+// // Create an instance of the Stats object
+// const stats = new Stats();
 
-// Add the Stats object to the HTML document
-document.body.appendChild(stats.dom);
+// // Add the Stats object to the HTML document
+// document.body.appendChild(stats.dom);
 
 
 let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo;
