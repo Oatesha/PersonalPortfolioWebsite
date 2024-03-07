@@ -10,13 +10,25 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 
 
 
+// Create an instance of the Stats object
+const stats = new Stats();
+
+// Add the Stats object to the HTML document
+document.body.appendChild(stats.dom);
 
 
-
-let gl, renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo;
+let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo;
 
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 3000);
+let camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
+// let camera = new THREE.OrthographicCamera(
+//   window.innerWidth / - 150,   // Left
+//   window.innerWidth / 150,     // Right
+//   window.innerHeight / 150,    // Top
+//   window.innerHeight / - 150,  // Bottom
+//   0.001,                      // Near
+//   30000                        // Far
+// );
 
 
 const renderer = new THREE.WebGLRenderer();
@@ -24,8 +36,9 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
+
+
 // const controls = new OrbitControls(camera, renderer.domElement);
-// controls.enableZoom = false;
 
 
 // controls.addEventListener('change',  ()=> {
@@ -38,17 +51,19 @@ renderer.setClearColor(0x001011);
 
 
 const camArm = new THREE.Group();
-camArm.add(camera);
-camera.position.set(-5, 0, 15);
-scene.add(camArm);
+// camArm.add(camera);
+camera.position.set(-3.5, 0, 15);
+// scene.add(camArm);
 
 
 const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
-const dummyObject = new THREE.PlaneGeometry(512, 512);
-const dummyMat = new THREE.MeshToonMaterial();
 
-scene.add(new THREE.Mesh(dummyObject, dummyMat));
+const dummyGeom = new THREE.PlaneGeometry(512, 512);
+const dummyMat = new THREE.MeshBasicMaterial();
+const dummyObject = new THREE.Mesh(dummyGeom, dummyMat);
+dummyObject.position.set (0, 0, 0);
+
 
 function initEvents() {
   window.addEventListener( 'resize', onWindowResize, false );
@@ -56,6 +71,8 @@ function initEvents() {
   function onWindowResize(){
 
     camera.aspect = window.innerWidth / window.innerHeight;
+    // camera.left = ( (window.innerWidth)) / -150;
+    // camera.right = ((window.innerWidth)) / 150;
     camera.updateProjectionMatrix();
 
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -68,7 +85,16 @@ function initEvents() {
 
     pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+    
+
     raycaster.setFromCamera(pointer, camera);
+
+    let intersects = raycaster.intersectObject(dummyObject);
+    if (intersects.length > 0) {
+      let {x,y} = intersects[0].point;
+      simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
+    }
 
   }
 
@@ -78,43 +104,40 @@ function initEvents() {
 
 
 function initFBO() {
-
-
-
   // verify browser can support float textures
-  gl = renderer.getContext();
   if (!renderer.capabilities.floatVertexTextures) {
     alert(' * Browser does not support float vertex and fragment shaders');
   }
 
-  // set initial positions of width and height of data texture which when multiplied gives particle count
+
   let w = h = 512;
 
-  // initialise positions of particles in data texture
+  // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < w; j++) {
       let index = (i + j * w) * 4;
 
       let theta = Math.random() * Math.PI * 4.;
-      let r = -3.5 + 3.5 * Math.random();
+      let r = -5. + 5.* Math.random();
 
       initPos[index] = r * Math.cos(theta);
       initPos[index + 1] = r * Math.sin(theta);
-      initPos[index + 2] = (Math.random()),
+      initPos[index + 2] = (Math.random() ),
       initPos[index + 3] = 1.0;
 
     }
   }
 
-  // feed those positions into a data texture
   let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
   dataTex.minFilter = THREE.NearestFilter;
   dataTex.magFilter = THREE.NearestFilter;
   dataTex.needsUpdate = true;
 
+  // init simulation mat with above created data texture
   simMaterial = new THREE.ShaderMaterial({
-    uniforms: { posTex: { value: dataTex }, },
+    uniforms: { posTex: { value: dataTex }, 
+    mouse: { value : new THREE.Vector2(10,10)},},
     vertexShader: simvertFBO,
     fragmentShader: simfragFBO,
   });
@@ -130,7 +153,7 @@ function initFBO() {
     }
   }
 
-  // create a scene where we'll render the positional attributes
+  // scene to render simulation texture so that we can 'ping-pong' the renderer between different render targets to update positions 
   fbo = new FBO(w, simMaterial);
 
   // create render targets a + b to which the simulation will be rendered
@@ -157,7 +180,8 @@ function initFBO() {
 
 
   renderMaterial = new THREE.ShaderMaterial({
-    uniforms: { posTex: { value: null }, },
+    uniforms: { posTex: { value: null }, 
+    time: {value: 1.0}},
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
   });
@@ -184,8 +208,8 @@ function initFBO() {
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
     let points = new THREE.Points(geometry, renderMaterial);
-    scene.add(points);
-
+    camArm.add(points);
+    scene.add(camArm);
     renderMaterial.uniforms.posTex.value = dataTex;
 }
 
@@ -201,11 +225,13 @@ function render() {
   renderer.render(fbo.scene, fbo.camera);
   renderer.setRenderTarget(null);
   renderMaterial.uniforms.posTex.value = renderTargetB.texture;
+  renderMaterial.uniforms.time.value = performance.now() * 0.0001;
 
   renderer.render(scene, camera);
   // Request the next frame
   requestAnimationFrame(render);
-  camArm.rotation.y += (0.005);
+  // camArm.rotation.x += 0.0025;
+  // camArm.rotation.y += 0.0025;
 
 }
 

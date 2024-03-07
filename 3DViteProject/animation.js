@@ -2,6 +2,6 @@ import { gsap } from "gsap";
 
 
 
-gsap.registerPlugin(ScrollTrigger);
+// gsap.registerPlugin(ScrollTrigger);
 
 
