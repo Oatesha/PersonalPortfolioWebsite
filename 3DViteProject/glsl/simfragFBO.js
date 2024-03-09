@@ -2,7 +2,9 @@ export const simfragFBO = /* glsl */`
 
   uniform sampler2D posTex;
   uniform vec2 mouse;
+  uniform int state;
   varying vec2 vUv;
+  
 
   vec3 thomasAttractor(vec3 pos) {
     float b = 0.2;
@@ -90,10 +92,10 @@ export const simfragFBO = /* glsl */`
 
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    vec3 dpos = thomasAttractor(pos);
-    pos.x += dpos.x;
-    pos.y += dpos.y;
-    pos.z += dpos.z;
+    // vec3 dpos = thomasAttractor(pos);
+    // pos.x += dpos.x;
+    // pos.y += dpos.y;
+    // pos.z += dpos.z;
 
 
     vec3 mousePos3D = vec3(mouse.xy, 0.0);

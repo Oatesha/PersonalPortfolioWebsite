@@ -1,6 +1,8 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { vertexShader } from './glsl/main.vertFBO.js';
 import { fragmentShader } from './glsl/main.fragFBO.js';
 import { simvertFBO } from './glsl/simvertFBO.js';
@@ -20,16 +22,7 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo;
 
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
-// let camera = new THREE.OrthographicCamera(
-//   window.innerWidth / - 150,   // Left
-//   window.innerWidth / 150,     // Right
-//   window.innerHeight / 150,    // Top
-//   window.innerHeight / - 150,  // Bottom
-//   0.001,                      // Near
-//   30000                        // Far
-// );
-
+export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -38,22 +31,11 @@ document.body.appendChild( renderer.domElement );
 
 
 
-// const controls = new OrbitControls(camera, renderer.domElement);
-
-
-// controls.addEventListener('change',  ()=> {
-//   console.log(camera.position);
-// })
-
-
 renderer.setClearColor(0x001011);
 // renderer.setClearColor(0x000000);
 
 
 const camArm = new THREE.Group();
-// camArm.add(camera);
-camera.position.set(-3.5, 0, 15);
-// scene.add(camArm);
 
 
 const pointer = new THREE.Vector2();
@@ -119,15 +101,14 @@ function initFBO() {
       let index = (i + j * w) * 4;
 
       let theta = Math.random() * Math.PI * 4.;
-      let r = -5. + 5.* Math.random();
-
+      let r = -20. + 5.* Math.random();
       initPos[index] = r * Math.cos(theta);
       initPos[index + 1] = r * Math.sin(theta);
       initPos[index + 2] = (Math.random() ),
-      initPos[index + 3] = 1.0;
-
+      initPos[index + 3] = 0.0;
     }
   }
+
 
   let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
   dataTex.minFilter = THREE.NearestFilter;
@@ -235,5 +216,7 @@ function render() {
 
 }
 
+
 initEvents();
+
 render()
