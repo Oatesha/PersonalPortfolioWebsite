@@ -92,10 +92,10 @@ export const simfragFBO = /* glsl */`
 
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    // vec3 dpos = thomasAttractor(pos);
-    // pos.x += dpos.x;
-    // pos.y += dpos.y;
-    // pos.z += dpos.z;
+    vec3 dpos = thomasAttractor(pos);
+    pos.x += dpos.x;
+    pos.y += dpos.y;
+    pos.z += dpos.z;
 
 
     vec3 mousePos3D = vec3(mouse.xy, 0.0);

@@ -16,9 +16,31 @@ const sectionsElements = document.querySelectorAll('[class*="Section"]');
 new SplitType(".LoadingText");
 
 //intro
-const landingText = document.querySelector(".LandingPageContent");
+const landingText = sectionsElements[1];
 console.log(landingText);
+const introTextFirstLine = landingText.querySelector('h4');
+const introTextSecondLine = landingText.querySelector('h1');
+const introTextThirdLine = landingText.querySelector('p');
 
+
+// window.addEventListener('scroll', () => {
+//     let currentSection = '';
+  
+//     sections.forEach(section => {
+//       const sectionTop = section.offsetTop;
+//       const sectionHeight = section.clientHeight;
+//       if (window.pageYOffset >= sectionTop - (sectionHeight / 3)) {
+//         currentSection = section.getAttribute('id');
+//       }
+//     });
+  
+//     indicatorBoxes.forEach(box => {
+//       box.classList.remove('active');
+//       if (box.dataset.section === currentSection) {
+//         box.classList.add('active');
+//       }
+//     });
+//   });
 
 
 const lenis = new Lenis({
@@ -39,14 +61,26 @@ const animationTimeline = gsap.timeline({
     onComplete: scrollDownSmoothly,
 });
 
-animationTimeline.to(".char", {
+// window.addEventListener("load", function(event) {
+//     initAnim();
+// });
 
-    y: 0,
-    stagger: 0.1,
-    delay: 0.2,
-    duration: 0.5,
-    ease: "circ",
-});
+initAnim();
+function initAnim() {
+    animationTimeline.to(".char", {
+    
+        y: 0,
+        stagger: 0.1,
+        delay: 0.2,
+        duration: 0.5,
+        ease: "circ",
+    });
+    animationTimeline.to(".LoadingText", {
+        autoAlpha: 1,
+    }, "<")
+}
+
+
 
 function scrollDownSmoothly() {
 
@@ -54,21 +88,19 @@ function scrollDownSmoothly() {
         delay: 0.5,
         duration: 1, // Duration of the scroll animation in seconds
         scrollTo: { y: window.innerHeight }, // Scroll down by one viewport height
-        ease: "power2.inOut" // Easing for the scroll animation
+        ease: "power2.inOut",
+
     });
 }
 
 
-// var introTl = gsap.timeline({
-//     scrollTrigger: {
-//         trigger: 
-//     }
-// });
-// // Animate the text elements
-// introTl.fromTo(introHeading, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
-// introTl.fromTo(name, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power2"});
-// introTl.fromTo(description, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"}, "-=0.25");
-// introTl.fromTo(camera.position, {x: 0, z: -5}, {x: -3, z: 12.5, duration: 2})
+var introTl = gsap.timeline({
+});
+// Animate the text elements
+introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
+introTl.fromTo(introTextSecondLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power2"});
+introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"}, "-=0.25");
+introTl.fromTo(camera.position, {x: 0, z: -5}, {x: -3, z: 12.5, duration: 2})
 
 
 

@@ -18,6 +18,8 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 // // Add the Stats object to the HTML document
 // document.body.appendChild(stats.dom);
 
+const root = document.documentElement;
+root.dataset.theme = 'dark';
 
 let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo;
 
@@ -31,8 +33,8 @@ document.body.appendChild( renderer.domElement );
 
 
 
-renderer.setClearColor(0x001011);
-// renderer.setClearColor(0x000000);
+// renderer.setClearColor(0x0A0A09);
+renderer.setClearColor(0x000000, 0);
 
 
 const camArm = new THREE.Group();
