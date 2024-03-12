@@ -61,9 +61,9 @@ const animationTimeline = gsap.timeline({
     onComplete: scrollDownSmoothly,
 });
 
-// window.addEventListener("load", function(event) {
-//     initAnim();
-// });
+window.onload = function() {
+    initAnim();
+};
 
 initAnim();
 function initAnim() {
@@ -85,7 +85,7 @@ function initAnim() {
 function scrollDownSmoothly() {
 
     gsap.to(window, {
-        delay: 0.5,
+        delay: 0.25,
         duration: 1, // Duration of the scroll animation in seconds
         scrollTo: { y: window.innerHeight }, // Scroll down by one viewport height
         ease: "power2.inOut",
@@ -95,6 +95,13 @@ function scrollDownSmoothly() {
 
 
 var introTl = gsap.timeline({
+    scrollTrigger: {
+        trigger: ".LandingPageSection",
+        start: "50px center",
+        markers: true,
+
+    },
+
 });
 // Animate the text elements
 introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
