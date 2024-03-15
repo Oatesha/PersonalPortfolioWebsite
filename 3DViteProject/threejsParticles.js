@@ -213,8 +213,7 @@ function render() {
   renderer.render(scene, camera);
   // Request the next frame
   requestAnimationFrame(render);
-  // camArm.rotation.x += 0.0025;
-  // camArm.rotation.y += 0.0025;
+  camArm.rotation.y += 0.0025;
 
 }
 

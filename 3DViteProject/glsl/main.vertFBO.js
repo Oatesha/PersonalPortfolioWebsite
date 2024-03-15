@@ -14,7 +14,7 @@ export const vertexShader = /* glsl */`
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
-    gl_PointSize = 0.5;
+    gl_PointSize = 2.5;
     // Size attenuation;
     gl_PointSize *= step(1.0 - (1.0/64.0), position.x) + 0.5;
   }
