@@ -105,7 +105,7 @@ var introTl = gsap.timeline({
 introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
 introTl.fromTo(introTextSecondLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power2"});
 introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"}, "-=0.25");
-introTl.fromTo(camera.position, {x: 0, z: -5}, {x: -3, z: 12.5, duration: 1.75})
+introTl.fromTo(camera.position, {x: 0, z: -5}, {x: -1.5, z: 5.5, duration: 1.75})
 
 
 

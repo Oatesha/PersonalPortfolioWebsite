@@ -21,11 +21,11 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo;
+let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points;
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
-
+const objects = new THREE.Group();
 const renderer = new THREE.WebGLRenderer();
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -40,8 +40,9 @@ const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
 const dummyGeom = new THREE.PlaneGeometry(512, 512);
-const dummyMat = new THREE.MeshBasicMaterial();
+const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
 const dummyObject = new THREE.Mesh(dummyGeom, dummyMat);
+// scene.add(dummyObject);
 dummyObject.position.set (0, 0, 0);
 
 
@@ -82,7 +83,7 @@ function initFBO() {
   }
 
 
-  let w = h = 1024;
+  let w = h = 512;
 
   // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
@@ -101,7 +102,7 @@ function initFBO() {
 
 
  // Set up a geometry to sample positions from
-  let tetrageometry = new THREE.TorusKnotGeometry(5);
+  let tetrageometry = new THREE.TetrahedronGeometry();
   let mesh = new THREE.Mesh(tetrageometry);
 
   // Build a Mesh Surface Sampler to sample positions from the geometry
@@ -136,7 +137,6 @@ function initFBO() {
 
   let dataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
   // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
-
   dataTex.minFilter = THREE.NearestFilter;
   dataTex.magFilter = THREE.NearestFilter;
   dataTex.needsUpdate = true;
@@ -146,7 +146,7 @@ function initFBO() {
   simMaterial = new THREE.ShaderMaterial({
     uniforms: { posTex: { value: dataTex },
     originalPosTex: { value: dataTex}, 
-    mouse: { value : new THREE.Vector2(10,10)},},
+    mouse: { value : new THREE.Vector2(-100,-100)},},
     vertexShader: simvertFBO,
     fragmentShader: simfragFBO,
   });
@@ -188,10 +188,20 @@ function initFBO() {
   renderer.setRenderTarget(null)
 
 
+  // const loader = new THREE.TextureLoader();
+
+  // const texture = loader.load('cop1.png', (texture) => {
+  //   texture.magFilter = THREE.NearestFilter;
+  //   texture.minFilter = THREE.NearestFilter;
+  //   texture.format = THREE.RGBAFormat;
+  // });
+
+  // console.log(texture)
+
   renderMaterial = new THREE.ShaderMaterial({
     uniforms: { posTex: { value: null },
     mouse: { value : new THREE.Vector2(10,10)},
-    // colorTexture: {value: particleInitColorArray}, 
+    // uTexture: {value: texture}, 
     u_time: {value: 1.0}},
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
@@ -218,8 +228,9 @@ function initFBO() {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
-    let points = new THREE.Points(geometry, renderMaterial);
-    scene.add(points);
+    points = new THREE.Points(geometry, renderMaterial);
+    objects.add(points);
+    scene.add(objects);
     renderMaterial.uniforms.posTex.value = dataTex;
 }
 
@@ -248,6 +259,7 @@ function render() {
     simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
   }
 
+  // points.rotation.y += (0.001);
 
   // Request the next frame
   

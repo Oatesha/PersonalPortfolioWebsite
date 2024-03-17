@@ -268,10 +268,10 @@ export const simfragFBO = /* glsl */`
 
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    vec3 dpos = thomasAttractor(pos);
-    pos.x += dpos.x;
-    pos.y += dpos.y;
-    pos.z += dpos.z;
+    // vec3 dpos = thomasAttractor(pos);
+    // pos.x += dpos.x;
+    // pos.y += dpos.y;
+    // pos.z += dpos.z;
 
 
     
@@ -294,7 +294,7 @@ export const simfragFBO = /* glsl */`
     if (distToEllipsoid < 1.0) {
       
       vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
-      pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
+      pos += dirToEllipsoid * 0.003 * smoothstep(1.0, 0.0, distToEllipsoid);
     }
     
     // // Read the original position without mouse
@@ -304,8 +304,15 @@ export const simfragFBO = /* glsl */`
     // vec3 force = forceToOriginalPos(pos, originalPos);
     
     // // Apply a constant force magnitude in the direction towards the original position
-    // float forceMagnitude = 0.01; // Adjust as needed
+    // float forceMagnitude = 0.1; // Adjust as needed
     // pos += force * forceMagnitude;
+
+    // Rotate the particle positions around the Y-axis
+    float x = pos.x * cos(0.001) + pos.z * sin(0.001);
+    float z = -pos.x * sin(0.001) + pos.z * cos(0.001);
+    pos.x = x;
+    pos.z = z;
+
 
 
     gl_FragColor = vec4(pos, 1.0);
