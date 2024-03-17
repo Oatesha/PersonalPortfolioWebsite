@@ -17,7 +17,6 @@ new SplitType(".LoadingText");
 
 //intro
 const landingText = sectionsElements[1];
-console.log(landingText);
 const introTextFirstLine = landingText.querySelector('h4');
 const introTextSecondLine = landingText.querySelector('h1');
 const introTextThirdLine = landingText.querySelector('p');

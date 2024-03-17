@@ -1,8 +1,8 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
+import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { vertexShader } from './glsl/main.vertFBO.js';
 import { fragmentShader } from './glsl/main.fragFBO.js';
 import { simvertFBO } from './glsl/simvertFBO.js';
@@ -32,12 +32,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
 
-
 // renderer.setClearColor(0x0A0A09);
 renderer.setClearColor(0x000000, 0);
-
-
-const camArm = new THREE.Group();
 
 
 const pointer = new THREE.Vector2();
@@ -70,21 +66,13 @@ function initEvents() {
     pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-    
-
-    raycaster.setFromCamera(pointer, camera);
-
-    let intersects = raycaster.intersectObject(dummyObject);
-    if (intersects.length > 0) {
-      let {x,y} = intersects[0].point;
-      simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
-    }
 
   }
 
   initFBO();
   
 }  
+
 
 
 function initFBO() {
@@ -94,7 +82,7 @@ function initFBO() {
   }
 
 
-  let w = h = 512;
+  let w = h = 1024;
 
   // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
@@ -107,19 +95,57 @@ function initFBO() {
       initPos[index] = r * Math.cos(theta);
       initPos[index + 1] = r * Math.sin(theta);
       initPos[index + 2] = (Math.random() ),
-      initPos[index + 3] = 0.0;
+      initPos[index + 3] = 1.0;
     }
   }
 
 
-  let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
+ // Set up a geometry to sample positions from
+  let tetrageometry = new THREE.TorusKnotGeometry(5);
+  let mesh = new THREE.Mesh(tetrageometry);
+
+  // Build a Mesh Surface Sampler to sample positions from the geometry
+  let sampler = new MeshSurfaceSampler(mesh).build();
+
+  // Function to sample positions and return them as an array of Vector3
+  function samplePositions(numSamples) {
+    let positions = [];
+    for (let i = 0; i < numSamples; i++) {
+      let position = new THREE.Vector3();
+      sampler.sample(position);
+      positions.push(position);
+    }
+    return positions;
+  }
+
+  // Number of initial positions to sample
+  const numInitialPositions = w * h;
+  // Sample initial positions
+  let initialPositions = samplePositions(numInitialPositions);
+
+  // Convert initial positions to Float32Array for use in DataTexture
+  let initialPositionsArray = new Float32Array(numInitialPositions * 4);
+  initialPositions.forEach((position, index) => {
+    initialPositionsArray[index * 4] = position.x;
+    initialPositionsArray[index * 4 + 1] = position.y;
+    initialPositionsArray[index * 4 + 2] = position.z;
+    initialPositionsArray[index * 4 + 3] = 1.0;
+  });
+
+  // let dataTex = new THREE.DataTexture(particleInitPosArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+
+  let dataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+  // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
+
   dataTex.minFilter = THREE.NearestFilter;
   dataTex.magFilter = THREE.NearestFilter;
   dataTex.needsUpdate = true;
 
   // init simulation mat with above created data texture
+
   simMaterial = new THREE.ShaderMaterial({
-    uniforms: { posTex: { value: dataTex }, 
+    uniforms: { posTex: { value: dataTex },
+    originalPosTex: { value: dataTex}, 
     mouse: { value : new THREE.Vector2(10,10)},},
     vertexShader: simvertFBO,
     fragmentShader: simfragFBO,
@@ -163,8 +189,10 @@ function initFBO() {
 
 
   renderMaterial = new THREE.ShaderMaterial({
-    uniforms: { posTex: { value: null }, 
-    time: {value: 1.0}},
+    uniforms: { posTex: { value: null },
+    mouse: { value : new THREE.Vector2(10,10)},
+    // colorTexture: {value: particleInitColorArray}, 
+    u_time: {value: 1.0}},
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
   });
@@ -191,10 +219,10 @@ function initFBO() {
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
     let points = new THREE.Points(geometry, renderMaterial);
-    camArm.add(points);
-    scene.add(camArm);
+    scene.add(points);
     renderMaterial.uniforms.posTex.value = dataTex;
 }
+
 
 function render() {
 
@@ -208,16 +236,66 @@ function render() {
   renderer.render(fbo.scene, fbo.camera);
   renderer.setRenderTarget(null);
   renderMaterial.uniforms.posTex.value = renderTargetB.texture;
-  renderMaterial.uniforms.time.value = performance.now() * 0.0001;
+  renderMaterial.uniforms.u_time.value = performance.now() * 0.0001;
 
   renderer.render(scene, camera);
+  
+  raycaster.setFromCamera(pointer, camera);
+
+  let intersects = raycaster.intersectObject(dummyObject);
+  if (intersects.length > 0) {
+    let {x,y} = intersects[0].point;
+    simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
+  }
+
+
   // Request the next frame
+  
   requestAnimationFrame(render);
-  camArm.rotation.y += 0.0025;
 
 }
 
+// let particleInitPosArray, particleInitColorArray;
+
 
 initEvents();
-
 render()
+
+
+
+
+
+// function getImage(img) {
+//   const canvas = document.createElement('canvas');
+//   canvas.width = img.width;
+//   canvas.height = img.height;
+//   console.log(canvas.width + " " + canvas.height);
+//   const ctx = canvas.getContext('2d');
+
+//   ctx.drawImage(img, 0, 0);
+
+//   const imageData = ctx.getImageData(0, 0, img.width, img.height);
+//   const data = imageData.data;
+
+//   const length = img.width * img.height;
+//   const pointData = new Float32Array(length * 4); // Change to length * 4
+//   const colourData = new Float32Array(length * 4); // Change to length * 4
+
+//   for (let i = 0, j = 0; i < length; i++, j += 4) {
+//     const x = (i % img.width) / img.width - 0.5;
+//     const y = (i / img.width) / img.height - 0.5;
+//     // const grayscale = data[i * 4] * 0.299 + data[i * 4 + 1] * 0.587 + data[i * 4 + 2] * 0.114;
+
+//     pointData[j] = x * img.width;
+//     pointData[j + 1] = y * img.height;
+//     pointData[j + 2] = 1.0
+//     pointData[j + 3] = 1.0; // Set the alpha value to 1.0
+    
+//     colourData[j ] = data[i * 4]; // Red
+//     colourData[j + 1] = data[i * 4 + 1]; // Green
+//     colourData[j + 2] = data[i * 4 + 2]; // Blue
+//     colourData[j + 3] = data[i * 4 + 3]; // Alpha
+//   }
+
+//   return [pointData, colourData];
+// }
