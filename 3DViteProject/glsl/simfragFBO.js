@@ -4,6 +4,7 @@ export const simfragFBO = /* glsl */`
   uniform sampler2D originalPosTex;
   uniform vec2 mouse;
   uniform int state;
+  uniform float maxDist;
   varying vec2 vUv;
 
   
@@ -246,14 +247,8 @@ export const simfragFBO = /* glsl */`
   
   }
 
-  vec2 rotate(vec2 v, float a) {
-    float s = sin(a);
-    float c = cos(a);
-    mat2 m = mat2(c, s, -s, c);
-    return m * v;
-  }
 
-  // Add a function to calculate the force vector towards the original curled position
+  // Add a function to calculate the force vector towards the original position
   vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
       // Calculate the direction towards the original position
       vec3 direction = originalPos - currentPos;
@@ -263,9 +258,9 @@ export const simfragFBO = /* glsl */`
 
   float frequency = 0.2;
   float amplit = 0.5;
-  float maxDistance = 2.;
   void main() {
 
+    float maxDistance = maxDist;
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
     // vec3 dpos = thomasAttractor(pos);
@@ -273,15 +268,9 @@ export const simfragFBO = /* glsl */`
     // pos.y += dpos.y;
     // pos.z += dpos.z;
 
-
-    
-    
-    
-    
-    
-    // vec3 tar = pos + curlNoise(vec3(pos.x * frequency, pos.y * frequency, pos.z * frequency)) * amplit;
-    // float d = length(pos - tar) / maxDistance;
-    // pos = mix(pos, tar, pow(d, 5.));
+    vec3 tar = pos + curlNoise(vec3(pos.x * frequency, pos.y * frequency, pos.z * frequency)) * amplit;
+    float d = length(pos - tar) / maxDistance;
+    pos = mix(pos, tar, pow(d, 5.));
     
     vec3 mousePos3D = vec3(mouse.xy, 0.0);
     float ellipsoidRadiusXY = 2.0;
@@ -294,24 +283,21 @@ export const simfragFBO = /* glsl */`
     if (distToEllipsoid < 1.0) {
       
       vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
-      pos += dirToEllipsoid * 0.003 * smoothstep(1.0, 0.0, distToEllipsoid);
+      pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
     }
-    
-    // // Read the original position without mouse
-    // vec3 originalPos = texture2D(originalPosTex, vUv).xyz;
-    
-    // // Calculate the force vector towards the original curled position
-    // vec3 force = forceToOriginalPos(pos, originalPos);
-    
-    // // Apply a constant force magnitude in the direction towards the original position
-    // float forceMagnitude = 0.1; // Adjust as needed
-    // pos += force * forceMagnitude;
+  
 
-    // Rotate the particle positions around the Y-axis
-    float x = pos.x * cos(0.001) + pos.z * sin(0.001);
-    float z = -pos.x * sin(0.001) + pos.z * cos(0.001);
-    pos.x = x;
-    pos.z = z;
+    // Read the original position without mouse
+    vec3 originalPos = texture2D(originalPosTex, vUv).xyz;
+    
+    // Calculate the force vector towards the original position
+    vec3 force = forceToOriginalPos(pos, originalPos);
+    
+    // Apply a constant force magnitude in the direction towards the original position
+    float forceMagnitude = 0.001 * (5.0 * maxDist); // Adjust as needed
+    pos += force * forceMagnitude;
+
+
 
 
 

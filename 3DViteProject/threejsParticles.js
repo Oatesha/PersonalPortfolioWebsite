@@ -1,6 +1,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { vertexShader } from './glsl/main.vertFBO.js';
@@ -21,7 +22,7 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points;
+let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry;
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
@@ -69,8 +70,22 @@ function initEvents() {
 
 
   }
+  const loader = new FontLoader();
+  loader.load( 'Epilogue Medium_Regular.json', function ( font ) {
 
-  initFBO();
+    textGeometry = new TextGeometry('Harrison', {
+      size:10,
+      height:0,
+      font:font,
+
+      style:'normal',
+      bevelSize:0.25,
+      bevelThickness:0.50,
+      bevelEnabled:true,
+    });
+    initFBO();
+  });
+  
   
 }  
 
@@ -81,16 +96,16 @@ function initFBO() {
   if (!renderer.capabilities.floatVertexTextures) {
     alert(' * Browser does not support float vertex and fragment shaders');
   }
-
-
-  let w = h = 512;
-
+  
+  
+  let w = h = 1024;
+  
   // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < w; j++) {
       let index = (i + j * w) * 4;
-
+      
       let theta = Math.random() * Math.PI * 4.;
       let r = -20. + 5.* Math.random();
       initPos[index] = r * Math.cos(theta);
@@ -99,11 +114,12 @@ function initFBO() {
       initPos[index + 3] = 1.0;
     }
   }
-
-
- // Set up a geometry to sample positions from
+  
+  
+  // Set up a geometry to sample positions from
   let tetrageometry = new THREE.TetrahedronGeometry();
-  let mesh = new THREE.Mesh(tetrageometry);
+  textGeometry.center();
+  let mesh = new THREE.Mesh(textGeometry);
 
   // Build a Mesh Surface Sampler to sample positions from the geometry
   let sampler = new MeshSurfaceSampler(mesh).build();
@@ -133,25 +149,28 @@ function initFBO() {
     initialPositionsArray[index * 4 + 3] = 1.0;
   });
 
-  // let dataTex = new THREE.DataTexture(particleInitPosArray, w, h, THREE.RGBAFormat, THREE.FloatType);
-
   let dataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+  
+  
   // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
   dataTex.minFilter = THREE.NearestFilter;
   dataTex.magFilter = THREE.NearestFilter;
   dataTex.needsUpdate = true;
-
+  
   // init simulation mat with above created data texture
-
+  // Export the simMaterial
   simMaterial = new THREE.ShaderMaterial({
-    uniforms: { posTex: { value: dataTex },
-    originalPosTex: { value: dataTex}, 
-    mouse: { value : new THREE.Vector2(-100,-100)},},
+    uniforms: { 
+      posTex: { value: dataTex },
+      maxDist: { value: 0.5 },
+      originalPosTex: { value: dataTex }, 
+      mouse: { value : new THREE.Vector2(-100,-100) },
+    },
     vertexShader: simvertFBO,
     fragmentShader: simfragFBO,
   });
-
-
+  
+  
   class FBO {
     constructor(w, simMat) {
       this.scene = new THREE.Scene();
@@ -161,10 +180,10 @@ function initFBO() {
       this.scene.add(planeMesh);
     }
   }
-
+  
   // scene to render simulation texture so that we can 'ping-pong' the renderer between different render targets to update positions 
   fbo = new FBO(w, simMaterial);
-
+  
   // create render targets a + b to which the simulation will be rendered
   renderTargetA = new THREE.WebGLRenderTarget(w, h, {
     wrapS: THREE.RepeatWrapping,
@@ -175,10 +194,10 @@ function initFBO() {
     type: THREE.FloatType,
     stencilBuffer: false,
   });
-
+  
   // a second render target lets us store input + output positional states
   renderTargetB = renderTargetA.clone();
-
+  
   renderer.setRenderTarget(renderTargetA),
   renderer.clear(),
   renderer.render(fbo.scene, fbo.camera),
@@ -186,128 +205,112 @@ function initFBO() {
   renderer.clear(),
   renderer.render(fbo.scene, fbo.camera),
   renderer.setRenderTarget(null)
-
-
+  
+  
   // const loader = new THREE.TextureLoader();
-
+  
   // const texture = loader.load('cop1.png', (texture) => {
-  //   texture.magFilter = THREE.NearestFilter;
-  //   texture.minFilter = THREE.NearestFilter;
-  //   texture.format = THREE.RGBAFormat;
-  // });
-
-  // console.log(texture)
-
-  renderMaterial = new THREE.ShaderMaterial({
-    uniforms: { posTex: { value: null },
-    mouse: { value : new THREE.Vector2(10,10)},
-    // uTexture: {value: texture}, 
-    u_time: {value: 1.0}},
-    vertexShader: vertexShader,
-    fragmentShader: fragmentShader,
-  });
-
-  var geometry = new THREE.BufferGeometry();
-  let positions = new Float32Array((w * w) * 3);
-  let uvs = new Float32Array((w * w) * 2);
-  for (let i = 0; i < w; i++) {
-
-    for (let j = 0; j < w; j++) {
-
-      let index = (i + j * w);
-      positions[index] = Math.random();
-      positions[index + 1] = 1.0;
-      positions[index + 2] = 1.0;
-      uvs[index] = i / w
-      uvs[index + 1] = j / w; 
-
-
+    //   texture.magFilter = THREE.NearestFilter;
+    //   texture.minFilter = THREE.NearestFilter;
+    //   texture.format = THREE.RGBAFormat;
+    // });
+    
+    // console.log(texture)
+    
+    renderMaterial = new THREE.ShaderMaterial({
+      uniforms: { posTex: { value: null },
+      mouse: { value : new THREE.Vector2(10,10)},
+      // uTexture: {value: texture}, 
+      u_time: {value: 1.0}},
+      vertexShader: vertexShader,
+      fragmentShader: fragmentShader,
+    });
+    
+    var geometry = new THREE.BufferGeometry();
+    let positions = new Float32Array((w * w) * 3);
+    let uvs = new Float32Array((w * w) * 2);
+    for (let i = 0; i < w; i++) {
+      
+      for (let j = 0; j < w; j++) {
+        
+        let index = (i + j * w);
+        positions[index] = Math.random();
+        positions[index + 1] = 1.0;
+        positions[index + 2] = 1.0;
+        uvs[index] = i / w
+        uvs[index + 1] = j / w; 
+        
+        
       }
     }
-
+    
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-
+    
     points = new THREE.Points(geometry, renderMaterial);
     objects.add(points);
     scene.add(objects);
     renderMaterial.uniforms.posTex.value = dataTex;
-}
-
-
-function render() {
-
-  // Swap renderTargetA and renderTargetB
-  var temp = renderTargetA;
-  renderTargetA = renderTargetB;
-  renderTargetB = temp;
-
-  simMaterial.uniforms.posTex.value = renderTargetA.texture;
-  renderer.setRenderTarget(renderTargetB);
-  renderer.render(fbo.scene, fbo.camera);
-  renderer.setRenderTarget(null);
-  renderMaterial.uniforms.posTex.value = renderTargetB.texture;
-  renderMaterial.uniforms.u_time.value = performance.now() * 0.0001;
-
-  renderer.render(scene, camera);
-  
-  raycaster.setFromCamera(pointer, camera);
-
-  let intersects = raycaster.intersectObject(dummyObject);
-  if (intersects.length > 0) {
-    let {x,y} = intersects[0].point;
-    simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
+    render()
   }
-
-  // points.rotation.y += (0.001);
-
-  // Request the next frame
   
-  requestAnimationFrame(render);
-
-}
-
-// let particleInitPosArray, particleInitColorArray;
-
-
-initEvents();
-render()
-
-
-
-
-
-// function getImage(img) {
-//   const canvas = document.createElement('canvas');
-//   canvas.width = img.width;
-//   canvas.height = img.height;
-//   console.log(canvas.width + " " + canvas.height);
-//   const ctx = canvas.getContext('2d');
-
-//   ctx.drawImage(img, 0, 0);
-
-//   const imageData = ctx.getImageData(0, 0, img.width, img.height);
-//   const data = imageData.data;
-
-//   const length = img.width * img.height;
-//   const pointData = new Float32Array(length * 4); // Change to length * 4
-//   const colourData = new Float32Array(length * 4); // Change to length * 4
-
-//   for (let i = 0, j = 0; i < length; i++, j += 4) {
-//     const x = (i % img.width) / img.width - 0.5;
-//     const y = (i / img.width) / img.height - 0.5;
-//     // const grayscale = data[i * 4] * 0.299 + data[i * 4 + 1] * 0.587 + data[i * 4 + 2] * 0.114;
-
-//     pointData[j] = x * img.width;
-//     pointData[j + 1] = y * img.height;
-//     pointData[j + 2] = 1.0
-//     pointData[j + 3] = 1.0; // Set the alpha value to 1.0
+  
+  function render() {
     
-//     colourData[j ] = data[i * 4]; // Red
-//     colourData[j + 1] = data[i * 4 + 1]; // Green
-//     colourData[j + 2] = data[i * 4 + 2]; // Blue
-//     colourData[j + 3] = data[i * 4 + 3]; // Alpha
-//   }
+    // Swap renderTargetA and renderTargetB
+    var temp = renderTargetA;
+    renderTargetA = renderTargetB;
+    renderTargetB = temp;
+    
+    simMaterial.uniforms.posTex.value = renderTargetA.texture;
+    renderer.setRenderTarget(renderTargetB);
+    renderer.render(fbo.scene, fbo.camera);
+    renderer.setRenderTarget(null);
+    renderMaterial.uniforms.posTex.value = renderTargetB.texture;
+    renderMaterial.uniforms.u_time.value = performance.now() * 0.0001;
+    
+    renderer.render(scene, camera);
+    
+    raycaster.setFromCamera(pointer, camera);
+    
+    let intersects = raycaster.intersectObject(dummyObject);
+    if (intersects.length > 0) {
+      let {x,y} = intersects[0].point;
+      simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
+    }
+    
+    
+    // Request the next frame
+    
+    requestAnimationFrame(render);
+    
+  }
+  
+  // let particleInitPosArray, particleInitColorArray;
+  
+  
+  initEvents();
 
-//   return [pointData, colourData];
-// }
+// Export a function to get the simMaterial instance
+export function getSimMaterial() {
+  return simMaterial;
+}
+  
+  
+    // function parseMesh(geometry) {
+    //   const positionArray = textGeometry.attributes.position.array;
+    //   const totalVertices = positionArray.length;
+    //   const size = parseInt(Math.sqrt(totalVertices * 3) + .5);
+    //   const data = new Float32Array(size * size * 4);
+  
+    //   for (var i = 0; i < totalVertices; i++) {
+    //       data[i * 4] = vertices[i * 4];
+    //       data[i * 4 + 1] = vertices[i * 4 + 1];
+    //       data[i * 4 + 2] = vertices[i * 4 + 2];
+    //       data[i * 4 + 3] = vertices[i * 4 + 3]; // Alpha component
+    //   }
+  
+    //   return {data, size};
+    // }
+    
+  

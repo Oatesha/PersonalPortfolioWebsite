@@ -4,8 +4,11 @@ import { ScrollToPlugin } from "gsap/all";
 import Lenis from '@studio-freight/lenis'
 import { camera } from "./threejsParticles";
 import SplitType from 'split-type'
+import { getSimMaterial } from "./threejsParticles";
 
 // sections
+
+let simMaterial;
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
@@ -18,7 +21,7 @@ new SplitType(".LoadingText");
 //intro
 const landingText = sectionsElements[1];
 const introTextFirstLine = landingText.querySelector('h4');
-const introTextSecondLine = landingText.querySelector('h1');
+// const introTextSecondLine = landingText.querySelector('h1');
 const introTextThirdLine = landingText.querySelector('p');
 
 
@@ -64,7 +67,6 @@ window.onload = function() {
     initAnim();
 };
 
-initAnim();
 function initAnim() {
     animationTimeline.to(".char", {
     
@@ -77,6 +79,9 @@ function initAnim() {
     animationTimeline.to(".LoadingText", {
         autoAlpha: 1,
     }, "<")
+    simMaterial = getSimMaterial();
+    console.log(simMaterial.uniforms.maxDist);
+    InitAnimationTimeline();
 }
 
 
@@ -93,19 +98,26 @@ function scrollDownSmoothly() {
 }
 
 
-var introTl = gsap.timeline({
-    scrollTrigger: {
-        trigger: ".LandingPageSection",
-        start: "-50px center",
-        markers: true,
-
-    },
-});
-// Animate the text elements
-introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
-introTl.fromTo(introTextSecondLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power2"});
-introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"}, "-=0.25");
-introTl.fromTo(camera.position, {x: 0, z: -5}, {x: -1.5, z: 5.5, duration: 1.75})
-
-
-
+function InitAnimationTimeline() {
+    var introTl = gsap.timeline({
+        scrollTrigger: {
+            trigger: ".LandingPageSection",
+            start: "-50px center",
+            markers: true,
+    
+        },
+    });
+    
+    
+    // Animate the text elements
+    introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
+    introTl.fromTo(camera.position, {x: 0, z: -5}, {x: 0, z: 50, duration: 1.75})
+    introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
+    introTl.fromTo(simMaterial.uniforms.maxDist, {value: 1.0}, {value: 2.0, duration: 1.5});
+    console.log(simMaterial.uniforms.maxDist);
+}
+// OG
+// introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
+// introTl.fromTo(introTextSecondLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power2"});
+// introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"}, "-=0.25");
+// introTl.fromTo(camera.position, {x: 0, z: -5}, {x: 25, z: 50.5, duration: 1.75})
