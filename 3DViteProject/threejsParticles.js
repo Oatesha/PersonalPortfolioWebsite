@@ -12,7 +12,6 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 
 
 
-
 // // Create an instance of the Stats object
 // const stats = new Stats();
 
@@ -36,7 +35,6 @@ document.body.appendChild( renderer.domElement );
 // renderer.setClearColor(0x0A0A09);
 renderer.setClearColor(0x000000, 0);
 
-
 const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
@@ -58,6 +56,7 @@ function initEvents() {
     camera.updateProjectionMatrix();
 
     renderer.setSize( window.innerWidth, window.innerHeight );
+    initHtml();
 
   }
 
@@ -70,6 +69,9 @@ function initEvents() {
 
 
   }
+
+  initHtml();
+
   const loader = new FontLoader();
   loader.load( 'Epilogue Medium_Regular.json', function ( font ) {
 
@@ -90,6 +92,31 @@ function initEvents() {
 }  
 
 
+function initHtml() {
+  // Get canvas element and its dimensions
+  var canvas = renderer.domElement;
+  var canvasWidth = canvas.width;
+  var canvasHeight = canvas.height;
+
+
+
+
+  var element1 = document.querySelector(".LandingPageContent");
+
+  var centerY = canvasHeight / 2; // 50% of canvas height
+
+  // Set CSS style to position elements
+  element1.style.position = "absolute";
+  // element1.style.left = centerX + "px";
+  element1.style.height = (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
+  element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";
+
+  // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be that
+  element1.style.left = ((canvasWidth - (canvasHeight * 1.232)) / 2) -2.5 + "px";
+
+  // console.log(((canvasWidth - (canvasHeight * 1.232)) / 2) + " " + (centerY - ((canvasHeight * 0.2321) + 200) / 2));
+
+}
 
 function initFBO() {
   // verify browser can support float textures
