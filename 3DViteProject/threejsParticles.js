@@ -177,9 +177,23 @@ function initFBO() {
     }
   }
   
+  // init positions in data texture
+  let cubePos = new Float32Array(w * h * 4);
+  for (let i = 0; i < w; i++) {
+    for (let j = 0; j < w; j++) {
+      let index = (i + j * w) * 4;
+      
+      let theta = Math.random() * Math.PI * 4.;
+      let r = -20. + 5.* Math.random();
+      cubePos[index] = 5 * Math.random();
+      cubePos[index + 1] =  5 * Math.random();
+      cubePos[index + 2] = (Math.random() ),
+      cubePos[index + 3] = 1.0;
+    }
+  }
+  
   
   // Set up a geometry to sample positions from
-  let tetrageometry = new THREE.TetrahedronGeometry();
   textGeometry.center();
   let mesh = new THREE.Mesh(textGeometry);
 
@@ -211,27 +225,34 @@ function initFBO() {
     initialPositionsArray[index * 4 + 3] = 1.0;
   });
 
-  let dataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+  let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
+  let textDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
   
   
   // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
   dataTex.minFilter = THREE.NearestFilter;
   dataTex.magFilter = THREE.NearestFilter;
   dataTex.needsUpdate = true;
+
+  // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
+  textDataTex.minFilter = THREE.NearestFilter;
+  textDataTex.magFilter = THREE.NearestFilter;
+  textDataTex.needsUpdate = true;
   
   // init simulation mat with above created data texture
   // Export the simMaterial
   simMaterial = new THREE.ShaderMaterial({
     uniforms: { 
       posTex: { value: dataTex },
-      maxDist: { value: 0.5 },
-      originalPosTex: { value: dataTex }, 
+      maxDist: { value: 0.0 },
+      originalPosTex: { value: textDataTex }, 
       mouse: { value : new THREE.Vector2(-100,-100) },
     },
     vertexShader: simvertFBO,
     fragmentShader: simfragFBO,
   });
   
+  console.log(simMaterial.uniforms);
   
   class FBO {
     constructor(w, simMat) {
@@ -310,8 +331,7 @@ function initFBO() {
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     
     points = new THREE.Points(geometry, renderMaterial);
-    objects.add(points);
-    scene.add(objects);
+    scene.add(points);
     renderMaterial.uniforms.posTex.value = dataTex;
     render()
   }

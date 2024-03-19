@@ -229,21 +229,6 @@ vec3 curl(float x, float y, float z) {
     return curl;
 }
 
-
-vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
-  // Calculate the direction towards the original position
-  vec3 direction = originalPos - currentPos;
-  // Calculate the distance between the current and original positions
-  float distance = length(direction);
-  // Normalize the direction vector to get the unit vector
-  vec3 unitDirection = normalize(direction);
-  
-  // Increase the force magnitude as the particle gets closer to the original position
-  float forceFactor = 1.0 / (distance + 0.001); // Adjust the constant (0.001) as needed
-  
-  return unitDirection * forceFactor;
-}
-
   float frequency = 0.35;
   float amplitude = 0.09;
   void main() {
@@ -256,37 +241,28 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     // pos.y += dpos.y;
     // pos.z += dpos.z;
 
-    // vec3 tar = pos + curl(pos.x * frequency, pos.y * frequency, pos.z * frequency) * amplitude;
-    // float d = length(pos - tar) / maxDistance;
-    // pos = mix(pos, tar, pow(d, 5.));
+
     
-    vec3 mousePos3D = vec3(mouse.xy, 0.0);
-    float ellipsoidRadiusXY = 2.0;
-    float ellipsoidRadiusZ = 10.0; 
+    // vec3 mousePos3D = vec3(mouse.xy, 0.0);
+    // float ellipsoidRadiusXY = 2.0;
+    // float ellipsoidRadiusZ = 10.0; 
     
-    // Calculate the distance from the particle position to the ellipsoid center
-    vec3 distVec = pos - mousePos3D;
-    float distToEllipsoid = length(vec3(distVec.x / ellipsoidRadiusXY, distVec.y / ellipsoidRadiusXY, distVec.z / ellipsoidRadiusZ));
+    // // Calculate the distance from the particle position to the ellipsoid center
+    // vec3 distVec = pos - mousePos3D;
+    // float distToEllipsoid = length(vec3(distVec.x / ellipsoidRadiusXY, distVec.y / ellipsoidRadiusXY, distVec.z / ellipsoidRadiusZ));
     
-    if (distToEllipsoid < 1.0) {
+    // if (distToEllipsoid < 1.0) {
       
-      vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
-      pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
-    }
+    //   vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
+    //   pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
+    // }
   
 
     // Read the original position without mouse
     vec3 originalPos = texture2D(originalPosTex, vUv).xyz;
     
-    // Calculate the force vector towards the original position
-    vec3 force = forceToOriginalPos(pos, originalPos);
+    pos = mix(pos, originalPos, 0.5);
     
-    // Apply a constant force magnitude in the direction towards the original position
-    pos += force * 0.000001;
-
-
-
-
 
     gl_FragColor = vec4(pos, 1.0);
 
