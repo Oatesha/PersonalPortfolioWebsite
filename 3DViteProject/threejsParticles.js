@@ -26,10 +26,12 @@ let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, t
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
 const objects = new THREE.Group();
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({alpha: true});
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
+
+const controls = new OrbitControls(camera, renderer.domElement);
 
 
 // renderer.setClearColor(0x0A0A09);
@@ -44,9 +46,21 @@ const dummyObject = new THREE.Mesh(dummyGeom, dummyMat);
 // scene.add(dummyObject);
 dummyObject.position.set (0, 0, 0);
 
+// background div 
+const backgroundAnim = document.querySelector(".BackgroundAnimation");
+const blurHtml = document.querySelector(".Blur");
+
 
 function initEvents() {
   window.addEventListener( 'resize', onWindowResize, false );
+  // Listen for scroll event on the window
+  window.addEventListener('scroll', handleScroll);
+
+  function handleScroll() {
+    // console.log("scrolling");
+
+    moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
+  }
 
   function onWindowResize(){
 
@@ -66,6 +80,9 @@ function initEvents() {
 
     pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+    
+    moveBackgroundAnim(event.clientX, event.clientY, false);
 
 
   }
@@ -90,7 +107,25 @@ function initEvents() {
   
   
 }  
+let scrollLeft, scrollTop
+function moveBackgroundAnim(x, y, scrolling) {
+  if (scrolling) {
+    // console.log("scrolling update");
+    scrollLeft = (window.scrollX !== undefined) ? window.scrollX : (document.documentElement || document.body.parentNode || document.body).scrollLeft;
+    scrollTop = (window.scrollY !== undefined) ? window.scrollY : (document.documentElement || document.body.parentNode || document.body).scrollTop;  
+    backgroundAnim.style.left = `${x + scrollLeft}px`;
 
+    backgroundAnim.style.top = `${y + scrollTop}px`;
+
+  }
+
+  else {
+    // console.log("not scrolling")
+    backgroundAnim.style.left = `${x + scrollLeft}px`;
+
+    backgroundAnim.style.top = `${y + scrollTop}px`;
+    }
+}
 
 function initHtml() {
   // Get canvas element and its dimensions

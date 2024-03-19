@@ -2,8 +2,8 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import Lenis from '@studio-freight/lenis'
-import { camera } from "./threejsParticles";
 import SplitType from 'split-type'
+import { camera } from "./threejsParticles";
 import { getSimMaterial } from "./threejsParticles";
 
 // sections
@@ -117,7 +117,7 @@ function InitAnimationTimeline() {
     // Animate the text elements
     introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
     introTl.fromTo(camera.position, {x: 0, z: -5}, {x: 0, z: 50, duration: 1.75});
-    introTl.fromTo(simMaterial.uniforms.maxDist, {value: 1.0}, {value: 2.0, duration: 1.5});
+    introTl.fromTo(simMaterial.uniforms.maxDist, {value: 1.0}, {value: 10.0, duration: 1.5});
     introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
 }
 
