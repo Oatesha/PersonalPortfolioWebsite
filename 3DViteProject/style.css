@@ -76,14 +76,15 @@ p {
   */
   
   transform: translate(-50%, -50%);
-  height: 500px;
-  width: 500px;
+  height: 200px;
+  width: 200px;
   display: flex;
   align-items: center;
   z-index: -9;
-  background: linear-gradient(white, black);
   border-radius: 100%;
   position: absolute;
+  /* background: radial-gradient(circle, #ff0000 20%, #00ff00 40%, #0000ff 60%);
+  box-shadow: 0 0 0 100px #ff0000, 0 0 0 200px #00ff00, 0 0 0 300px #0000ff; */
 
 }
 
@@ -94,9 +95,8 @@ p {
   width: 100vw;
   height: 100vh;
   backdrop-filter: blur(200px);
-  z-index: -7;
+  z-index: -1;
   overflow: auto;
-
 }
 
 .progressIndicator{

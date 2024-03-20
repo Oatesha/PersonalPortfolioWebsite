@@ -170,12 +170,13 @@ function initFBO() {
     for (let j = 0; j < w; j++) {
       let index = (i + j * w) * 4;
       
-      let theta = Math.random() * Math.PI * 4.;
-      let r = -20. + 5.* Math.random();
-      initPos[index] = r * Math.cos(theta);
-      initPos[index + 1] = r * Math.sin(theta);
-      initPos[index + 2] = (Math.random() ),
-      initPos[index + 3] = 1.0;
+      const distance = Math.sqrt((Math.random())) * 20.0;
+      const theta = THREE.MathUtils.randFloatSpread(360); 
+      const phi = THREE.MathUtils.randFloatSpread(360); 
+      initPos[index] =  distance * Math.sin(theta) * Math.cos(phi)
+      initPos[index + 1] =  distance * Math.sin(theta) * Math.sin(phi);
+      initPos[index + 2] =  1.0 * Math.cos(theta);
+      initPos[index + 3] =  1.0; // this value will not have any impact
     }
   }
   
@@ -185,8 +186,6 @@ function initFBO() {
     for (let j = 0; j < w; j++) {
       let index = (i + j * w) * 4;
       
-      let theta = Math.random() * Math.PI * 4.;
-      let r = -20. + 5.* Math.random();
       cubePos[index] = 5 * Math.random();
       cubePos[index + 1] =  5 * Math.random();
       cubePos[index + 2] = (Math.random() ),

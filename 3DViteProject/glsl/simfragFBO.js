@@ -234,9 +234,18 @@ vec3 curl(float x, float y, float z) {
 // Add a function to calculate the force vector towards the original position
 vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     // Calculate the direction towards the original position
-    vec3 direction = originalPos - currentPos;
+    vec3 direction = normalize(originalPos - currentPos);
     // Normalize the direction vector to get the unit vector
-    return normalize(direction);
+
+    // Calculate the distance between the current position and the original position
+    float distance = length(originalPos - currentPos);
+
+    if (distance < 0.1) {
+      // If the direction is small enough, return zero vector or the direction itself
+      return vec3(0.0); // or return direction;
+    } 
+
+    return (direction);
 }
 
   float frequency = 0.35;
@@ -259,8 +268,8 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     
     
     vec3 mousePos3D = vec3(mouse.xy, 0.0);
-    float ellipsoidRadiusXY = 2.0;
-    float ellipsoidRadiusZ = 10.0; 
+    float ellipsoidRadiusXY = 5.0;
+    float ellipsoidRadiusZ = 50.0; 
     
     // Calculate the distance from the particle position to the ellipsoid center
     vec3 distVec = pos - mousePos3D;
@@ -269,7 +278,7 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     if (distToEllipsoid < 1.0) {
       
       vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
-      pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
+      pos += dirToEllipsoid * 5.0 * smoothstep(1.0, 0.0, distToEllipsoid);
     }
     
     vec3 force = forceToOriginalPos(pos, mix(originalPos, textPos, mixValue));
