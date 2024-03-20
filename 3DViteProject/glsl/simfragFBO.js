@@ -2,12 +2,14 @@ export const simfragFBO = /* glsl */`
 
   uniform sampler2D posTex;
   uniform sampler2D originalPosTex;
+  uniform sampler2D textPosTex;
   uniform vec2 mouse;
   uniform int state;
   uniform float maxDist;
-  varying vec2 vUv;
+  uniform float mixValue;
+  uniform float time;
 
-  float time = 0.1;
+  varying vec2 vUv;
   
 
   vec3 thomasAttractor(vec3 pos) {
@@ -229,6 +231,14 @@ vec3 curl(float x, float y, float z) {
     return curl;
 }
 
+// Add a function to calculate the force vector towards the original position
+vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
+    // Calculate the direction towards the original position
+    vec3 direction = originalPos - currentPos;
+    // Normalize the direction vector to get the unit vector
+    return normalize(direction);
+}
+
   float frequency = 0.35;
   float amplitude = 0.09;
   void main() {
@@ -242,26 +252,31 @@ vec3 curl(float x, float y, float z) {
     // pos.z += dpos.z;
 
 
-    
-    // vec3 mousePos3D = vec3(mouse.xy, 0.0);
-    // float ellipsoidRadiusXY = 2.0;
-    // float ellipsoidRadiusZ = 10.0; 
-    
-    // // Calculate the distance from the particle position to the ellipsoid center
-    // vec3 distVec = pos - mousePos3D;
-    // float distToEllipsoid = length(vec3(distVec.x / ellipsoidRadiusXY, distVec.y / ellipsoidRadiusXY, distVec.z / ellipsoidRadiusZ));
-    
-    // if (distToEllipsoid < 1.0) {
-      
-    //   vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
-    //   pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
-    // }
-  
-
     // Read the original position without mouse
     vec3 originalPos = texture2D(originalPosTex, vUv).xyz;
+    vec3 textPos = texture2D(textPosTex, vUv).xyz;
+  
     
-    pos = mix(pos, originalPos, 0.5);
+    
+    vec3 mousePos3D = vec3(mouse.xy, 0.0);
+    float ellipsoidRadiusXY = 2.0;
+    float ellipsoidRadiusZ = 10.0; 
+    
+    // Calculate the distance from the particle position to the ellipsoid center
+    vec3 distVec = pos - mousePos3D;
+    float distToEllipsoid = length(vec3(distVec.x / ellipsoidRadiusXY, distVec.y / ellipsoidRadiusXY, distVec.z / ellipsoidRadiusZ));
+    
+    if (distToEllipsoid < 1.0) {
+      
+      vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
+      pos += dirToEllipsoid * 0.3 * smoothstep(1.0, 0.0, distToEllipsoid);
+    }
+    
+    vec3 force = forceToOriginalPos(pos, mix(originalPos, textPos, mixValue));
+    pos += force * 0.05;
+
+
+    
     
 
     gl_FragColor = vec4(pos, 1.0);

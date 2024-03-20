@@ -8,7 +8,7 @@ import { vertexShader } from './glsl/main.vertFBO.js';
 import { fragmentShader } from './glsl/main.fragFBO.js';
 import { simvertFBO } from './glsl/simvertFBO.js';
 import { simfragFBO } from './glsl/simfragFBO.js';
-
+import { GUI } from 'dat.gui';
 
 
 
@@ -18,6 +18,8 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 // // Add the Stats object to the HTML document
 // document.body.appendChild(stats.dom);
 
+// Create a new dat.GUI instance
+const gui = new GUI();
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
@@ -25,13 +27,12 @@ let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, t
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
-const objects = new THREE.Group();
 const renderer = new THREE.WebGLRenderer({alpha: true});
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
-const controls = new OrbitControls(camera, renderer.domElement);
+
 
 
 // renderer.setClearColor(0x0A0A09);
@@ -90,7 +91,8 @@ function initEvents() {
   initHtml();
 
   const loader = new FontLoader();
-  loader.load( 'Epilogue Medium_Regular.json', function ( font ) {
+  loader.load( 'Epilogue Medium_Regular.json', 
+  function ( font ) {
 
     textGeometry = new TextGeometry('Harrison', {
       size:10,
@@ -108,6 +110,7 @@ function initEvents() {
   
 }  
 let scrollLeft, scrollTop
+
 function moveBackgroundAnim(x, y, scrolling) {
   if (scrolling) {
     // console.log("scrolling update");
@@ -116,7 +119,6 @@ function moveBackgroundAnim(x, y, scrolling) {
     backgroundAnim.style.left = `${x + scrollLeft}px`;
 
     backgroundAnim.style.top = `${y + scrollTop}px`;
-
   }
 
   else {
@@ -244,15 +246,17 @@ function initFBO() {
   simMaterial = new THREE.ShaderMaterial({
     uniforms: { 
       posTex: { value: dataTex },
-      maxDist: { value: 0.0 },
-      originalPosTex: { value: textDataTex }, 
+      maxDist: { value: 1.0 },
+      time: {value: 0.0},
+      mixValue: {value: 1.0},
+      originalPosTex: { value: dataTex },
+      textPosTex: { value: textDataTex }, 
       mouse: { value : new THREE.Vector2(-100,-100) },
     },
     vertexShader: simvertFBO,
     fragmentShader: simfragFBO,
   });
   
-  console.log(simMaterial.uniforms);
   
   class FBO {
     constructor(w, simMat) {
@@ -289,43 +293,35 @@ function initFBO() {
   renderer.render(fbo.scene, fbo.camera),
   renderer.setRenderTarget(null)
   
+
+
+    
+  renderMaterial = new THREE.ShaderMaterial({
+    uniforms: { posTex: { value: null },
+    mouse: { value : new THREE.Vector2(10,10)},
+    // uTexture: {value: texture}, 
+    u_time: {value: 1.0}},
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
+  });
   
-  // const loader = new THREE.TextureLoader();
-  
-  // const texture = loader.load('cop1.png', (texture) => {
-    //   texture.magFilter = THREE.NearestFilter;
-    //   texture.minFilter = THREE.NearestFilter;
-    //   texture.format = THREE.RGBAFormat;
-    // });
+  var geometry = new THREE.BufferGeometry();
+  let positions = new Float32Array((w * w) * 3);
+  let uvs = new Float32Array((w * w) * 2);
+  for (let i = 0; i < w; i++) {
     
-    // console.log(texture)
-    
-    renderMaterial = new THREE.ShaderMaterial({
-      uniforms: { posTex: { value: null },
-      mouse: { value : new THREE.Vector2(10,10)},
-      // uTexture: {value: texture}, 
-      u_time: {value: 1.0}},
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
-    });
-    
-    var geometry = new THREE.BufferGeometry();
-    let positions = new Float32Array((w * w) * 3);
-    let uvs = new Float32Array((w * w) * 2);
-    for (let i = 0; i < w; i++) {
+    for (let j = 0; j < w; j++) {
       
-      for (let j = 0; j < w; j++) {
-        
-        let index = (i + j * w);
-        positions[index] = Math.random();
-        positions[index + 1] = 1.0;
-        positions[index + 2] = 1.0;
-        uvs[index] = i / w
-        uvs[index + 1] = j / w; 
-        
-        
-      }
+      let index = (i + j * w);
+      positions[index] = Math.random();
+      positions[index + 1] = 1.0;
+      positions[index + 2] = 1.0;
+      uvs[index] = i / w
+      uvs[index + 1] = j / w; 
+      
+      
     }
+  }
     
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
@@ -333,23 +329,27 @@ function initFBO() {
     points = new THREE.Points(geometry, renderMaterial);
     scene.add(points);
     renderMaterial.uniforms.posTex.value = dataTex;
+    // Add a slider for the time uniform
+    gui.add(simMaterial.uniforms.mixValue, 'value', 0.0, 1.0, 0.05).name('mixValue');
     render()
   }
   
-  
+  const clock = new THREE.Clock();
+
   function render() {
-    
+    requestAnimationFrame(render);
+
+
+    simMaterial.uniforms.time.value = clock.getElapsedTime();
     // Swap renderTargetA and renderTargetB
     var temp = renderTargetA;
     renderTargetA = renderTargetB;
     renderTargetB = temp;
-    
     simMaterial.uniforms.posTex.value = renderTargetA.texture;
     renderer.setRenderTarget(renderTargetB);
     renderer.render(fbo.scene, fbo.camera);
     renderer.setRenderTarget(null);
     renderMaterial.uniforms.posTex.value = renderTargetB.texture;
-    renderMaterial.uniforms.u_time.value = performance.now() * 0.0001;
     
     renderer.render(scene, camera);
     
@@ -361,16 +361,12 @@ function initFBO() {
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
     
-    
     // Request the next frame
     
-    requestAnimationFrame(render);
     
   }
   
-  // let particleInitPosArray, particleInitColorArray;
-  
-  
+
   initEvents();
 
 // Export a function to get the simMaterial instance
