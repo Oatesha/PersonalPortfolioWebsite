@@ -6,14 +6,20 @@ import SplitType from 'split-type'
 import { camera } from "./threejsParticles";
 import { getSimMaterial } from "./threejsParticles";
 
-// sections
-
-let simMaterial;
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+let simMaterial;
 
-
+// sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
+
+// svg
+const circle1 = document.querySelector('#circleOne');
+const circle2 = document.querySelector('#circleTwo');
+const circle3 = document.querySelector('#circleThree');
+console.log(circle1);
+console.log(circle2);
+console.log(circle3);
 
 // split load text
 new SplitType(".LoadingText");
@@ -24,27 +30,7 @@ const introTextFirstLine = landingText.querySelector('h4');
 // const introTextSecondLine = landingText.querySelector('h1');
 const introTextThirdLine = landingText.querySelector('p');
 
-
-// window.addEventListener('scroll', () => {
-//     let currentSection = '';
-  
-//     sections.forEach(section => {
-//       const sectionTop = section.offsetTop;
-//       const sectionHeight = section.clientHeight;
-//       if (window.pageYOffset >= sectionTop - (sectionHeight / 3)) {
-//         currentSection = section.getAttribute('id');
-//       }
-//     });
-  
-//     indicatorBoxes.forEach(box => {
-//       box.classList.remove('active');
-//       if (box.dataset.section === currentSection) {
-//         box.classList.add('active');
-//       }
-//     });
-//   });
-
-
+// Smooth scroll
 const lenis = new Lenis({
     duration: 1.2,
     easeInOut: true,
@@ -52,15 +38,11 @@ const lenis = new Lenis({
     lerp: 0.05,
 });
 
-
 function raf(time) {
     lenis.raf(time);
     requestAnimationFrame(raf);
 }
-
 requestAnimationFrame(raf);
-
-
 
 
 window.onload = function() {
@@ -70,16 +52,24 @@ window.onload = function() {
 };
 
 function initAnim() {
-    // Initialize your animation timeline
+
+    // init svg anim
+    const backgroundBlobTimeline = gsap.timeline({
+        repeat: -1,
+        yoyo: true,
+    });
+
+    // Init animation timeline
     simMaterial = getSimMaterial();
-    InitAnimationTimeline();
+    InitLandingAnimationTimeline();
+    InitMiddlePageAnimationTimeline();
+    InitBackgroundBlobAnimationTimeline(backgroundBlobTimeline);
     
-        // Create a timeline for your animations
     const animationTimeline = gsap.timeline({
         delay: 1.5,
     });
 
-    // Add animations to the animation timeline
+    // animate chars moving up and then scroll down to landing section
     animationTimeline.to(".char", {
         y: 0,
         stagger: 0.1,
@@ -104,22 +94,44 @@ function scrollDownSmoothly() {
     });
 }
 
-// Initialize Animation Timeline
-function InitAnimationTimeline() {
+
+function InitBackgroundBlobAnimationTimeline(timeline) {
+
+    timeline.to(circle1, {
+        duration: 2,
+        y: "+=20vh",
+        zIndex: 5,
+        ease: "none",
+    });
+}
+
+function InitLandingAnimationTimeline() {
     var introTl = gsap.timeline({
         scrollTrigger: {
             trigger: ".LandingPageSection",
             start: "-50px center",
-            markers: true,
         },
     });
 
     // Animate the text elements
     introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
-    introTl.fromTo(camera.position, {x: 0, z: -5}, {x: 0, z: 50, duration: 1.75});
-    introTl.fromTo(simMaterial.uniforms.maxDist, {value: 0.0}, {value: 0.1, duration: 5.0});
+    introTl.fromTo(camera.position, {z: -5}, {z: 50, duration: 1.75});
+    introTl.fromTo(simMaterial.uniforms.mixValue, {value: 0.0}, {value: 1.0, duration: 2.0}, "-=1.75");
     introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
 }
+
+function InitMiddlePageAnimationTimeline() {
+    var middlePageTl = gsap.timeline({
+        scrollTrigger: {
+            trigger: ".LandingPageSection",
+            start: "55% center",
+            markers: true,
+            scrub: true,
+        },
+    });
+    middlePageTl.to(camera.position, {x: -5, z: 0});
+}
+
 
 
 

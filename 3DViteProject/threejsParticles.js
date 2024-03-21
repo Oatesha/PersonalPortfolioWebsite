@@ -9,6 +9,7 @@ import { fragmentShader } from './glsl/main.fragFBO.js';
 import { simvertFBO } from './glsl/simvertFBO.js';
 import { simfragFBO } from './glsl/simfragFBO.js';
 import { GUI } from 'dat.gui';
+import gsap from 'gsap';
 
 
 
@@ -109,24 +110,21 @@ function initEvents() {
   
   
 }  
-let scrollLeft, scrollTop
+let scrollLeft = 0, scrollTop = 0;
+
+let tweenX = gsap.quickTo(backgroundAnim, "left", { duration: 0.4, ease: "power3" }),
+tweenY = gsap.quickTo(backgroundAnim, "top", { duration: 0.4, ease: "power3" });
 
 function moveBackgroundAnim(x, y, scrolling) {
   if (scrolling) {
     // console.log("scrolling update");
     scrollLeft = (window.scrollX !== undefined) ? window.scrollX : (document.documentElement || document.body.parentNode || document.body).scrollLeft;
     scrollTop = (window.scrollY !== undefined) ? window.scrollY : (document.documentElement || document.body.parentNode || document.body).scrollTop;  
-    backgroundAnim.style.left = `${x + scrollLeft}px`;
-
-    backgroundAnim.style.top = `${y + scrollTop}px`;
   }
+  tweenX(x + scrollLeft);
+  tweenY(y + scrollTop);
 
-  else {
-    // console.log("not scrolling")
-    backgroundAnim.style.left = `${x + scrollLeft}px`;
-
-    backgroundAnim.style.top = `${y + scrollTop}px`;
-    }
+  
 }
 
 function initHtml() {

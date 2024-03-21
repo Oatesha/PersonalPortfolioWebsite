@@ -76,8 +76,8 @@ p {
   */
   
   transform: translate(-50%, -50%);
-  height: 200px;
-  width: 200px;
+  height: 50vh;
+  width: 50vw;
   display: flex;
   align-items: center;
   z-index: -9;
@@ -85,19 +85,32 @@ p {
   position: absolute;
   /* background: radial-gradient(circle, #ff0000 20%, #00ff00 40%, #0000ff 60%);
   box-shadow: 0 0 0 100px #ff0000, 0 0 0 200px #00ff00, 0 0 0 300px #0000ff; */
-
 }
 
-.Blur {
+.SvgContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.BackgroundAnimation svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* .Blur {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  backdrop-filter: blur(200px);
+  backdrop-filter: blur(100px);
   z-index: -1;
   overflow: auto;
-}
+} */
 
 .progressIndicator{
   position: fixed;

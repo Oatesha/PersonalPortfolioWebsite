@@ -240,7 +240,7 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     // Calculate the distance between the current position and the original position
     float distance = length(originalPos - currentPos);
 
-    if (distance < 0.1) {
+    if (distance < 0.05) {
       // If the direction is small enough, return zero vector or the direction itself
       return vec3(0.0); // or return direction;
     } 
