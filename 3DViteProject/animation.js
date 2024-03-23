@@ -57,6 +57,7 @@ function initAnim() {
     const backgroundBlobTimeline = gsap.timeline({
         repeat: -1,
         yoyo: true,
+        repeatDelay: 2,
     });
 
     // Init animation timeline
@@ -90,7 +91,7 @@ function scrollDownSmoothly() {
         delay: 0.25,
         duration: 2.5, 
         scrollTo: { y: window.innerHeight }, 
-        ease: "power2.inOut",
+        ease: "noneOut",
     });
 }
 
@@ -98,11 +99,59 @@ function scrollDownSmoothly() {
 function InitBackgroundBlobAnimationTimeline(timeline) {
 
     timeline.to(circle1, {
-        duration: 2,
-        y: "+=20vh",
-        zIndex: 5,
+        duration: 4,
+        y: "-=5vh",
         ease: "none",
     });
+    timeline.to(circle2, {
+        duration: 4,
+        y: "+=5vh",
+        ease: "none",
+    }, "<");
+
+    timeline.to(circle3, {
+        duration: 6,
+        x: "+= 10vw",
+        scale: 1.5,
+        ease: "none",
+    }, "<");
+
+    timeline.to(circle3, {
+        duration: 6,
+        y: "-=10vh",
+        x: "+=4vw",
+        scale: 1.0,
+        ease: "none",
+    });
+
+    timeline.to(circle1, { 
+        duration: 4,
+        y: "+= 5vh",
+        ease: "none",
+    }, "<");
+
+    timeline.to(circle2, { 
+        duration: 4,
+        y: "-=5vh",
+        x: "+= 2.5vw",
+        ease: "none",
+    }, "<");
+
+    timeline.to(circle2, {
+        duration: 6,
+        y: "-=12.5vh",
+        scale: 1.5,
+        zIndex: 2,
+        ease: "none",
+    })
+    timeline.to(circle1, {
+        duration: 3,
+        y: "+=15vh",
+        ease: "none",
+    }, "<")
+
+
+
 }
 
 function InitLandingAnimationTimeline() {

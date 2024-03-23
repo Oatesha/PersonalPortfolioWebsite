@@ -20,7 +20,7 @@ import gsap from 'gsap';
 // document.body.appendChild(stats.dom);
 
 // Create a new dat.GUI instance
-const gui = new GUI();
+// const gui = new GUI();
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
@@ -327,7 +327,7 @@ function initFBO() {
     scene.add(points);
     renderMaterial.uniforms.posTex.value = dataTex;
     // Add a slider for the time uniform
-    gui.add(simMaterial.uniforms.mixValue, 'value', 0.0, 1.0, 0.05).name('mixValue');
+    // gui.add(simMaterial.uniforms.mixValue, 'value', 0.0, 1.0, 0.05).name('mixValue');
     render()
   }
   
