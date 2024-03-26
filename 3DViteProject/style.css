@@ -11,6 +11,7 @@ body {
   justify-content: center; /* Add this line */
   align-items: center; /* Add this line */
   background-color: var(--background);
+  overflow: hidden; /* Hide scrollbars */
 }
 canvas {
   position: fixed;
@@ -69,14 +70,24 @@ p {
   padding: 0;
 }
 
+.MenuContainer {
+  position: fixed;
+  top: 0%;
+  right: 0%;
+  height: 10vh;
+  width: 10vw;
+  z-index: 6;
+}
+
 .HamburgerMenu {
   position: fixed;
   top: 0%;
   right: 0%;
   height: 100vh;
   width: 33vw;
-  z-index: 5;
   padding: 2rem;
+  z-index: 5;
+  pointer-events: none;
 }
 
 .MenuElements {
@@ -93,19 +104,22 @@ p {
   background-clip: content-box;
   text-align: center;
   border-radius: 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .HamburgerToggle{
   position: absolute;
   top: 0;
   right: 0;
-  width: 20%;
-  height: 10%;
+  width: 100%;
+  height: 100%;
   cursor: pointer;
-  z-index: 5;
+  z-index: 6;
 }
 
-img {
+.HamburgerToggle img {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -122,11 +136,68 @@ img {
   
 }
 
+
+project {
+  display: grid;
+  height: 100%;
+  padding: 1rem;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 2fr 1fr;
+  box-sizing: border-box;
+}
+
+project > .project-section {
+  height: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+project > .project-description-section, project > .project-nav-section {
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+}
+
+project > .project-image-section, project > .project-title-section {
+  border-left: 2px solid var(--accent);
+}
+
+project > .project-description-section, project > .project-image-section {
+  border-top: 2px solid var(--accent);
+}
+
+project > .project-title-section {
+  display: flex;
+  justify-content: space-between;
+}
+
+project > .project-title-section img {
+  flex-grow: 1;
+  height: 100px;
+  width: 100px;
+  aspect-ratio: 1/1;
+}
+
+project > .project-title-section h2 {
+  flex-grow: 3;
+}
+
+project > .project-title-section, project > .project-nav-section {
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+project > .project-nav-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+project > .project-nav-section svg {
+  flex-grow: 1;
+  height: 200px;
+}
+
 .BackgroundAnimation {
-  /* position: fixed;
-  height: 50vh;
-  width: 50vw;
-  */
   
   transform: translate(-50%, -50%);
   height: 50vh;
@@ -156,11 +227,13 @@ img {
 
 .menuBlur {
   position: fixed;
+  visibility: hidden;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
   backdrop-filter: blur(50px);
+  z-index: 4;
 }
 
 .Blur {
