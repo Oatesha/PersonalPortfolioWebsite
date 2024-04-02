@@ -1,7 +1,7 @@
 export const fragmentShader = /* glsl */`
 
 
-uniform float u_time; // Uniform variable to pass time
+uniform float u_time; 
 uniform sampler2D uTexture;
 varying vec2 vUv;
 

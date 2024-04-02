@@ -3,16 +3,16 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import Lenis from '@studio-freight/lenis'
 import SplitType from 'split-type'
-import { camera } from "./threejsParticles";
-import { getSimMaterial } from "./threejsParticles";
+import { camera, getSimMaterial, getRenderer } from "./threejsParticles";
 
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
-let simMaterial;
+
+let simMaterial, renderer;
 
 // sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
-
+console.log(sectionsElements);
 // svg
 const circle1 = document.querySelector('#circleOne');
 const circle2 = document.querySelector('#circleTwo');
@@ -62,8 +62,10 @@ function initAnim() {
 
     // Init animation timeline
     simMaterial = getSimMaterial();
+    renderer = getRenderer();
     InitLandingAnimationTimeline();
     InitMiddlePageAnimationTimeline();
+
     InitBackgroundBlobAnimationTimeline(backgroundBlobTimeline);
     
     const animationTimeline = gsap.timeline({
@@ -174,12 +176,14 @@ function InitMiddlePageAnimationTimeline() {
         scrollTrigger: {
             trigger: ".LandingPageSection",
             start: "55% center",
+            end: () => `+=${sectionsElements[1].getBoundingClientRect().height * 1.5}`,
             markers: true,
             scrub: true,
         },
     });
-    middlePageTl.to(camera.position, {x: -5, z: 0});
+    middlePageTl.to(camera.position, {x: "-=90vw"});
 }
+
 
 
 

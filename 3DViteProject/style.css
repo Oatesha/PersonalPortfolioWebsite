@@ -13,7 +13,8 @@ body {
   background-color: var(--background);
   overflow: hidden; /* Hide scrollbars */
 }
-canvas {
+
+#threeJSCanvas {
   position: fixed;
   top: 0;
   left: 0;
@@ -144,6 +145,7 @@ project {
   grid-template-columns: 2fr 1fr;
   grid-template-rows: 2fr 1fr;
   box-sizing: border-box;
+  position: absolute;
 }
 
 project > .project-section {
@@ -165,15 +167,41 @@ project > .project-description-section, project > .project-image-section {
   border-top: 2px solid var(--accent);
 }
 
+project > .project-title-section, project > .project-nav-section {
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+/*
+top two sections of grid
+*/
+
+project > .project-description-section {
+  display: flex;
+  align-items: flex-end;
+}
+
+project > .project-description-section p {
+  font-size: 1.999rem;
+  padding: 1.5rem;
+  text-align: justify;
+}
+
+
+/*
+bottom two sections of grid
+*/
+
 project > .project-title-section {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
-project > .project-title-section img {
+project > .project-title-section svg {
   flex-grow: 1;
-  height: 100px;
-  width: 100px;
+  min-height: 100px;
+  min-width: 100px;
   aspect-ratio: 1/1;
 }
 
@@ -181,10 +209,6 @@ project > .project-title-section h2 {
   flex-grow: 3;
 }
 
-project > .project-title-section, project > .project-nav-section {
-  border-top: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
-}
 
 project > .project-nav-section {
   display: flex;

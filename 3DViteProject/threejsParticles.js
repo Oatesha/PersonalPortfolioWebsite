@@ -4,11 +4,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { vertexShader } from './glsl/main.vertFBO.js';
 import { fragmentShader } from './glsl/main.fragFBO.js';
 import { simvertFBO } from './glsl/simvertFBO.js';
 import { simfragFBO } from './glsl/simfragFBO.js';
-import { GUI } from 'dat.gui';
+import { imageVertexShader } from './glsl/imageVertexShader.js';
+import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import gsap from 'gsap';
 
 
@@ -31,8 +33,20 @@ export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.i
 const renderer = new THREE.WebGLRenderer({alpha: true});
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.domElement.id = 'threeJSCanvas'; 
 document.body.appendChild( renderer.domElement );
 
+let imageScene = new THREE.Scene();
+let imagecam = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
+const imageRenderer = new THREE.WebGLRenderer({alpha: true});
+imageRenderer.setPixelRatio(window.devicePixelRatio);
+imageRenderer.setSize(window.innerWidth, window.innerHeight);
+const canvas = imageRenderer.domElement;
+canvas.style.width ='100%';
+canvas.style.height='100%';
+canvas.width  = canvas.offsetWidth;
+canvas.height = canvas.offsetHeight;
+document.querySelector(".project-image-section.project-section").appendChild( imageRenderer.domElement );
 
 
 
@@ -50,7 +64,6 @@ dummyObject.position.set (0, 0, 0);
 
 // background div 
 const backgroundAnim = document.querySelector(".BackgroundAnimation");
-const blurHtml = document.querySelector(".Blur");
 
 
 function initEvents() {
@@ -91,25 +104,53 @@ function initEvents() {
 
   initHtml();
 
+  // const modelLoader = new GLTFLoader();
+
+  // modelLoader.load( 'path/to/model.glb', function ( gltf ) {
+
+  // 	scene.add( gltf.scene );
+
+  // }, undefined, function ( error ) {
+
+  // 	console.error( error );
+
+  // } );
+
+  const textureLoader = new THREE.TextureLoader();
+
+  const imageGeo = new THREE.PlaneGeometry(40,20);
+  const imageMat = new THREE.ShaderMaterial({
+    uniforms: {
+      u_texture: { type: "t", value: null }
+    },
+    vertexShader: imageVertexShader,
+    fragmentShader: imageFragmentShader,
+
+  })
+
+  imageMat.uniforms.u_texture.value = textureLoader.load('/cop1.png');
+  const image = new THREE.Mesh(imageGeo, imageMat);
+  imageScene.add(image);
+
   const loader = new FontLoader();
   loader.load( 'Epilogue Medium_Regular.json', 
   function ( font ) {
 
     textGeometry = new TextGeometry('Harrison', {
-      size:10,
-      height:0,
-      font:font,
-
-      style:'normal',
-      bevelSize:0.25,
-      bevelThickness:0.50,
-      bevelEnabled:true,
-    });
+      size: 10,
+      height: 0,
+      font: font,
+      style: 'normal',
+      bevelSize: 0.25,
+      bevelThickness: 0.50,
+      bevelEnabled: true,
+    });  
     initFBO();
   });
-  
-  
-}  
+}
+
+
+
 let scrollLeft = 0, scrollTop = 0;
 
 let tweenX = gsap.quickTo(backgroundAnim, "left", { duration: 0.4, ease: "power3" }),
@@ -357,7 +398,7 @@ function initFBO() {
       let {x,y} = intersects[0].point;
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
-    
+    imageRenderer.render(imageScene, imagecam);
     // Request the next frame
     
     
@@ -370,6 +411,11 @@ function initFBO() {
 export function getSimMaterial() {
   return simMaterial;
 }
+
+export function getRenderer() {
+  return renderer;
+}
+
   
   
     // function parseMesh(geometry) {
