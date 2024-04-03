@@ -36,17 +36,20 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.domElement.id = 'threeJSCanvas'; 
 document.body.appendChild( renderer.domElement );
 
+
 let imageScene = new THREE.Scene();
-let imagecam = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
-const imageRenderer = new THREE.WebGLRenderer({alpha: true});
+let imagecam = new THREE.PerspectiveCamera(10, window.innerWidth / window.innerHeight, 0.01, 3000);
+const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
+
+imagecam.aspect = window.innerWidth / window.innerHeight;
+imagecam.updateProjectionMatrix();
+
 imageRenderer.setPixelRatio(window.devicePixelRatio);
-imageRenderer.setSize(window.innerWidth, window.innerHeight);
-const canvas = imageRenderer.domElement;
-canvas.style.width ='100%';
-canvas.style.height='100%';
-canvas.width  = canvas.offsetWidth;
-canvas.height = canvas.offsetHeight;
-document.querySelector(".project-image-section.project-section").appendChild( imageRenderer.domElement );
+
+const projectImageSection = document.querySelector(".project-image-section.project-section");
+setImageRendererSize();
+
+projectImageSection.appendChild(imageRenderer.domElement);
 
 
 
@@ -59,11 +62,39 @@ const raycaster = new THREE.Raycaster();
 const dummyGeom = new THREE.PlaneGeometry(512, 512);
 const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
 const dummyObject = new THREE.Mesh(dummyGeom, dummyMat);
-// scene.add(dummyObject);
 dummyObject.position.set (0, 0, 0);
 
 // background div 
 const backgroundAnim = document.querySelector(".BackgroundAnimation");
+
+
+function setImageRendererSize() {
+
+  // const controls = new OrbitControls(imagecam, imageRenderer.domElement);
+  let elementWidth, elementHeight;
+
+  // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
+  var cs = getComputedStyle(projectImageSection);
+
+
+  var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+
+  var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+  var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+
+  console.log(`${paddingX} ${paddingY} ${borderX} ${borderY} borders`);
+  console.log(`${projectImageSection.offsetWidth} ${projectImageSection.offsetHeight}`);
+
+  // Element width and height minus padding and border
+  elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
+  elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
+
+  console.log(elementHeight + " " + elementWidth);
+
+
+  imageRenderer.setSize(elementWidth, elementHeight, false);
+}
 
 
 function initEvents() {
@@ -83,8 +114,13 @@ function initEvents() {
     // camera.left = ( (window.innerWidth)) / -150;
     // camera.right = ((window.innerWidth)) / 150;
     camera.updateProjectionMatrix();
-
     renderer.setSize( window.innerWidth, window.innerHeight );
+
+    imagecam.aspect = window.innerWidth / window.innerHeight;
+    imagecam.updateProjectionMatrix();
+
+    setImageRendererSize();
+
     initHtml();
 
   }
@@ -117,8 +153,10 @@ function initEvents() {
   // } );
 
   const textureLoader = new THREE.TextureLoader();
-
-  const imageGeo = new THREE.PlaneGeometry(40,20);
+  
+  const imageGeo = new THREE.PlaneGeometry(7, 7);
+  
+  imageGeo.center();
   const imageMat = new THREE.ShaderMaterial({
     uniforms: {
       u_texture: { type: "t", value: null }
@@ -127,10 +165,18 @@ function initEvents() {
     fragmentShader: imageFragmentShader,
 
   })
-
-  imageMat.uniforms.u_texture.value = textureLoader.load('/cop1.png');
   const image = new THREE.Mesh(imageGeo, imageMat);
+  
+  var tex = textureLoader.load("/Minecraftle.png", (tex) => {
+    tex.needsUpdate = true;
+    imageMat.uniforms.u_texture.value = tex
+    image.scale.set(1.0, tex.image.height / tex.image.width, 1.0);
+  });
+  
   imageScene.add(image);
+
+  imagecam.position.set(0, 0, 15);
+  imagecam.lookAt(0, 0, 0);
 
   const loader = new FontLoader();
   loader.load( 'Epilogue Medium_Regular.json', 

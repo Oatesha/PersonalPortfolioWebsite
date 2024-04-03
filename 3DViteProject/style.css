@@ -146,6 +146,12 @@ project {
   grid-template-rows: 2fr 1fr;
   box-sizing: border-box;
   position: absolute;
+  left: 0px;
+  top: 0px;
+}
+
+.ProjectSection > project[status="inactive"] {
+  transform: translateX(-100%);
 }
 
 project > .project-section {
@@ -175,6 +181,10 @@ project > .project-title-section, project > .project-nav-section {
 /*
 top two sections of grid
 */
+
+project > .project-image-section {
+  overflow: hidden;
+}
 
 project > .project-description-section {
   display: flex;
@@ -359,6 +369,7 @@ project > .project-nav-section svg {
 
 .ProjectSection {
   height: 100vh;
+  position: relative;
 }
 
 .ProjectList {
