@@ -38,7 +38,7 @@ document.body.appendChild( renderer.domElement );
 
 
 let imageScene = new THREE.Scene();
-let imagecam = new THREE.PerspectiveCamera(10, window.innerWidth / window.innerHeight, 0.01, 3000);
+export const imagecam = new THREE.PerspectiveCamera(10, window.innerWidth / window.innerHeight, 0.01, 3000);
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 
 imagecam.aspect = window.innerWidth / window.innerHeight;
