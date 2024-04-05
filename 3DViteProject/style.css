@@ -150,6 +150,11 @@ project {
   top: 0px;
 }
 
+.reorder {
+  grid-template-columns: 1fr 2fr;
+  grid-template-rows: 1fr 2fr;
+}
+
 .ProjectSection > project[status="inactive"] {
   transform: translateX(-100%);
 }
@@ -204,7 +209,7 @@ bottom two sections of grid
 
 project > .project-title-section {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   align-items: center;
 }
 
@@ -331,7 +336,7 @@ project > .project-nav-section svg {
   z-index: 1;
 }
 
-.char {
+.LoadingText .char {
   transform: translateY(126px);
   transition: transform;
 }

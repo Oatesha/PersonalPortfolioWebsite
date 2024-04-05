@@ -2,8 +2,10 @@ import { gsap } from "gsap";
 import { Observer } from "gsap/all";
 import { imagecam } from "./threejsParticles";
 import { Flip } from "gsap/all";
+import SplitType from 'split-type'
+import ScrambleText from 'scramble-text';
 
-gsap.registerPlugin(Observer, Flip);
+gsap.registerPlugin(Observer, Flip, ScrambleText);
 
 
 const hamburgerMenu = document.querySelector(".HamburgerToggle");
@@ -11,11 +13,10 @@ const menu = document.querySelector(".MenuElements");
 const blurBackground = document.querySelector(".menuBlur");
 const buttonSVGOne = document.querySelector("#buttonSVGOne");
 const buttonSVGTwo = document.querySelector("#buttonSVGTwo");
-let activeProjectSection = 0;
 const projectSections = gsap.utils.toArray(`.project-section`);
 
-console.log(document.querySelector(`[pos-index="1"]`));
-console.log(buttonSVGOne);
+let activeProjectSection = 0;
+
 
 hamburgerMenu.addEventListener("click", toggleMenu);
 hamburgerMenu.addEventListener("mouseenter", hoverHamburger);
@@ -81,34 +82,40 @@ function projectButtonHover (state) {
       }
 }
 
+const projectData = [
+    {
+      title: "Minecraftle",
+      description: "Minecraftle is a wordle like clone based around minecraft where users have to guess the daily recipe."
+    },
+    {
+      title: "Project 2",
+      description: "This is the description for Project 2."
+    }
+  ];
+
+
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {
     var targetButton = button == 1 ? buttonSVGOne : buttonSVGTwo;
+  
+    const projectTitleSection = document.querySelector('[pos-index="0"] .project-title-section.project-section');
+    const projectImageSection = document.querySelector('[pos-index="0"] .project-image-section.project-section');
+    const projectDescriptionSection = document.querySelector('[pos-index="0"] .project-description-section.project-section');
+    
+    const nextIndex = (activeProjectSection + 1) % projectData.length;
+    activeProjectSection += 1;
+  
+    const newProjTl = gsap.timeline();
+  
+    newProjTl
+      .to(projectTitleSection, { duration: 0.5, x: '-100%', stagger: 0.1 })
+      .to(projectTitleSection, { duration: 0.5, x: '100%', stagger: 0.1 })
+      .call(() => {
+        projectTitleSection.innerHTML = projectData[nextIndex].title;
+        projectDescriptionSection.innerHTML = projectData[nextIndex].description;
+      })
+      .to([projectTitleSection, projectImageSection, projectDescriptionSection], { duration: 0.5, x: 0, stagger: 0.1 });
 
-    const state = Flip.getState('[pos-index="0"]');
-    console.log(state);
-
-    // Get the current and desired sections of the active project
-    var currentDescriptionSection = document.querySelector('[status="active"').querySelector('.project-description-section');
-    var currentTitleSection = document.querySelector('[status="active"').querySelector('.project-title-section');
-    var currentNavSection = document.querySelector('[status="active"').querySelector('.project-nav-section');
-    var desiredDescriptionSection = document.querySelector('[pos-index="1"').querySelector('.project-description-section');
-    var desiredTitleSection = document.querySelector('[pos-index="1"').querySelector('.project-title-section');
-    var desiredNavSection = document.querySelector('[pos-index="1"').querySelector('.project-nav-section');
-
-    // Replace description, title, and nav sections of the active project with the next project's sections
-    currentDescriptionSection.innerHTML = desiredDescriptionSection.innerHTML;
-    currentTitleSection.innerHTML = desiredTitleSection.innerHTML;
-
-    // // Update status attribute to switch active and inactive projects
-    // currentProject.setAttribute('status', 'inactive');
-    // nextProject.setAttribute('status', 'active');
-
-    Flip.from(state, {
-        absolute: true,
-        duration: 5,
-        ease: "power2.inOut",
-    });
 
 
     // gsap.to(activeProjectSection, {

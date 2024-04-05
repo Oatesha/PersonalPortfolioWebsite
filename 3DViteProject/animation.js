@@ -12,14 +12,15 @@ let simMaterial, renderer;
 
 // sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
-console.log(sectionsElements);
+// console.log(sectionsElements);
+
 // svg
 const circle1 = document.querySelector('#circleOne');
 const circle2 = document.querySelector('#circleTwo');
 const circle3 = document.querySelector('#circleThree');
-console.log(circle1);
-console.log(circle2);
-console.log(circle3);
+// console.log(circle1);
+// console.log(circle2);
+// console.log(circle3);
 
 // split load text
 new SplitType(".LoadingText");
