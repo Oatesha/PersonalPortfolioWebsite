@@ -111,8 +111,9 @@ function projectButtonPress(button) {
       .to(projectTitleSection, { duration: 0.5, x: '-100%', stagger: 0.1 })
       .to(projectTitleSection, { duration: 0.5, x: '100%', stagger: 0.1 })
       .call(() => {
-        projectTitleSection.innerHTML = projectData[nextIndex].title;
-        projectDescriptionSection.innerHTML = projectData[nextIndex].description;
+        console.log(projectTitleSection.childNodes[1]);
+        projectTitleSection.childNodes[1].innerHTML = projectData[nextIndex].title;
+        projectDescriptionSection.childNodes[1].innerHTML = projectData[nextIndex].description;
       })
       .to([projectTitleSection, projectImageSection, projectDescriptionSection], { duration: 0.5, x: 0, stagger: 0.1 });
 
