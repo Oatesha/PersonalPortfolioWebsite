@@ -1,10 +1,8 @@
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { vertexShader } from './glsl/main.vertFBO.js';
 import { fragmentShader } from './glsl/main.fragFBO.js';
 import { simvertFBO } from './glsl/simvertFBO.js';
@@ -26,7 +24,7 @@ import gsap from 'gsap';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry;
+let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry, imageMat;
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
@@ -38,19 +36,25 @@ document.body.appendChild( renderer.domElement );
 
 
 let imageScene = new THREE.Scene();
+let imageScene2 = new THREE.Scene();
 export const imagecam = new THREE.PerspectiveCamera(10, window.innerWidth / window.innerHeight, 0.01, 3000);
+let imagecam2;
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
+const imageRenderer2 = new THREE.WebGLRenderer({ alpha: true });
 
 imagecam.aspect = window.innerWidth / window.innerHeight;
 imagecam.updateProjectionMatrix();
 
 imageRenderer.setPixelRatio(window.devicePixelRatio);
+imageRenderer2.setPixelRatio(window.devicePixelRatio);
 
 const projectImageSection = document.querySelector(".project-image-section.project-section");
-setImageRendererSize();
+const projectImageSection2 = document.querySelector(`[pos-index="1"]`).querySelector(".project-image-section.project-section");
+console.log(projectImageSection2);
 
 projectImageSection.appendChild(imageRenderer.domElement);
-
+// projectImageSection2.appendChild(imageRenderer2.domElement);
+setImageRendererSize();
 
 
 // renderer.setClearColor(0x0A0A09);
@@ -67,25 +71,36 @@ dummyObject.position.set (0, 0, 0);
 // background div 
 const backgroundAnim = document.querySelector(".BackgroundAnimation");
 
+const textureLoader = new THREE.TextureLoader();
+
+
+
+// list of textures in order of project pos-index 0 through to max length
+const textures = [
+  "/Minecraftle.png",
+  "None",
+  "/Vendetta.png",
+  '/Qfin.png'
+]
 
 function setImageRendererSize() {
-
+  
   // const controls = new OrbitControls(imagecam, imageRenderer.domElement);
   let elementWidth, elementHeight;
-
+  
   // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
   var cs = getComputedStyle(projectImageSection);
-
-
+  
+  
   var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-
+  
   var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
   var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-
+  
   console.log(`${paddingX} ${paddingY} ${borderX} ${borderY} borders`);
   console.log(`${projectImageSection.offsetWidth} ${projectImageSection.offsetHeight}`);
-
+  
   // Element width and height minus padding and border
   elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
   elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
@@ -94,6 +109,8 @@ function setImageRendererSize() {
 
 
   imageRenderer.setSize(elementWidth, elementHeight, false);
+  imageRenderer2.setSize(elementWidth, elementHeight, false);
+  
 }
 
 
@@ -118,6 +135,9 @@ function initEvents() {
 
     imagecam.aspect = window.innerWidth / window.innerHeight;
     imagecam.updateProjectionMatrix();
+
+    imagecam2.aspect = window.innerWidth / window.innerHeight;
+    imagecam2.updateProjectionMatrix();
 
     setImageRendererSize();
 
@@ -152,12 +172,11 @@ function initEvents() {
 
   // } );
 
-  const textureLoader = new THREE.TextureLoader();
   
   const imageGeo = new THREE.PlaneGeometry(7, 7);
   
   imageGeo.center();
-  const imageMat = new THREE.ShaderMaterial({
+  imageMat = new THREE.ShaderMaterial({
     uniforms: {
       u_texture: { type: "t", value: null }
     },
@@ -175,8 +194,18 @@ function initEvents() {
   
   imageScene.add(image);
 
+
   imagecam.position.set(0, 0, 15);
   imagecam.lookAt(0, 0, 0);
+  // Clone the scene and camera from imageRenderer to imageRenderer2
+  imageScene.children.forEach(child => {
+    imageScene2.add(child.clone());
+  });
+  imagecam2 = imagecam.clone();
+  imagecam2.updateProjectionMatrix();
+
+  // Update the imageRenderer2 with the cloned scene and camera
+  imageRenderer2.render(imageScene2, imagecam2);
 
   const loader = new FontLoader();
   loader.load( 'Epilogue Medium_Regular.json', 
@@ -445,6 +474,7 @@ function initFBO() {
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
     imageRenderer.render(imageScene, imagecam);
+    imageRenderer2.render(imageScene2, imagecam2);
     // Request the next frame
     
     
@@ -459,9 +489,24 @@ export function getSimMaterial() {
 }
 
 export function getRenderer() {
-  return renderer;
+    return renderer;
 }
 
+export function updateImageTexture(index) {
+  console.log(index);
+  textureLoader.load(
+    textures[index],
+    (tex) => {
+      tex.needsUpdate = true;
+      imageMat.uniforms.u_texture.value = tex;
+      imageMat.uniforms.u_texture.needsUpdate = true;
+    },
+    undefined,
+    (error) => {
+      console.error('Error loading texture:', error);
+    }
+  );
+}
   
   
     // function parseMesh(geometry) {

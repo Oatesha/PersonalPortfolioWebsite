@@ -191,6 +191,13 @@ project > .project-image-section {
   overflow: hidden;
 }
 
+project > .project-image-section img {
+  padding: 1rem;
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+
 project > .project-description-section {
   display: flex;
   align-items: flex-end;

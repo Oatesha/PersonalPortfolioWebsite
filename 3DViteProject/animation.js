@@ -185,6 +185,12 @@ function InitMiddlePageAnimationTimeline() {
     middlePageTl.to(camera.position, {x: "-=90vw"});
 }
 
+export function animateParticlesIn() {
+    gsap.to(camera.position, {
+        duration: 1,
+        x: "0",
+    })
+}
 
 
 

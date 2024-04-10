@@ -1,11 +1,11 @@
 import { gsap } from "gsap";
 import { Observer } from "gsap/all";
-import { imagecam } from "./threejsParticles";
+import { animateParticlesIn } from "./animation";
+import { imagecam, updateImageTexture } from "./threejsParticles";
 import { Flip } from "gsap/all";
 import SplitType from 'split-type'
-import ScrambleText from 'scramble-text';
 
-gsap.registerPlugin(Observer, Flip, ScrambleText);
+gsap.registerPlugin(Observer, Flip);
 
 
 const hamburgerMenu = document.querySelector(".HamburgerToggle");
@@ -16,6 +16,7 @@ const buttonSVGTwo = document.querySelector("#buttonSVGTwo");
 const projectSections = gsap.utils.toArray(`.project-section`);
 
 let activeProjectSection = 0;
+let currentCanvasPointer = 0;
 
 
 hamburgerMenu.addEventListener("click", toggleMenu);
@@ -32,6 +33,14 @@ hamburgerMenu.addEventListener("mouseleave", exitHoverHamburger);
 
 let menuVisible = false;
 let targetAlpha, targetZ;
+
+
+// window.addEventListener('DOMContentLoaded', () => {
+//   initObservers();
+//   console.log("loaded");
+// });
+
+initObservers();
 
 function toggleMenu() {
     menuVisible ? targetAlpha = 0.0 : targetAlpha = 1.0; 
@@ -55,90 +64,93 @@ function exitHoverHamburger() {
     console.log("left");
 }
 
-Observer.create({
-    type: "pointer",
-    target: buttonSVGOne,
-    onHover: () => projectButtonHover(true),
-    onHoverEnd: () =>  projectButtonHover(false),
-    onPress: () =>  projectButtonPress(1),
-});
 
-Observer.create({
-    type: "pointer",
-    target: buttonSVGTwo,
-    onHover: () => projectButtonHover(true),
-    onHoverEnd: () =>  projectButtonHover(false),
-    onPress: () =>  projectButtonPress(2),
-})
 
-// animate button on hover state true for entering hover false for exiting
-function projectButtonHover (state) {
-    if (state) {
-        // Enter hover state
-        gsap.to(buttonSVGOne, { scale: 1.2, duration: 0.3, ease: "back" });
-      } else {
-        // Exit hover state
-        gsap.to(buttonSVGOne, { scale: 1, duration: 0.3, ease: "back" });
-      }
+function initObservers() {
+  const svgButtons = document.querySelectorAll('.project-nav-section svg');
+  svgButtons.forEach(element => {
+
+    Observer.create({
+      type: "pointer",
+      target: element,
+      onHover: () => projectButtonHover(true, element),
+      onHoverEnd: () =>  projectButtonHover(false, element),
+      onPress: () =>  projectButtonPress(element),
+    });
+  });
 }
 
-const projectData = [
-    {
-      title: "Minecraftle",
-      description: "Minecraftle is a wordle like clone based around minecraft where users have to guess the daily recipe."
-    },
-    {
-      title: "Project 2",
-      description: "This is the description for Project 2."
+// animate button on hover state true for entering hover false for exiting
+function projectButtonHover (state, button) {
+  console.log(button)
+  var targetButton = button;
+
+  if (state) {
+      // Enter hover state
+      gsap.to(targetButton, { scale: 1.2, duration: 0.3, ease: "back" });
+    } else {
+      // Exit hover state
+      gsap.to(targetButton, { scale: 1, duration: 0.3, ease: "back" });
     }
-  ];
+}
 
 
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {
-    var targetButton = button == 1 ? buttonSVGOne : buttonSVGTwo;
-  
-    const projectTitleSection = document.querySelector('[pos-index="0"] .project-title-section.project-section');
-    const projectImageSection = document.querySelector('[pos-index="0"] .project-image-section.project-section');
-    const projectDescriptionSection = document.querySelector('[pos-index="0"] .project-description-section.project-section');
-    
-    const nextIndex = (activeProjectSection + 1) % projectData.length;
-    activeProjectSection += 1;
-  
-    const newProjTl = gsap.timeline();
-  
+  var targetButton = button
+
+  const currentProject = document.querySelector('[status="active"]');
+  activeProjectSection += 1;
+  const nextProject = document.querySelector(`[pos-index="${activeProjectSection}"]`);
+
+  const newProjTl = gsap.timeline();
+  console.log(currentProject.childNodes[1]);
+  // Get the Three.js canvas element from the current project
+  const currentCanvasElement = currentProject.childNodes[1];
+  console.log(currentCanvasElement);
+
+
+
+
+  if (targetButton.id === "buttonSVGOne") {
     newProjTl
-      .to(projectTitleSection, { duration: 0.5, x: '-100%', stagger: 0.1 })
-      .to(projectTitleSection, { duration: 0.5, x: '100%', stagger: 0.1 })
+      .to(currentProject, { duration: 2.5, x: '-100%', opacity: "0", ease: "power3.out"})
+      .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, activeProjectSection], "<0.2")
+
+      .fromTo(nextProject, { x: '100%', opacity: "0" }, { duration: 2.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-0.2");
+  } 
+
+  else {
+    newProjTl
+      .to(currentProject, { duration: 1.5, x: '100%', stagger: 0.1 })
       .call(() => {
-        console.log(projectTitleSection.childNodes[1]);
-        projectTitleSection.childNodes[1].innerHTML = projectData[nextIndex].title;
-        projectDescriptionSection.childNodes[1].innerHTML = projectData[nextIndex].description;
+        // Call the switchImageCanvasSection function
+        switchImageCanvasSection(nextProject, currentCanvasElement, activeProjectSection);
       })
-      .to([projectTitleSection, projectImageSection, projectDescriptionSection], { duration: 0.5, x: 0, stagger: 0.1 });
 
+      .fromTo(nextProject, { x: '-100%' }, { duration: 1.5, x: '0%', stagger: 0.1 });
+  }
 
+}
 
-    // gsap.to(activeProjectSection, {
-    //     duration: 0.5,
-    //     x: '-100%',
-    //     opacity: 0,
-    //     ease: 'power2.inOut',
-    //     onComplete: () => {
-    //       // Animate in the new project content
-    //       gsap.fromTo(
-    //         document.querySelector(`[pos-index="1"]`),
-    //         {
-    //           x: '100%',
-    //           opacity: 0,
-    //         },
-    //         {
-    //           duration: 0.5,
-    //           x: '0%',
-    //           opacity: 1,
-    //           ease: 'power2.inOut',
-    //         }
-    //       );
-    //     },
-    //   });
+// hacky but works
+function switchImageCanvasSection(project, currentCanvasElement, currentProject, activeProjectSection) {
+
+  if (activeProjectSection == 1) {
+    animateParticlesIn();
+    return;
+  }
+
+  console.log(project.childNodes[1].childNodes)
+
+  project.childNodes[1].childNodes[0].replaceWith(currentCanvasElement.firstChild);
+  currentCanvasPointer = (currentCanvasPointer + 1) % 4;
+  console.log(currentCanvasPointer);
+  
+  // console.log(currentProject.childNodes[1]);
+  // currentProject.childNodes[1].appendChild(imageElement);
+
+  // currentProject.childNodes[1].replaceWith(imageElement);
+  updateImageTexture(activeProjectSection);
+
 }
