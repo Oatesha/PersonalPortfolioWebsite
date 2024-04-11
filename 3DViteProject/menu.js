@@ -15,7 +15,7 @@ const buttonSVGOne = document.querySelector("#buttonSVGOne");
 const buttonSVGTwo = document.querySelector("#buttonSVGTwo");
 const projectSections = gsap.utils.toArray(`.project-section`);
 
-let activeProjectSection = 0;
+let nextProjectSection = 0;
 let currentCanvasPointer = 0;
 
 
@@ -82,7 +82,7 @@ function initObservers() {
 
 // animate button on hover state true for entering hover false for exiting
 function projectButtonHover (state, button) {
-  console.log(button)
+  // console.log(button)
   var targetButton = button;
 
   if (state) {
@@ -97,60 +97,57 @@ function projectButtonHover (state, button) {
 
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {
-  var targetButton = button
 
   const currentProject = document.querySelector('[status="active"]');
-  activeProjectSection += 1;
-  const nextProject = document.querySelector(`[pos-index="${activeProjectSection}"]`);
+
+  var pointerIncrement = button.id == "buttonSVGOne" ? 1 : -1;
+
+
+  nextProjectSection = (nextProjectSection + pointerIncrement) % 3;
+
+  if (nextProjectSection > 0) {nextProjectSection += 3};
+
+
+  const nextProject = document.querySelector(`[pos-index="${nextProjectSection}"]`);
+
 
   const newProjTl = gsap.timeline();
-  console.log(currentProject.childNodes[1]);
+  // console.log(currentProject.childNodes[1]);
   // Get the Three.js canvas element from the current project
-  const currentCanvasElement = currentProject.childNodes[1];
-  console.log(currentCanvasElement);
+  const currentCanvasElement = document.querySelector(`[pos-index="${currentCanvasPointer}"]`);
+  // console.log(currentCanvasElement);
+  // console.log(nextProject);
 
+  newProjTl
+    .to(currentProject, { duration: 2.5, x: '-100%', opacity: "0", ease: "power3.out"})
+    .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, nextProjectSection], "<0.2")
+    .fromTo(nextProject, { x: '100%', opacity: "0" }, { duration: 2.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-0.2");
 
-
-
-  if (targetButton.id === "buttonSVGOne") {
-    newProjTl
-      .to(currentProject, { duration: 2.5, x: '-100%', opacity: "0", ease: "power3.out"})
-      .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, activeProjectSection], "<0.2")
-
-      .fromTo(nextProject, { x: '100%', opacity: "0" }, { duration: 2.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-0.2");
-  } 
-
-  else {
-    newProjTl
-      .to(currentProject, { duration: 1.5, x: '100%', stagger: 0.1 })
-      .call(() => {
-        // Call the switchImageCanvasSection function
-        switchImageCanvasSection(nextProject, currentCanvasElement, activeProjectSection);
-      })
-
-      .fromTo(nextProject, { x: '-100%' }, { duration: 1.5, x: '0%', stagger: 0.1 });
-  }
 
 }
 
 // hacky but works
-function switchImageCanvasSection(project, currentCanvasElement, currentProject, activeProjectSection) {
+function switchImageCanvasSection(project, currentCanvasElement, currentProject, nextProjectSection) {
 
-  if (activeProjectSection == 1) {
+  currentProject.setAttribute("status", "inactive");
+  project.setAttribute("status", "active");
+
+  if (nextProjectSection == 1) {
     animateParticlesIn();
     return;
   }
 
-  console.log(project.childNodes[1].childNodes)
-
+  // console.log(project.childNodes[1].childNodes)
   project.childNodes[1].childNodes[0].replaceWith(currentCanvasElement.firstChild);
-  currentCanvasPointer = (currentCanvasPointer + 1) % 4;
-  console.log(currentCanvasPointer);
+  currentCanvasPointer = project.getAttribute("pos-index");
+  console.log(currentCanvasPointer + " currcanvaspointer");
+  console.log(currentCanvasElement);
   
   // console.log(currentProject.childNodes[1]);
   // currentProject.childNodes[1].appendChild(imageElement);
 
   // currentProject.childNodes[1].replaceWith(imageElement);
-  updateImageTexture(activeProjectSection);
+  updateImageTexture(nextProjectSection);
+
 
 }

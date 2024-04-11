@@ -36,24 +36,17 @@ document.body.appendChild( renderer.domElement );
 
 
 let imageScene = new THREE.Scene();
-let imageScene2 = new THREE.Scene();
 export const imagecam = new THREE.PerspectiveCamera(10, window.innerWidth / window.innerHeight, 0.01, 3000);
-let imagecam2;
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
-const imageRenderer2 = new THREE.WebGLRenderer({ alpha: true });
 
 imagecam.aspect = window.innerWidth / window.innerHeight;
 imagecam.updateProjectionMatrix();
 
 imageRenderer.setPixelRatio(window.devicePixelRatio);
-imageRenderer2.setPixelRatio(window.devicePixelRatio);
 
 const projectImageSection = document.querySelector(".project-image-section.project-section");
-const projectImageSection2 = document.querySelector(`[pos-index="1"]`).querySelector(".project-image-section.project-section");
-console.log(projectImageSection2);
 
 projectImageSection.appendChild(imageRenderer.domElement);
-// projectImageSection2.appendChild(imageRenderer2.domElement);
 setImageRendererSize();
 
 
@@ -109,7 +102,6 @@ function setImageRendererSize() {
 
 
   imageRenderer.setSize(elementWidth, elementHeight, false);
-  imageRenderer2.setSize(elementWidth, elementHeight, false);
   
 }
 
@@ -135,9 +127,6 @@ function initEvents() {
 
     imagecam.aspect = window.innerWidth / window.innerHeight;
     imagecam.updateProjectionMatrix();
-
-    imagecam2.aspect = window.innerWidth / window.innerHeight;
-    imagecam2.updateProjectionMatrix();
 
     setImageRendererSize();
 
@@ -197,15 +186,7 @@ function initEvents() {
 
   imagecam.position.set(0, 0, 15);
   imagecam.lookAt(0, 0, 0);
-  // Clone the scene and camera from imageRenderer to imageRenderer2
-  imageScene.children.forEach(child => {
-    imageScene2.add(child.clone());
-  });
-  imagecam2 = imagecam.clone();
-  imagecam2.updateProjectionMatrix();
 
-  // Update the imageRenderer2 with the cloned scene and camera
-  imageRenderer2.render(imageScene2, imagecam2);
 
   const loader = new FontLoader();
   loader.load( 'Epilogue Medium_Regular.json', 
@@ -474,7 +455,6 @@ function initFBO() {
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
     imageRenderer.render(imageScene, imagecam);
-    imageRenderer2.render(imageScene2, imagecam2);
     // Request the next frame
     
     
