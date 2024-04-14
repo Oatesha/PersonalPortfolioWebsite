@@ -102,11 +102,11 @@ function projectButtonPress(button) {
 
   var pointerIncrement = button.id == "buttonSVGOne" ? 1 : -1;
 
-
   nextProjectSection = (nextProjectSection + pointerIncrement) % 3;
 
-  if (nextProjectSection > 0) {nextProjectSection += 3};
+  if (nextProjectSection < 0) {nextProjectSection += 3};
 
+  
 
   const nextProject = document.querySelector(`[pos-index="${nextProjectSection}"]`);
 
@@ -119,9 +119,9 @@ function projectButtonPress(button) {
   // console.log(nextProject);
 
   newProjTl
-    .to(currentProject, { duration: 2.5, x: '-100%', opacity: "0", ease: "power3.out"})
-    .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, nextProjectSection], "<0.2")
-    .fromTo(nextProject, { x: '100%', opacity: "0" }, { duration: 2.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-0.2");
+    .to(currentProject, { duration: 1.5, x: pointerIncrement == 1 ? '-100%' : '100%', ease: "power3.out"})
+    .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, nextProjectSection], "<1.25")
+    .fromTo(nextProject, { x: pointerIncrement == 1 ? '100%' : '-100%', opacity: "0" }, { duration: 1.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-1.25");
 
 
 }
@@ -137,8 +137,20 @@ function switchImageCanvasSection(project, currentCanvasElement, currentProject,
     return;
   }
 
-  // console.log(project.childNodes[1].childNodes)
-  project.childNodes[1].childNodes[0].replaceWith(currentCanvasElement.firstChild);
+  // Get the canvas element from the current project
+  console.log(currentCanvasElement.children[0].children)
+  const currentCanvasNode = currentCanvasElement.children[0].children[0];
+  // Check if the next project already has a canvas element
+  if (project.children[0].children[0]) {
+    // If it does, replace the existing canvas element
+    project.children[0].children[0].replaceWith(currentCanvasNode);
+  } else {
+    // If it doesn't, append the current canvas element
+    project.children[0].appendChild(currentCanvasNode);
+  }
+
+  // const currentCanvas = currentCanvasElement.querySelector('canvas');
+  // project.childNodes[1].appendChild(currentCanvasElement.childNodes[1].firstChild);
   currentCanvasPointer = project.getAttribute("pos-index");
   console.log(currentCanvasPointer + " currcanvaspointer");
   console.log(currentCanvasElement);
