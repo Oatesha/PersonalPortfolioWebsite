@@ -3,12 +3,12 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import Lenis from '@studio-freight/lenis'
 import SplitType from 'split-type'
-import { camera, getSimMaterial, getRenderer } from "./threejsParticles";
+import { camera, getSimMaterial, getRenderer, getRenderMaterial } from "./threejsParticles";
 
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
-let simMaterial, renderer;
+let simMaterial, renderer, rendMaterial;
 
 // sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
@@ -63,6 +63,7 @@ function initAnim() {
 
     // Init animation timeline
     simMaterial = getSimMaterial();
+    rendMaterial = getRenderMaterial();
     renderer = getRenderer();
     InitLandingAnimationTimeline();
     InitMiddlePageAnimationTimeline();
@@ -182,13 +183,32 @@ function InitMiddlePageAnimationTimeline() {
             scrub: true,
         },
     });
-    middlePageTl.to(camera.position, {x: "-=90vw"});
+    middlePageTl.to(camera.position, {x: "-=90"});
+    middlePageTl.to(simMaterial.uniforms.state, {value: 1});
+    middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5})
 }
 
+// slope and function for widths around 1920-3440 need to fix this to be responsive on all
 export function animateParticlesIn() {
+    const slope = 1/760;
+    const yIntercept = 93;
+    const idealX = (slope * innerWidth) + yIntercept;
+    gsap.set(camera.position, {y: "-25", x: "+=" + idealX})
     gsap.to(camera.position, {
-        duration: 1,
-        x: "0",
+        duration: 1.5,
+        z: "18",
+        y: "-2.5",
+    })
+}
+
+export function animateParticlesOut() {
+    const slope = 1/760;
+    const yIntercept = 93;
+    const idealX = (slope * innerWidth) + yIntercept;
+    gsap.to(camera.position, {
+        duration: 1.5,
+        x: "-=" + idealX,
+        z: "50",
     })
 }
 

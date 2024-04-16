@@ -255,16 +255,12 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     float maxDistance = maxDist;
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    // vec3 dpos = thomasAttractor(pos);
-    // pos.x += dpos.x;
-    // pos.y += dpos.y;
-    // pos.z += dpos.z;
-
-
+    
+    
     // Read the original position without mouse
     vec3 originalPos = texture2D(originalPosTex, vUv).xyz;
     vec3 textPos = texture2D(textPosTex, vUv).xyz;
-  
+    
     
     
     vec3 mousePos3D = vec3(mouse.xy, 0.0);
@@ -281,9 +277,18 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
       pos += dirToEllipsoid * 5.0 * smoothstep(1.0, 0.0, distToEllipsoid);
     }
     
-    vec3 force = forceToOriginalPos(pos, mix(originalPos, textPos, mixValue));
-    pos += force * 0.05;
+    if (state == 1) {
+      vec3 dpos = thomasAttractor(pos);
+      pos.x += dpos.x;
+      pos.y += dpos.y;
+      pos.z += dpos.z;
+    }
+    
+    else {
+      vec3 force = forceToOriginalPos(pos, mix(originalPos, textPos, mixValue));
+      pos += force * 0.05;
 
+    }
 
     
     

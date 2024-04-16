@@ -72,8 +72,7 @@ const textureLoader = new THREE.TextureLoader();
 const textures = [
   "/Minecraftle.png",
   "None",
-  "/Vendetta.png",
-  '/Qfin.png'
+  '/QFIN.png'
 ]
 
 function setImageRendererSize() {
@@ -176,6 +175,7 @@ function initEvents() {
   const image = new THREE.Mesh(imageGeo, imageMat);
   
   var tex = textureLoader.load("/Minecraftle.png", (tex) => {
+    console.log(tex)
     tex.needsUpdate = true;
     imageMat.uniforms.u_texture.value = tex
     image.scale.set(1.0, tex.image.height / tex.image.width, 1.0);
@@ -340,6 +340,7 @@ function initFBO() {
   simMaterial = new THREE.ShaderMaterial({
     uniforms: { 
       posTex: { value: dataTex },
+      state: { value: 0 },
       maxDist: { value: 1.0 },
       time: {value: 0.0},
       mixValue: {value: 1.0},
@@ -394,6 +395,7 @@ function initFBO() {
     uniforms: { posTex: { value: null },
     mouse: { value : new THREE.Vector2(10,10)},
     // uTexture: {value: texture}, 
+    pointSize: { value: 2.0 },
     u_time: {value: 1.0}},
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
@@ -468,6 +470,10 @@ export function getSimMaterial() {
   return simMaterial;
 }
 
+export function getRenderMaterial() {
+  return renderMaterial;
+}
+
 export function getRenderer() {
     return renderer;
 }
@@ -477,9 +483,10 @@ export function updateImageTexture(index) {
   textureLoader.load(
     textures[index],
     (tex) => {
+      console.log(tex)
       tex.needsUpdate = true;
       imageMat.uniforms.u_texture.value = tex;
-      imageMat.uniforms.u_texture.needsUpdate = true;
+
     },
     undefined,
     (error) => {
