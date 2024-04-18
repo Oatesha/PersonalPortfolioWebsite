@@ -58,9 +58,11 @@ renderer.setClearColor(0x000000, 0);
 
 const pointer = new THREE.Vector2();
 const imagePointer = new THREE.Vector2();
+const prevImagePointer = new THREE.Vector2();
 
 
 const raycaster = new THREE.Raycaster();
+const imageRaycaster = new THREE.Raycaster();
 
 const dummyGeom = new THREE.PlaneGeometry(512, 512);
 const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
@@ -118,9 +120,9 @@ function adjustCameraFov() {
   console.log(imagecam.aspect + " " + planeAspectRatio);
   
   if (imagecam.aspect > planeAspectRatio) {
-		// window too large
 		imagecam.fov = fov;
-	} else {
+	} 
+  else {
 		// window too narrow
 		const cameraHeight = Math.tan(MathUtils.degToRad(fov / 2));
 		const ratio = imagecam.aspect / planeAspectRatio;
@@ -132,6 +134,7 @@ function adjustCameraFov() {
 }
 
 
+let rect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
 function initEvents() {
   window.addEventListener( 'resize', onWindowResize, false );
   // Listen for scroll event on the window
@@ -142,7 +145,7 @@ function initEvents() {
 
     moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
   }
-
+  
   function onWindowResize(){
 
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -155,7 +158,7 @@ function initEvents() {
 
     // scale images to try and maintain aspect ratio
     setImageRendererSize();
-
+    rect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
     initHtml();
 
   }
@@ -168,13 +171,15 @@ function initEvents() {
     pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
 
-    let rect = document.querySelector('[status="active"]').childNodes[1].getBoundingClientRect();
     let padding = rect.height - elementHeight
+
+    prevImagePointer.copy(imagePointer);
 
     // divide by the canvas boudning box so that the pointer works for just the image
     imagePointer.x = (((event.clientX - rect.left) / (rect.width)));
     imagePointer.y = (1 - ((event.clientY - rect.top) / (rect.height)));
     
+    console.log(imagePointer);
     
     moveBackgroundAnim(event.clientX, event.clientY, false);
 
@@ -203,7 +208,8 @@ function initEvents() {
     uniforms: {
       u_texture: { type: "t", value: null },
       u_Mouse: { type: "v2", value: new THREE.Vector2() },      
-      u_PrevMouse: { type: "v2", value: new THREE.Vector2() },      
+      u_PrevMouse: { type: "v2", value: new THREE.Vector2() },
+      u_aberrationIntensity: { type: "f", value: 1.0 },    
 
     },
     vertexShader: imageVertexShader,
@@ -212,7 +218,7 @@ function initEvents() {
   })
   image = new THREE.Mesh(imageGeo, imageMat);
   
-  var tex = textureLoader.load("/Vendetta.png", (tex) => {
+  var tex = textureLoader.load("/Minecraftle.png", (tex) => {
     tex.needsUpdate = true;
     imageMat.uniforms.u_texture.value = tex
     
@@ -506,22 +512,20 @@ function initFBO() {
     }
 
     imageRenderer.render(imageScene, imagecam);
-    
-    // imageRaycaster.setFromCamera(imagePointer, imagecam);
-    // let imageIntersects = imageRaycaster.intersectObject(image);
-    // if (imageIntersects.length > 0) {
-    //   let {x,y} = imageIntersects[0].point;
-    //   // console.log(imageIntersects[0].point);
-    //   imageMat.uniforms.u_Mouse.value = new THREE.Vector2(
-    //     x,
-    //     y,
-    //   )
-    // }
 
+    console.log(imagePointer);
+    console.log(prevImagePointer);
+    
+    imageMat.uniforms.u_PrevMouse.value.set(
+      prevImagePointer.x,
+      prevImagePointer.y,
+    )
+    
     imageMat.uniforms.u_Mouse.value.set(
       imagePointer.x,
       imagePointer.y,
     )
+
 
 
 
