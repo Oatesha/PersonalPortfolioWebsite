@@ -169,17 +169,15 @@ function initEvents() {
 
     pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    // let padding = rect.height - elementHeight
 
-
-    let padding = rect.height - elementHeight
-
-    prevImagePointer.copy(imagePointer);
+    prevImagePointer.x = imagePointer.x;
+    prevImagePointer.y = imagePointer.y;
 
     // divide by the canvas boudning box so that the pointer works for just the image
     imagePointer.x = (((event.clientX - rect.left) / (rect.width)));
     imagePointer.y = (1 - ((event.clientY - rect.top) / (rect.height)));
     
-    console.log(imagePointer);
     
     moveBackgroundAnim(event.clientX, event.clientY, false);
 
@@ -228,10 +226,6 @@ function initEvents() {
     const ratio = tex.image.height / tex.image.width;
     console.log(tex.image.height + " " + tex.image.width);
     image.scale.set(boxSize * ratio, boxSize * ratio, 1.0)
-
-
-
-
   });
   
   imageScene.add(image);
