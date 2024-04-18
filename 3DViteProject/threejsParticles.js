@@ -1,5 +1,6 @@
-
 import * as THREE from 'three';
+import { MathUtils } from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
@@ -24,7 +25,7 @@ import gsap from 'gsap';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry, imageMat;
+let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry, imageMat, image, elementHeight, elementWidth;
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
@@ -36,11 +37,13 @@ document.body.appendChild( renderer.domElement );
 
 
 let imageScene = new THREE.Scene();
-export const imagecam = new THREE.PerspectiveCamera(10, window.innerWidth / window.innerHeight, 0.01, 3000);
+export const imagecam = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, 0.001, 30000);
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 
 imagecam.aspect = window.innerWidth / window.innerHeight;
 imagecam.updateProjectionMatrix();
+
+// const controls = new OrbitControls( imagecam, imageRenderer.domElement );
 
 imageRenderer.setPixelRatio(window.devicePixelRatio);
 
@@ -54,6 +57,9 @@ setImageRendererSize();
 renderer.setClearColor(0x000000, 0);
 
 const pointer = new THREE.Vector2();
+const imagePointer = new THREE.Vector2();
+
+
 const raycaster = new THREE.Raycaster();
 
 const dummyGeom = new THREE.PlaneGeometry(512, 512);
@@ -78,7 +84,6 @@ const textures = [
 function setImageRendererSize() {
   
   // const controls = new OrbitControls(imagecam, imageRenderer.domElement);
-  let elementWidth, elementHeight;
   
   // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
   var cs = getComputedStyle(projectImageSection);
@@ -101,7 +106,29 @@ function setImageRendererSize() {
 
 
   imageRenderer.setSize(elementWidth, elementHeight, false);
+  adjustCameraFov();
+}
+
+function adjustCameraFov() {
+  const fov = 100;
+  const planeAspectRatio = 21/9;
+  imagecam.aspect = window.innerWidth / window.innerHeight;
   
+  
+  console.log(imagecam.aspect + " " + planeAspectRatio);
+  
+  if (imagecam.aspect > planeAspectRatio) {
+		// window too large
+		imagecam.fov = fov;
+	} else {
+		// window too narrow
+		const cameraHeight = Math.tan(MathUtils.degToRad(fov / 2));
+		const ratio = imagecam.aspect / planeAspectRatio;
+		const newCameraHeight = cameraHeight / ratio;
+		imagecam.fov = MathUtils.radToDeg(Math.atan(newCameraHeight)) * 2;
+	}
+  
+  imagecam.updateProjectionMatrix();
 }
 
 
@@ -124,9 +151,9 @@ function initEvents() {
     camera.updateProjectionMatrix();
     renderer.setSize( window.innerWidth, window.innerHeight );
 
-    imagecam.aspect = window.innerWidth / window.innerHeight;
-    imagecam.updateProjectionMatrix();
 
+
+    // scale images to try and maintain aspect ratio
     setImageRendererSize();
 
     initHtml();
@@ -140,6 +167,14 @@ function initEvents() {
     pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
+
+    let rect = document.querySelector('[status="active"]').childNodes[1].getBoundingClientRect();
+    let padding = rect.height - elementHeight
+
+    // divide by the canvas boudning box so that the pointer works for just the image
+    imagePointer.x = (((event.clientX - rect.left) / (rect.width)));
+    imagePointer.y = (1 - ((event.clientY - rect.top) / (rect.height)));
+    
     
     moveBackgroundAnim(event.clientX, event.clientY, false);
 
@@ -161,30 +196,42 @@ function initEvents() {
   // } );
 
   
-  const imageGeo = new THREE.PlaneGeometry(7, 7);
+  const imageGeo = new THREE.PlaneGeometry(21, 9);
   
   imageGeo.center();
   imageMat = new THREE.ShaderMaterial({
     uniforms: {
-      u_texture: { type: "t", value: null }
+      u_texture: { type: "t", value: null },
+      u_Mouse: { type: "v2", value: new THREE.Vector2() },      
+      u_PrevMouse: { type: "v2", value: new THREE.Vector2() },      
+
     },
     vertexShader: imageVertexShader,
     fragmentShader: imageFragmentShader,
 
   })
-  const image = new THREE.Mesh(imageGeo, imageMat);
+  image = new THREE.Mesh(imageGeo, imageMat);
   
-  var tex = textureLoader.load("/Minecraftle.png", (tex) => {
-    console.log(tex)
+  var tex = textureLoader.load("/Vendetta.png", (tex) => {
     tex.needsUpdate = true;
     imageMat.uniforms.u_texture.value = tex
-    image.scale.set(1.0, tex.image.height / tex.image.width, 1.0);
+    
+    
+
+    const boxSize = 1.0;
+    const ratio = tex.image.height / tex.image.width;
+    console.log(tex.image.height + " " + tex.image.width);
+    image.scale.set(boxSize * ratio, boxSize * ratio, 1.0)
+
+
+
+
   });
   
   imageScene.add(image);
 
 
-  imagecam.position.set(0, 0, 15);
+  imagecam.position.set(0, 0, 1.5);
   imagecam.lookAt(0, 0, 0);
 
 
@@ -257,7 +304,7 @@ function initFBO() {
   }
   
   
-  let w = h = 1024;
+  let w = h = 256;
   
   // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
@@ -454,9 +501,30 @@ function initFBO() {
     let intersects = raycaster.intersectObject(dummyObject);
     if (intersects.length > 0) {
       let {x,y} = intersects[0].point;
+      // console.log(intersects[0].point)
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
+
     imageRenderer.render(imageScene, imagecam);
+    
+    // imageRaycaster.setFromCamera(imagePointer, imagecam);
+    // let imageIntersects = imageRaycaster.intersectObject(image);
+    // if (imageIntersects.length > 0) {
+    //   let {x,y} = imageIntersects[0].point;
+    //   // console.log(imageIntersects[0].point);
+    //   imageMat.uniforms.u_Mouse.value = new THREE.Vector2(
+    //     x,
+    //     y,
+    //   )
+    // }
+
+    imageMat.uniforms.u_Mouse.value.set(
+      imagePointer.x,
+      imagePointer.y,
+    )
+
+
+
     // Request the next frame
     
     
@@ -483,7 +551,7 @@ export function updateImageTexture(index) {
   textureLoader.load(
     textures[index],
     (tex) => {
-      console.log(tex)
+      console.log(textures[index])
       tex.needsUpdate = true;
       imageMat.uniforms.u_texture.value = tex;
 
