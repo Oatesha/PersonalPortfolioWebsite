@@ -74,6 +74,18 @@ function initObservers() {
       onPress: () =>  projectButtonPress(element),
     });
   });
+
+  const gitButtons = document.querySelectorAll('.project-title-section svg')
+  gitButtons.forEach(element => {
+
+    Observer.create({
+      type: "pointer",
+      target: element,
+      onHover: () => projectButtonHover(true, element),
+      onHoverEnd: () =>  projectButtonHover(false, element),
+      onPress: () =>  projectButtonPress(element),
+    });
+  });
 }
 
 // animate button on hover state true for entering hover false for exiting
@@ -98,9 +110,9 @@ function projectButtonPress(button) {
 
   var pointerIncrement = button.id == "buttonSVGOne" ? 1 : -1;
 
-  nextProjectSection = (nextProjectSection + pointerIncrement) % 3;
+  nextProjectSection = (nextProjectSection + pointerIncrement) % 4;
 
-  if (nextProjectSection < 0) {nextProjectSection += 3};
+  if (nextProjectSection < 0) {nextProjectSection += 4};
 
   const nextProject = document.querySelector(`[pos-index="${nextProjectSection}"]`);
   const newProjTl = gsap.timeline();

@@ -80,7 +80,8 @@ const textureLoader = new THREE.TextureLoader();
 const textures = [
   "/Minecraftle.png",
   "None",
-  '/QFIN.png'
+  '/QFIN.png',
+  '/Vendetta.png'
 ]
 
 function setImageRendererSize() {
@@ -144,6 +145,7 @@ function initEvents() {
     // console.log("scrolling");
 
     moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
+    rect = document.querySelector('[status="active"]').childNodes[1].querySelector("canvas").getBoundingClientRect();
   }
   
   function onWindowResize(){
@@ -158,7 +160,7 @@ function initEvents() {
 
     // scale images to try and maintain aspect ratio
     setImageRendererSize();
-    rect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
+    rect = document.querySelector('[status="active"]').childNodes[1].querySelector("canvas").getBoundingClientRect();
     initHtml();
 
   }
@@ -212,8 +214,8 @@ function initEvents() {
     },
     vertexShader: imageVertexShader,
     fragmentShader: imageFragmentShader,
-
   })
+  
   image = new THREE.Mesh(imageGeo, imageMat);
   
   var tex = textureLoader.load("/Minecraftle.png", (tex) => {
