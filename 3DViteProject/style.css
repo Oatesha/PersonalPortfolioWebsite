@@ -204,7 +204,7 @@ project > .project-description-section {
 }
 
 project > .project-description-section p {
-  font-size: clamp(1.5rem, 0.5rem + 1vw, 2.99rem);
+  font-size: clamp(1rem, 0.5rem + 1vw, 2.99rem);
   padding: 1.5rem;
   text-align: justify;
 }
