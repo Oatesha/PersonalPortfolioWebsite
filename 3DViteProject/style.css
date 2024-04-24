@@ -200,11 +200,11 @@ project > .project-image-section img {
 
 project > .project-description-section {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
 }
 
 project > .project-description-section p {
-  font-size: 1.999rem;
+  font-size: clamp(1.5rem, 0.5rem + 1vw, 2.99rem);
   padding: 1.5rem;
   text-align: justify;
 }

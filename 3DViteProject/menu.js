@@ -77,13 +77,18 @@ function initObservers() {
 
   const gitButtons = document.querySelectorAll('.project-title-section svg')
   gitButtons.forEach(element => {
-
+    const link = element.dataset.link;
+    console.log(link);
     Observer.create({
       type: "pointer",
       target: element,
       onHover: () => projectButtonHover(true, element),
       onHoverEnd: () =>  projectButtonHover(false, element),
-      onPress: () =>  projectButtonPress(element),
+      onPress: () => {
+        // open link to github project
+        if (link) {
+          window.open(link);
+        }},
     });
   });
 }
@@ -103,8 +108,14 @@ function projectButtonHover (state, button) {
 }
 
 
+let lastTween = gsap.timeline();;
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {
+
+  if (lastTween.isActive()) {
+    // console.log("last tween is active")
+    return;
+  }
 
   const currentProject = document.querySelector('[status="active"]');
 
@@ -115,25 +126,23 @@ function projectButtonPress(button) {
   if (nextProjectSection < 0) {nextProjectSection += 4};
 
   const nextProject = document.querySelector(`[pos-index="${nextProjectSection}"]`);
-  const newProjTl = gsap.timeline();
   const currentCanvasElement = document.querySelector(`[pos-index="${currentCanvasPointer}"]`);
 
   
   if (currentProject.getAttribute("pos-index") == 1) {
     animateParticlesOut();
   }
-  newProjTl
+  lastTween
   .to(currentProject, { duration: 1.5, x: pointerIncrement == 1 ? '-100%' : '100%', ease: "power3.out"})
   .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, nextProjectSection], "<1.25")
   .fromTo(nextProject, { x: pointerIncrement == 1 ? '100%' : '-100%', opacity: "0" }, { duration: 1.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-1.25");
 }
 
-// hacky but works
+// hacky but works should revisit later and make this functionality way more elegant
 function switchImageCanvasSection(project, currentCanvasElement, currentProject, nextProjectSection) {
   
   currentProject.setAttribute("status", "inactive");
   project.setAttribute("status", "active");
-  
   
   if (nextProjectSection == 1) {
     animateParticlesIn();
@@ -156,10 +165,8 @@ function switchImageCanvasSection(project, currentCanvasElement, currentProject,
   }
 
   gsap.to(currentCanvasNode, { opacity: 1, duration: 0.25});
-  
 
   currentCanvasPointer = project.getAttribute("pos-index");
-
   updateImageTexture(nextProjectSection);
 
 

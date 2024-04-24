@@ -145,7 +145,13 @@ function initEvents() {
     // console.log("scrolling");
 
     moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
-    rect = document.querySelector('[status="active"]').childNodes[1].querySelector("canvas").getBoundingClientRect();
+
+    var activeSection = document.querySelector('[status="active"]')
+    if (activeSection.getAttribute('pos-index') == 1) {
+      return;
+    }
+
+    rect = activeSection.childNodes[1].querySelector("canvas").getBoundingClientRect();
   }
   
   function onWindowResize(){
@@ -160,7 +166,6 @@ function initEvents() {
 
     // scale images to try and maintain aspect ratio
     setImageRendererSize();
-    rect = document.querySelector('[status="active"]').childNodes[1].querySelector("canvas").getBoundingClientRect();
     initHtml();
 
   }
@@ -226,7 +231,7 @@ function initEvents() {
 
     const boxSize = 1.0;
     const ratio = tex.image.height / tex.image.width;
-    console.log(tex.image.height + " " + tex.image.width);
+    // console.log(tex.image.height + " " + tex.image.width);
     image.scale.set(boxSize * ratio, boxSize * ratio, 1.0)
   });
   
@@ -509,8 +514,8 @@ function initFBO() {
 
     imageRenderer.render(imageScene, imagecam);
 
-    console.log(imagePointer);
-    console.log(prevImagePointer);
+    // console.log(imagePointer);
+    // console.log(prevImagePointer);
     
     imageMat.uniforms.u_PrevMouse.value.set(
       prevImagePointer.x,
