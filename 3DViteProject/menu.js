@@ -15,9 +15,10 @@ let nextProjectSection = 0;
 let currentCanvasPointer = 0;
 
 
-hamburgerMenu.addEventListener("click", toggleMenu);
-hamburgerMenu.addEventListener("mouseenter", hoverHamburger);
-hamburgerMenu.addEventListener("mouseleave", exitHoverHamburger);
+// fix the hamburgerMenu when i find a use for it
+// hamburgerMenu.addEventListener("click", toggleMenu);
+// hamburgerMenu.addEventListener("mouseenter", hoverHamburger);
+// hamburgerMenu.addEventListener("mouseleave", exitHoverHamburger);
 
 // buttonSVGOne.addEventListener("click", toggleMenu);
 // buttonSVGOne.addEventListener("mouseenter", hoverHamburger);
@@ -53,11 +54,11 @@ function toggleMenu() {
 }
 
 function hoverHamburger() {
-    console.log("hovered");
+    // console.log("hovered");
 }
 
 function exitHoverHamburger() {
-    console.log("left");
+    // console.log("left");
 }
 
 

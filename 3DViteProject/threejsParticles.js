@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { MathUtils } from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
@@ -98,14 +97,14 @@ function setImageRendererSize() {
   var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
   var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
   
-  console.log(`${paddingX} ${paddingY} ${borderX} ${borderY} borders`);
-  console.log(`${projectImageSection.offsetWidth} ${projectImageSection.offsetHeight}`);
+  // console.log(`${paddingX} ${paddingY} ${borderX} ${borderY} borders`);
+  // console.log(`${projectImageSection.offsetWidth} ${projectImageSection.offsetHeight}`);
   
   // Element width and height minus padding and border
   elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
   elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
 
-  console.log(elementHeight + " " + elementWidth);
+  // console.log(elementHeight + " " + elementWidth);
 
 
   imageRenderer.setSize(elementWidth, elementHeight, false);
@@ -118,7 +117,7 @@ function adjustCameraFov() {
   imagecam.aspect = window.innerWidth / window.innerHeight;
   
   
-  console.log(imagecam.aspect + " " + planeAspectRatio);
+  // console.log(imagecam.aspect + " " + planeAspectRatio);
   
   if (imagecam.aspect > planeAspectRatio) {
 		imagecam.fov = fov;
@@ -243,7 +242,7 @@ function initEvents() {
 
 
   const loader = new FontLoader();
-  loader.load( 'Epilogue Medium_Regular.json', 
+  loader.load( '/Epilogue Medium_Regular.json', 
   function ( font ) {
 
     textGeometry = new TextGeometry('Harrison', {
@@ -274,7 +273,6 @@ function moveBackgroundAnim(x, y, scrolling) {
   }
   tweenX(x + scrollLeft);
   tweenY(y + scrollTop);
-
   
 }
 
@@ -283,12 +281,7 @@ function initHtml() {
   var canvas = renderer.domElement;
   var canvasWidth = canvas.width;
   var canvasHeight = canvas.height;
-
-
-
-
   var element1 = document.querySelector(".LandingPageContent");
-
   var centerY = canvasHeight / 2; // 50% of canvas height
 
   // Set CSS style to position elements
@@ -552,11 +545,10 @@ export function getRenderer() {
 }
 
 export function updateImageTexture(index) {
-  console.log(index);
+  // console.log(index);
   textureLoader.load(
     textures[index],
     (tex) => {
-      console.log(textures[index])
       tex.needsUpdate = true;
       imageMat.uniforms.u_texture.value = tex;
 
