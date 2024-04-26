@@ -297,13 +297,33 @@ function initHtml() {
 
 }
 
+// https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
+function detectMob() {
+  const toMatch = [
+      /Android/i,
+      /webOS/i,
+      /iPhone/i,
+      /iPad/i,
+      /iPod/i,
+      /BlackBerry/i,
+      /Windows Phone/i
+  ];
+  
+  return toMatch.some((toMatchItem) => {
+      return navigator.userAgent.match(toMatchItem);
+  });
+}
+
 function initFBO() {
   // verify browser can support float textures
   if (!renderer.capabilities.floatVertexTextures) {
     alert(' * Browser does not support float vertex and fragment shaders');
   }
   
-  
+  if (detectMob()) {
+    alert("currently this website does not support mobile please view on a desktop");
+  }
+
   let w = h = 256;
   
   // init positions in data texture
