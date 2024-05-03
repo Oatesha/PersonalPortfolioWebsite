@@ -30,6 +30,7 @@ let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
 const renderer = new THREE.WebGLRenderer({alpha: true});
 renderer.setPixelRatio(window.devicePixelRatio);
+console.log(window.innerWidth + " thisis da height and width " + window.innerHeight)
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.domElement.id = 'threeJSCanvas'; 
 document.body.appendChild( renderer.domElement );
@@ -61,7 +62,7 @@ const prevImagePointer = new THREE.Vector2();
 
 
 const raycaster = new THREE.Raycaster();
-const imageRaycaster = new THREE.Raycaster();
+// const imageRaycaster = new THREE.Raycaster();
 
 const dummyGeom = new THREE.PlaneGeometry(512, 512);
 const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
@@ -82,6 +83,28 @@ const textures = [
   '/QFIN.png',
   '/Vendetta.png'
 ]
+
+let loadedTextures = [];
+
+function preloadTextures() {
+  textures.forEach((textureUrl, index) => {
+    if (textureUrl !== "None") {
+      textureLoader.load(
+        textureUrl,
+        (texture) => {
+          texture.needsUpdate = true;
+          loadedTextures[index] = texture;
+        },
+        undefined,
+        (error) => {
+          console.error('Error loading texture:', error);
+        }
+      );
+    } else {
+      loadedTextures[index] = null; // Set 'None' textures as null
+    }
+  });
+}
 
 function setImageRendererSize() {
   
@@ -141,7 +164,7 @@ function initEvents() {
   window.addEventListener('scroll', handleScroll);
 
   function handleScroll() {
-    // console.log("scrolling");
+    console.log("scrolling");
 
     moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
 
@@ -191,6 +214,7 @@ function initEvents() {
   }
 
   initHtml();
+  preloadTextures();
 
   // const modelLoader = new GLTFLoader();
 
@@ -565,19 +589,14 @@ export function getRenderer() {
 }
 
 export function updateImageTexture(index) {
-  // console.log(index);
-  textureLoader.load(
-    textures[index],
-    (tex) => {
-      tex.needsUpdate = true;
-      imageMat.uniforms.u_texture.value = tex;
+  console.log(loadedTextures);
+  if (loadedTextures[index] == null) {
+    console.log("null");
+    return;
+  }
+  imageMat.uniforms.u_texture.value = loadedTextures[index];
+  imageMat.uniforms.u_texture.needsUpdate = true;
 
-    },
-    undefined,
-    (error) => {
-      console.error('Error loading texture:', error);
-    }
-  );
 }
   
   

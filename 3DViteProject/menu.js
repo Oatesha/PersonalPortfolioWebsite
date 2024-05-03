@@ -7,9 +7,9 @@ import { Flip } from "gsap/all";
 gsap.registerPlugin(Observer, Flip);
 
 
-const hamburgerMenu = document.querySelector(".HamburgerToggle");
-const menu = document.querySelector(".MenuElements");
-const blurBackground = document.querySelector(".menuBlur");
+// const hamburgermenu = document.queryselector(".hamburgertoggle");
+// const menu = document.queryselector(".menuelements");
+// const blurbackground = document.queryselector(".menublur");
 
 let nextProjectSection = 0;
 let currentCanvasPointer = 0;
@@ -28,8 +28,8 @@ let currentCanvasPointer = 0;
 // buttonSVGTwo.addEventListener("mouseenter", hoverHamburger);
 // buttonSVGTwo.addEventListener("mouseleave", exitHoverHamburger);
 
-let menuVisible = false;
-let targetAlpha, targetZ;
+// let menuVisible = false;
+// let targetAlpha, targetZ;
 
 
 // window.addEventListener('DOMContentLoaded', () => {
@@ -39,27 +39,27 @@ let targetAlpha, targetZ;
 
 initObservers();
 
-function toggleMenu() {
-    menuVisible ? targetAlpha = 0.0 : targetAlpha = 1.0; 
-    menuVisible ? targetZ = 0.0 : targetZ = 5.0; 
-    menuVisible = !menuVisible;
+// function toggleMenu() {
+//     menuVisible ? targetAlpha = 0.0 : targetAlpha = 1.0; 
+//     menuVisible ? targetZ = 0.0 : targetZ = 5.0; 
+//     menuVisible = !menuVisible;
 
-    gsap.to(menu, {
-        autoAlpha: targetAlpha,
-        duration: 0.5,
-    })
-    gsap.to(blurBackground, {
-        autoAlpha: targetAlpha,
-    })
-}
+//     gsap.to(menu, {
+//         autoAlpha: targetAlpha,
+//         duration: 0.5,
+//     })
+//     gsap.to(blurBackground, {
+//         autoAlpha: targetAlpha,
+//     })
+// }
 
-function hoverHamburger() {
-    // console.log("hovered");
-}
+// function hoverHamburger() {
+//     // console.log("hovered");
+// }
 
-function exitHoverHamburger() {
-    // console.log("left");
-}
+// function exitHoverHamburger() {
+//     // console.log("left");
+// }
 
 
 

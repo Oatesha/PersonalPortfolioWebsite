@@ -5,13 +5,13 @@ body {
   margin: 0;
   overflow-x: hidden;
   position: relative;
-  width: 100vw;
-  height: 100vh; /* Add this line */
-  display: flex; /* Add this line */
-  justify-content: center; /* Add this line */
-  align-items: center; /* Add this line */
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
   background-color: var(--background);
-  overflow: hidden; /* Hide scrollbars */
+  overflow-x: hidden;
+  overflow-y: scroll;
+
 }
 
 #threeJSCanvas {
@@ -71,6 +71,62 @@ p {
   padding: 0;
 }
 
+/* Styles for mobile screens */
+@media (max-width: 767px) {
+  h1 {
+    font-size: 2.027rem;
+  }
+
+  h2 {
+    font-size: 1.802rem;
+  }
+
+  h3 {
+    font-size: 1.602rem;
+  }
+
+  h4 {
+    font-size: 1.424rem;
+  }
+
+  h5 {
+    font-size: 1.266rem;
+  }
+
+  h6 {
+    font-size: 1.125rem;
+  }
+
+  p {
+    font-size: 0.889rem;
+  }
+}
+
+@media (max-width: 800px) {
+
+  .ProjectSection > project {
+    grid-template-rows: 1fr repeat(4, 0.5fr);
+    height: max(700px, 100%);
+    grid-template-columns: none;
+    
+  }
+
+  project > .project-title-section {
+    padding: 2rem;
+  }
+
+  project > .project-title-section > h2 {
+    flex-basis: 70%;
+    font-size: 1.75em;
+  }
+
+
+  project > .project-description-section {
+    padding: 2rem;
+  }
+
+}
+
 .MenuContainer {
   position: fixed;
   top: 0%;
@@ -88,7 +144,6 @@ p {
   width: 33vw;
   padding: 2rem;
   z-index: 5;
-  pointer-events: none;
 }
 
 .MenuElements {
@@ -148,11 +203,6 @@ project {
   position: absolute;
   left: 0px;
   top: 0px;
-}
-
-.reorder {
-  grid-template-columns: 1fr 2fr;
-  grid-template-rows: 1fr 2fr;
 }
 
 .ProjectSection > project[status="inactive"] {
@@ -382,6 +432,7 @@ project > .project-nav-section svg {
 .ProjectSection {
   height: 100vh;
   position: relative;
+  overflow-x: hidden;
 }
 
 .ProjectList {
@@ -424,16 +475,23 @@ project > .project-nav-section svg {
   --accent: #00FFEE;
 }
 
-html.lenis {
+html.lenis, html.lenis body {
   height: auto;
 }
+
 .lenis.lenis-smooth {
-  scroll-behavior: auto;
+  scroll-behavior: auto !important;
 }
+
 .lenis.lenis-smooth [data-lenis-prevent] {
   overscroll-behavior: contain;
 }
+
 .lenis.lenis-stopped {
   overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
 }
 
