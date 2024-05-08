@@ -1,7 +1,7 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
-import Lenis from '@studio-freight/lenis'
+// import Lenis from '@studio-freight/lenis'
 import SplitType from 'split-type'
 import { camera, getSimMaterial, getRenderer, getRenderMaterial, mobile } from "./threejsParticles";
 
@@ -178,7 +178,6 @@ function InitMiddlePageAnimationTimeline() {
             trigger: ".LandingPageSection",
             start: "55% center",
             end: () => `+=${sectionsElements[1].getBoundingClientRect().height * 1.5}`,
-            markers: true,
             scrub: true,
         },
     });

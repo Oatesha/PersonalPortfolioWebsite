@@ -274,6 +274,7 @@ project {
 
   project > .project-description-section p {
     padding: 1.5rem;
+    font-size: clamp(1rem, 0.5rem + 1vw, 4.5rem);
   }
 
 }
