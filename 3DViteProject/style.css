@@ -1,18 +1,25 @@
 @import url('epilogue.css');
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Epilogue-Bold';
   margin: 0;
-  overflow-x: hidden;
   position: relative;
   display: flex; 
   justify-content: center; 
   align-items: center; 
   background-color: var(--background);
-  overflow-x: hidden;
-  overflow-y: scroll;
-
+  -ms-overflow-style: none; 
+  scrollbar-width: none;  
 }
+
+::-webkit-scrollbar {
+  display: none;
+}
+
 
 #threeJSCanvas {
   position: fixed;
@@ -72,7 +79,7 @@ p {
 }
 
 /* Styles for mobile screens */
-@media (max-width: 767px) {
+@media (max-width: 800px) {
   h1 {
     font-size: 2.027rem;
   }
@@ -102,35 +109,56 @@ p {
   }
 }
 
-@media (max-width: 800px) {
+@media (width < 800px) {
 
   .ProjectSection > project {
-    grid-template-rows: 1fr repeat(4, 0.5fr);
+    grid-template-rows: 2fr 1fr 1fr 1fr;
     height: max(700px, 100%);
     grid-template-columns: none;
+    padding: 0.5rem;
+    
+  }
+
+  project > .project-section {
+    border-left: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    padding: 1rem;
+  }
+
+
+  project > .project-image-section {
+    order: 1;
+    border-top: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
     
   }
 
   project > .project-title-section {
-    padding: 2rem;
+    order: 2;
   }
 
-  project > .project-title-section > h2 {
-    flex-basis: 70%;
-    font-size: 1.75em;
+  project > .project-nav-section {
+    order: 4;
+    border-bottom: 2px solid var(--accent);
+    overflow: hidden;
   }
 
+  project > .project-nav-section:nth-child(1) {
+    border-left: 2px solid var(--accent);
+  }
 
   project > .project-description-section {
-    padding: 2rem;
+    order: 3;
+    border-top: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
   }
-
 }
+
 
 .MenuContainer {
   position: fixed;
-  top: 0%;
-  right: 0%;
+  top: 0;
+  right: 0;
   height: 10vh;
   width: 10vw;
   z-index: 6;
@@ -138,8 +166,8 @@ p {
 
 .HamburgerMenu {
   position: fixed;
-  top: 0%;
-  right: 0%;
+  top: 0;
+  right: 0;
   height: 100vh;
   width: 33vw;
   padding: 2rem;
@@ -193,17 +221,6 @@ p {
 }
 
 
-project {
-  display: grid;
-  height: 100%;
-  padding: 1rem;
-  grid-template-columns: 2fr 1fr;
-  grid-template-rows: 2fr 1fr;
-  box-sizing: border-box;
-  position: absolute;
-  left: 0px;
-  top: 0px;
-}
 
 .ProjectSection > project[status="inactive"] {
   transform: translateX(-100%);
@@ -211,28 +228,55 @@ project {
 
 project > .project-section {
   height: 100%;
-  padding: 2rem;
   box-sizing: border-box;
 }
 
-project > .project-description-section, project > .project-nav-section {
-  border-left: 2px solid var(--accent);
-  border-right: 2px solid var(--accent);
+project {  
+  display: grid;
+  height: 100%;
+  box-sizing: border-box;
+  position: absolute;
+  left: 0px;
+  top: 0px;
 }
 
-project > .project-image-section, project > .project-title-section {
-  border-left: 2px solid var(--accent);
-}
+@media (width >= 800px) {
 
-project > .project-description-section, project > .project-image-section {
-  border-top: 2px solid var(--accent);
-}
+  project {
+    padding: 1rem;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 2fr 1fr;
+  }
 
-project > .project-title-section, project > .project-nav-section {
-  border-top: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
-}
+  project > .project-section {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 2rem;
+  }
 
+  project > .project-description-section, project > .project-nav-section {
+    border-left: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+  }
+
+  project > .project-image-section, project > .project-title-section {
+    border-left: 2px solid var(--accent);
+  }
+
+  project > .project-description-section, project > .project-image-section {
+    border-top: 2px solid var(--accent);
+  }
+
+  project > .project-title-section, project > .project-nav-section {
+    border-top: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  project > .project-description-section p {
+    padding: 1.5rem;
+  }
+
+}
 /*
 top two sections of grid
 */
@@ -242,7 +286,6 @@ project > .project-image-section {
 }
 
 project > .project-image-section img {
-  padding: 1rem;
   object-fit: contain;
   width: 100%;
   height: 100%;
@@ -254,8 +297,6 @@ project > .project-description-section {
 }
 
 project > .project-description-section p {
-  font-size: clamp(1rem, 0.5rem + 1vw, 2.99rem);
-  padding: 1.5rem;
   text-align: justify;
 }
 
@@ -286,12 +327,19 @@ project > .project-nav-section {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
 
 project > .project-nav-section svg {
   flex-grow: 1;
-  height: 200px;
+  width: 100%;
+  height: 100%;
 }
+
+project > .project-nav-section #buttonSVGOne {
+  border-right: 2px solid var(--accent);
+}
+
 
 .BackgroundAnimation {
   
@@ -370,7 +418,7 @@ project > .project-nav-section svg {
 .ScrollIndicator {
   position: absolute;
   right: 50vw;
-  bottom: 0%;
+  bottom: 0;
   display: inline-block;
 }
 
@@ -418,9 +466,10 @@ project > .project-nav-section svg {
   text-wrap: wrap;
   min-width: 500px;
 }
+
 .LandingPageContent p {
   position: absolute;
-  bottom: 0%;
+  bottom: 0;
   width: 100%;
 }
 

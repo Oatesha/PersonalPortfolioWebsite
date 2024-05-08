@@ -66,12 +66,13 @@ initObservers();
 function initObservers() {
   const svgButtons = document.querySelectorAll('.project-nav-section svg');
   svgButtons.forEach(element => {
-
+    
+    var direction = element.id == "buttonSVGOne" ? true : false;
     Observer.create({
       type: "pointer",
       target: element,
-      onHover: () => projectButtonHover(true, element),
-      onHoverEnd: () =>  projectButtonHover(false, element),
+      onHover: () => projectButtonHover(true, element, direction),
+      onHoverEnd: () =>  projectButtonHover(false, element, direction),
       onPress: () =>  projectButtonPress(element),
     });
   });
@@ -83,8 +84,8 @@ function initObservers() {
     Observer.create({
       type: "pointer",
       target: element,
-      onHover: () => projectButtonHover(true, element),
-      onHoverEnd: () =>  projectButtonHover(false, element),
+      onHover: () => githubButtonHover(true, element),
+      onHoverEnd: () =>  githubButtonHover(false, element),
       onPress: () => {
         // open link to github project
         if (link) {
@@ -94,17 +95,31 @@ function initObservers() {
   });
 }
 
-// animate button on hover state true for entering hover false for exiting
-function projectButtonHover (state, button) {
+// animate button on hover state true for entering hover false for exiting direction being true for left false for right
+function projectButtonHover (state, button, direction) {
   // console.log(button)
-  var targetButton = button;
+  var targetButton = button.querySelector('path');
 
   if (state) {
       // Enter hover state
-      gsap.to(targetButton, { scale: 1.2, duration: 0.3, ease: "back" });
+      gsap.to(targetButton, { x: direction ? "-=20%" : "+=20%", duration: 0.3, ease: "back.out(2)" });
     } else {
       // Exit hover state
-      gsap.to(targetButton, { scale: 1, duration: 0.3, ease: "back" });
+      gsap.to(targetButton, { x: direction ? "0%" : "100%", duration: 0.3, ease: "back.out(2)" });
+    }
+}
+
+// similar function but increase scale rather than move direction for the github hover
+function githubButtonHover (state, button) {
+  // console.log(button)
+  var targetButton = button
+
+  if (state) {
+      // Enter hover state
+      gsap.to(targetButton, { scale: 1.25, duration: 0.3, ease: "back.out(4)" });
+    } else {
+      // Exit hover state
+      gsap.to(targetButton, { scale: 1, duration: 0.3, ease: "back.out(4)" });
     }
 }
 
@@ -120,7 +135,7 @@ function projectButtonPress(button) {
 
   const currentProject = document.querySelector('[status="active"]');
 
-  var pointerIncrement = button.id == "buttonSVGOne" ? 1 : -1;
+  var pointerIncrement = button.id == "buttonSVGOne" ? -1 : 1;
 
   nextProjectSection = (nextProjectSection + pointerIncrement) % 4;
 

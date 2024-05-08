@@ -3,7 +3,7 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import Lenis from '@studio-freight/lenis'
 import SplitType from 'split-type'
-import { camera, getSimMaterial, getRenderer, getRenderMaterial } from "./threejsParticles";
+import { camera, getSimMaterial, getRenderer, getRenderMaterial, mobile } from "./threejsParticles";
 
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
@@ -167,7 +167,7 @@ function InitLandingAnimationTimeline() {
 
     // Animate the text elements
     introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
-    introTl.fromTo(camera.position, {z: -5}, {z: 50, duration: 1.75});
+    introTl.fromTo(camera.position, {z: -5}, {z: mobile ? 150 : 50, duration: 1.75});
     introTl.fromTo(simMaterial.uniforms.mixValue, {value: 0.0}, {value: 1.0, duration: 2.0}, "-=1.75");
     introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
 }
@@ -192,11 +192,11 @@ export function animateParticlesIn() {
     const slope = 1/760;
     const yIntercept = 93;
     const idealX = (slope * innerWidth) + yIntercept;
-    gsap.set(camera.position, {y: "-25", x: "+=" + idealX})
+    gsap.set(camera.position, {y: "-25", x: "+=" + (mobile ? "90" : idealX)})
     gsap.to(camera.position, {
         duration: 1.5,
-        z: "18",
-        y: "-2.5",
+        z: mobile ? "36" : "18",
+        y: mobile ? "-10" : "-2.5",
     })
 }
 
@@ -206,8 +206,8 @@ export function animateParticlesOut() {
     const idealX = (slope * innerWidth) + yIntercept;
     gsap.to(camera.position, {
         duration: 1.5,
-        x: "-=" + idealX,
-        z: "50",
+        x: "-=" + (mobile ? "90" : idealX),
+        z: mobile ? "150" : "50",
     })
 }
 

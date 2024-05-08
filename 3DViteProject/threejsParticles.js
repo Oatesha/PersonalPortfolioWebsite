@@ -24,7 +24,7 @@ import gsap from 'gsap';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry, imageMat, image, elementHeight, elementWidth;
+let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry, imageMat, image, elementHeight, elementWidth, img;
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
@@ -40,17 +40,42 @@ let imageScene = new THREE.Scene();
 export const imagecam = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, 0.001, 30000);
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 
+// imageRenderer.setPixelRatio(window.devicePixelRatio)
+
 imagecam.aspect = window.innerWidth / window.innerHeight;
 imagecam.updateProjectionMatrix();
 
 // const controls = new OrbitControls( imagecam, imageRenderer.domElement );
 
-imageRenderer.setPixelRatio(window.devicePixelRatio);
+export const mobile = detectMob();
+
+// list of textures in order of project pos-index 0 through to max length
+const textures = [
+  "/Minecraftle.png",
+  "None",
+  '/QFIN.png',
+  '/Vendetta.png'
+]
+
+const mobileTextures = [
+  "/MinecraftleMob.png",
+  "None",
+  '/QFINMob.png',
+  '/VendettaMob.png'
+]
+
 
 const projectImageSection = document.querySelector(".project-image-section.project-section");
 
-projectImageSection.appendChild(imageRenderer.domElement);
-setImageRendererSize();
+if (mobile) {
+  img = document.createElement("img");
+  img.src = mobileTextures[0];
+  projectImageSection.appendChild(img);
+} 
+else {
+  projectImageSection.appendChild(imageRenderer.domElement);
+  setImageRendererSize();
+}
 
 
 // renderer.setClearColor(0x0A0A09);
@@ -76,13 +101,6 @@ const textureLoader = new THREE.TextureLoader();
 
 
 
-// list of textures in order of project pos-index 0 through to max length
-const textures = [
-  "/Minecraftle.png",
-  "None",
-  '/QFIN.png',
-  '/Vendetta.png'
-]
 
 let loadedTextures = [];
 
@@ -101,7 +119,7 @@ function preloadTextures() {
         }
       );
     } else {
-      loadedTextures[index] = null; // Set 'None' textures as null
+      loadedTextures[index] = null;
     }
   });
 }
@@ -134,6 +152,7 @@ function setImageRendererSize() {
   adjustCameraFov();
 }
 
+// https://discourse.threejs.org/t/keeping-an-object-scaled-based-on-the-bounds-of-the-canvas-really-battling-to-explain-this-one/17574/10
 function adjustCameraFov() {
   const fov = 100;
   const planeAspectRatio = 21/9;
@@ -164,12 +183,12 @@ function initEvents() {
   window.addEventListener('scroll', handleScroll);
 
   function handleScroll() {
-    console.log("scrolling");
+    // console.log("scrolling");
 
     moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
 
     var activeSection = document.querySelector('[status="active"]')
-    if (activeSection.getAttribute('pos-index') == 1) {
+    if (activeSection.getAttribute('pos-index') == 1 || mobile) {
       return;
     }
 
@@ -310,14 +329,13 @@ function initHtml() {
 
   // Set CSS style to position elements
   element1.style.position = "absolute";
-  // element1.style.left = centerX + "px";
+  // element1.style.left = centerX + "px" (these values only work for desktop);
   element1.style.height = (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
   element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";
 
   // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be that
   element1.style.left = ((canvasWidth - (canvasHeight * 1.232)) / 2) -2.5 + "px";
 
-  // console.log(((canvasWidth - (canvasHeight * 1.232)) / 2) + " " + (centerY - ((canvasHeight * 0.2321) + 200) / 2));
 
 }
 
@@ -344,7 +362,7 @@ function initFBO() {
     alert(' * Browser does not support float vertex and fragment shaders');
   }
   
-  if (detectMob()) {
+  if (mobile) {
     alert("currently this website does not support mobile please view on a desktop");
   }
 
@@ -589,11 +607,18 @@ export function getRenderer() {
 }
 
 export function updateImageTexture(index) {
-  console.log(loadedTextures);
-  if (loadedTextures[index] == null) {
-    console.log("null");
+  // console.log(loadedTextures);
+  if (loadedTextures[index] == null || textures[index] == null) {
+    // console.log("null");
     return;
   }
+
+  if (mobile) {
+    img.src = mobileTextures[index];
+    console.log(img.src);
+    
+  }
+
   imageMat.uniforms.u_texture.value = loadedTextures[index];
   imageMat.uniforms.u_texture.needsUpdate = true;
 
