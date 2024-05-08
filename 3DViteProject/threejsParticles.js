@@ -10,6 +10,7 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 import { imageVertexShader } from './glsl/imageVertexShader.js';
 import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import gsap from 'gsap';
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/Addons.js';
 
 
 
@@ -320,15 +321,25 @@ function moveBackgroundAnim(x, y, scrolling) {
 }
 
 function initHtml() {
+
+  var element1 = document.querySelector(".LandingPageContent");
+  element1.style.position = "absolute";
+  
+  if (mobile) {
+    element1.style.top = "40%";
+    element1.style.left = "5%";
+
+    element1.style.height = "20%"
+    return;
+  }
+  
+
   // Get canvas element and its dimensions
   var canvas = renderer.domElement;
   var canvasWidth = canvas.width;
   var canvasHeight = canvas.height;
-  var element1 = document.querySelector(".LandingPageContent");
-  var centerY = canvasHeight / 2; // 50% of canvas height
+  var centerY = canvasHeight / 2; 
 
-  // Set CSS style to position elements
-  element1.style.position = "absolute";
   // element1.style.left = centerX + "px" (these values only work for desktop);
   element1.style.height = (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
   element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";

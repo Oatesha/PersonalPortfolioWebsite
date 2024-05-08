@@ -83,20 +83,20 @@ function initAnim() {
     });
     animationTimeline.to(".LoadingText", {
         autoAlpha: 1,
-        // onComplete: scrollDownSmoothly,
+        onComplete: scrollDownSmoothly,
     }, "<")
 
 }
 
-// function scrollDownSmoothly() {
-//     console.log("initanim oncomplete");
-//     gsap.to(window, {
-//         delay: 0.25,
-//         duration: 2.5, 
-//         scrollTo: { y: window.innerHeight }, 
-//         ease: "noneOut",
-//     });
-// }
+function scrollDownSmoothly() {
+    console.log("initanim oncomplete");
+    gsap.to(window, {
+        delay: 0.25,
+        duration: 2.5, 
+        scrollTo: { y: window.innerHeight }, 
+        ease: "noneOut",
+    });
+}
 
 
 function InitBackgroundBlobAnimationTimeline(timeline) {
