@@ -322,7 +322,7 @@ function initHtml() {
   element1.style.position = "absolute";
   
   if (mobile) {
-    element1.style.top = "40%";
+    element1.style.top = "30%";
     element1.style.left = "5%";
 
     element1.style.height = "20%"
