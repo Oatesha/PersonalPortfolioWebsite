@@ -14,11 +14,7 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/Addons.js';
 
 
 
-// // Create an instance of the Stats object
-// const stats = new Stats();
 
-// // Add the Stats object to the HTML document
-// document.body.appendChild(stats.dom);
 
 // Create a new dat.GUI instance
 // const gui = new GUI();
@@ -374,7 +370,7 @@ function initFBO() {
   }
   
   if (mobile) {
-    alert("currently this website does not support mobile please view on a desktop");
+    alert("For the best viewing experience with all the features please view on desktop");
   }
 
   let w = h = 256;
