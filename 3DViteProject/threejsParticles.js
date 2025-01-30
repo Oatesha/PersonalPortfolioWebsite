@@ -10,7 +10,7 @@ import { simfragFBO } from './glsl/simfragFBO.js';
 import { imageVertexShader } from './glsl/imageVertexShader.js';
 import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import gsap from 'gsap';
-import { RectAreaLightUniformsLib } from 'three/examples/jsm/Addons.js';
+import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 
 
 
@@ -21,7 +21,8 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/Addons.js';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, textGeometry, imageMat, image, elementHeight, elementWidth, img;
+let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, 
+textGeometry, imageMat, image, elementHeight, elementWidth, img, mesh;
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
@@ -277,7 +278,7 @@ function initEvents() {
   imageScene.add(image);
 
 
-  imagecam.position.set(0, 0, 1.5);
+  imagecam.position.set(0, 0, 10);
   imagecam.lookAt(0, 0, 0);
 
 
@@ -294,11 +295,28 @@ function initEvents() {
       bevelThickness: 0.50,
       bevelEnabled: true,
     });  
-    initFBO();
+
+    const modelLoader = new GLTFLoader();
+    modelLoader.load( 'models/radiant_pillar_bc1.glb', function ( gltf ) {
+      gltf.scene.traverse((child) => {
+        if (child.isMesh) {
+          console.log(child);
+          mesh = child.clone();
+          mesh.geometry = child.geometry.clone();
+
+          mesh.geometry.applyMatrix4(new THREE.Matrix4().makeScale(0.01, 0.01, 0.01));
+          mesh.geometry.center();
+        }
+      });
+  
+      initFBO();
+    }, undefined, function ( error ) {
+  
+    console.error( error );
+  
+    } );
   });
 }
-
-
 
 let scrollLeft = 0, scrollTop = 0;
 
@@ -373,7 +391,7 @@ function initFBO() {
     alert("For the best viewing experience with all the features please view on desktop");
   }
 
-  let w = h = 256;
+  let w = h = 512;
   
   // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
@@ -404,10 +422,10 @@ function initFBO() {
     }
   }
   
-  
+
   // Set up a geometry to sample positions from
-  textGeometry.center();
-  let mesh = new THREE.Mesh(textGeometry);
+  // textGeometry.center();
+  // let mesh = new THREE.Mesh(gltf1.geometry);
 
   // Build a Mesh Surface Sampler to sample positions from the geometry
   let sampler = new MeshSurfaceSampler(mesh).build();
