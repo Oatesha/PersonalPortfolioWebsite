@@ -11,10 +11,7 @@ import { imageVertexShader } from './glsl/imageVertexShader.js';
 import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import gsap from 'gsap';
 import { GLTFLoader } from 'three/examples/jsm/Addons.js';
-
-
-
-
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // Create a new dat.GUI instance
 // const gui = new GUI();
@@ -38,6 +35,8 @@ let imageScene = new THREE.Scene();
 export const imagecam = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, 0.001, 30000);
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 
+const controls = new OrbitControls( camera, renderer.domElement );
+controls.autoRotate = true;
 // imageRenderer.setPixelRatio(window.devicePixelRatio)
 
 imagecam.aspect = window.innerWidth / window.innerHeight;
@@ -304,7 +303,9 @@ function initEvents() {
           mesh = child.clone();
           mesh.geometry = child.geometry.clone();
 
-          mesh.geometry.applyMatrix4(new THREE.Matrix4().makeScale(0.01, 0.01, 0.01));
+          // mesh.geometry.applyMatrix4(new THREE.Matrix4().makeScale(0.05, 0.05, 0.05));
+          // mesh.geometry.setAttribute('scale', new THREE.BufferAttribute(new THREE.Vector3(0.05, 0.05, 0.05)));
+          mesh.geometry.scale(0.1, 0.1, 0.1);
           mesh.geometry.center();
         }
       });
@@ -429,7 +430,7 @@ function initFBO() {
 
   // Build a Mesh Surface Sampler to sample positions from the geometry
   let sampler = new MeshSurfaceSampler(mesh).build();
-
+  console.log(mesh)
   // Function to sample positions and return them as an array of Vector3
   function samplePositions(numSamples) {
     let positions = [];
@@ -607,12 +608,7 @@ function initFBO() {
       imagePointer.y,
     )
 
-
-
-
-    // Request the next frame
-    
-    
+    controls.update();
   }
   
 

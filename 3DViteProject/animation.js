@@ -167,7 +167,7 @@ function InitLandingAnimationTimeline() {
 
     // Animate the text elements
     introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
-    introTl.fromTo(camera.position, {z: -5}, {z: mobile ? 150 : 50, duration: 1.75});
+    introTl.fromTo(camera.position, {z: -5}, {z: mobile ? 150 : 75, duration: 1.75});
     introTl.fromTo(simMaterial.uniforms.mixValue, {value: 0.0}, {value: 1.0, duration: 2.0}, "-=1.75");
     introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
 }
