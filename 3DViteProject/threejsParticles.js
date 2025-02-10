@@ -11,32 +11,32 @@ import { imageVertexShader } from './glsl/imageVertexShader.js';
 import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import gsap from 'gsap';
 import { GLTFLoader } from 'three/examples/jsm/Addons.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OrbitControls } from 'three/examples/jsm/Addons.js';
 
 // Create a new dat.GUI instance
 // const gui = new GUI();
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, h, simMaterial, renderMaterial, fbo, points, 
+let renderTargetB, renderTargetA, simMaterial, renderMaterial, fbo, points, 
 textGeometry, imageMat, image, elementHeight, elementWidth, img, mesh;
 
 let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
 const renderer = new THREE.WebGLRenderer({alpha: true});
+const controls = new OrbitControls(camera, renderer.domElement);
 renderer.setPixelRatio(window.devicePixelRatio);
 console.log(window.innerWidth + " thisis da height and width " + window.innerHeight)
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.domElement.id = 'threeJSCanvas'; 
 document.body.appendChild( renderer.domElement );
 
-
 let imageScene = new THREE.Scene();
-export const imagecam = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, 0.001, 30000);
+export const imagecam = new THREE.PerspectiveCamera(10, window.innerWidth/window.innerHeight, 0.001, 30000);
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 
-const controls = new OrbitControls( camera, renderer.domElement );
-controls.autoRotate = true;
+// const controls = new OrbitControls( camera, renderer.domElement );
+// controls.autoRotate = true;
 // imageRenderer.setPixelRatio(window.devicePixelRatio)
 
 imagecam.aspect = window.innerWidth / window.innerHeight;
@@ -84,7 +84,6 @@ const prevImagePointer = new THREE.Vector2();
 
 
 const raycaster = new THREE.Raycaster();
-// const imageRaycaster = new THREE.Raycaster();
 
 const dummyGeom = new THREE.PlaneGeometry(512, 512);
 const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
@@ -296,17 +295,16 @@ function initEvents() {
     });  
 
     const modelLoader = new GLTFLoader();
-    modelLoader.load( 'models/radiant_pillar_bc1.glb', function ( gltf ) {
+    modelLoader.load( 'models/radiant_pillar_baked3.glb', function ( gltf ) {
       gltf.scene.traverse((child) => {
         if (child.isMesh) {
           console.log(child);
           mesh = child.clone();
           mesh.geometry = child.geometry.clone();
 
-          // mesh.geometry.applyMatrix4(new THREE.Matrix4().makeScale(0.05, 0.05, 0.05));
-          // mesh.geometry.setAttribute('scale', new THREE.BufferAttribute(new THREE.Vector3(0.05, 0.05, 0.05)));
           mesh.geometry.scale(0.1, 0.1, 0.1);
-          mesh.geometry.center();
+          // mesh.geometry.center();
+          // mesh.geometry.setFromVector3(new THREE.Vector3(90, 90, 0));        
         }
       });
   
@@ -385,15 +383,15 @@ function detectMob() {
 function initFBO() {
   // verify browser can support float textures
   if (!renderer.capabilities.floatVertexTextures) {
-    alert(' * Browser does not support float vertex and fragment shaders');
+    alert(' * Browser does not support float shaders particles will not render properly');
   }
   
   if (mobile) {
     alert("For the best viewing experience with all the features please view on desktop");
   }
 
-  let w = h = 512;
-  
+  let w, h = 512;
+  console.log(h)
   // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
@@ -435,10 +433,26 @@ function initFBO() {
   function samplePositions(numSamples) {
     let positions = [];
     for (let i = 0; i < numSamples; i++) {
-      let position = new THREE.Vector3();
-      sampler.sample(position);
+      let position = new THREE.Vector4();
+      let colour = new THREE.Vector3();
+      let breh = new THREE.Vector3();
+
+      sampler.sample(position, breh, colour);
+      // pack rgb values as three 8 bit integers between 0-255 into the 4th float of the vector so that they can fit into
+      // the alpha channel of our data texture.
+      let packedRGB = ((colour.r * 255) << 16) | ((colour.g * 255) << 8) | ((colour.b * 255))
+      position.w = packedRGB;
       positions.push(position);
     }
+    let RGBPacked = positions[0];
+    console.log(RGBPacked)
+    let r = (((RGBPacked) >> 16) & 0xFF) / 255.0;
+    let g = (((RGBPacked) >> 8) & 0xFF) / 255.0;
+    let b = (RGBPacked & 0xFF) / 255.0;
+    console.log(r)
+    console.log(g)
+    console.log(b)
+
     return positions;
   }
 
@@ -453,9 +467,9 @@ function initFBO() {
     initialPositionsArray[index * 4] = position.x;
     initialPositionsArray[index * 4 + 1] = position.y;
     initialPositionsArray[index * 4 + 2] = position.z;
-    initialPositionsArray[index * 4 + 3] = 1.0;
+    initialPositionsArray[index * 4 + 3] = position.w;
   });
-
+  console.log(initialPositionsArray)
   let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
   let textDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
   
@@ -512,7 +526,7 @@ function initFBO() {
     stencilBuffer: false,
   });
   
-  // a second render target lets us store input + output positional states
+  // a second render target lets us store prev input + current output states
   renderTargetB = renderTargetA.clone();
   
   renderer.setRenderTarget(renderTargetA),
@@ -560,18 +574,14 @@ function initFBO() {
     points = new THREE.Points(geometry, renderMaterial);
     scene.add(points);
     renderMaterial.uniforms.posTex.value = dataTex;
-    // Add a slider for the time uniform
-    // gui.add(simMaterial.uniforms.mixValue, 'value', 0.0, 1.0, 0.05).name('mixValue');
     render()
   }
   
   const clock = new THREE.Clock();
-
   function render() {
     requestAnimationFrame(render);
-
-
     simMaterial.uniforms.time.value = clock.getElapsedTime();
+
     // Swap renderTargetA and renderTargetB
     var temp = renderTargetA;
     renderTargetA = renderTargetB;
@@ -607,8 +617,6 @@ function initFBO() {
       imagePointer.x,
       imagePointer.y,
     )
-
-    controls.update();
   }
   
 
@@ -621,10 +629,6 @@ export function getSimMaterial() {
 
 export function getRenderMaterial() {
   return renderMaterial;
-}
-
-export function getRenderer() {
-    return renderer;
 }
 
 export function updateImageTexture(index) {
@@ -644,22 +648,5 @@ export function updateImageTexture(index) {
   imageMat.uniforms.u_texture.needsUpdate = true;
 
 }
-  
-  
-    // function parseMesh(geometry) {
-    //   const positionArray = textGeometry.attributes.position.array;
-    //   const totalVertices = positionArray.length;
-    //   const size = parseInt(Math.sqrt(totalVertices * 3) + .5);
-    //   const data = new Float32Array(size * size * 4);
-  
-    //   for (var i = 0; i < totalVertices; i++) {
-    //       data[i * 4] = vertices[i * 4];
-    //       data[i * 4 + 1] = vertices[i * 4 + 1];
-    //       data[i * 4 + 2] = vertices[i * 4 + 2];
-    //       data[i * 4 + 3] = vertices[i * 4 + 3]; // Alpha component
-    //   }
-  
-    //   return {data, size};
-    // }
     
   

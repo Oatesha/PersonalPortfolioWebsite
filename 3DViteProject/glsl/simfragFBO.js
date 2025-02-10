@@ -233,16 +233,12 @@ vec3 curl(float x, float y, float z) {
 
 // Add a function to calculate the force vector towards the original position
 vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
-    // Calculate the direction towards the original position
-    vec3 direction = normalize(originalPos - currentPos);
-    // Normalize the direction vector to get the unit vector
 
-    // Calculate the distance between the current position and the original position
+    vec3 direction = normalize(originalPos - currentPos);
     float distance = length(originalPos - currentPos);
 
     if (distance < 0.05) {
-      // If the direction is small enough, return zero vector or the direction itself
-      return vec3(0.0); // or return direction;
+      return vec3(0.0);
     } 
 
     return (direction);
@@ -255,13 +251,11 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     float maxDistance = maxDist;
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    
+    float Colour = texture2D(textPosTex, vUv).w;
     
     // Read the original position without mouse
     vec3 originalPos = texture2D(originalPosTex, vUv).xyz;
     vec3 textPos = texture2D(textPosTex, vUv).xyz;
-    
-    
     
     vec3 mousePos3D = vec3(mouse.xy, 0.0);
     float ellipsoidRadiusXY = 5.0;
@@ -287,10 +281,10 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     else {
       vec3 force = forceToOriginalPos(pos, mix(originalPos, textPos, mixValue));
       pos += force * 0.05;
-
+      // pos.y +=  sin(time);
     }
 
-    gl_FragColor = vec4(pos, 1.0);
+    gl_FragColor = vec4(pos, Colour);
 
 
   }
