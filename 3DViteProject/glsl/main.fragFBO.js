@@ -8,7 +8,7 @@ varying float vColour;
 
 void main() {
     // Convert packed float to integer
-    int RGBPacked = floatBitsToInt(vColor);
+    int RGBPacked = floatBitsToInt(vColour);
     
     // Unpack rgb from packed float 
     float r = float((RGBPacked >> 16) & 0xFF) / 255.0;

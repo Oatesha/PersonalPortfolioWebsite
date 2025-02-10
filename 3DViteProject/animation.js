@@ -12,15 +12,9 @@ let simMaterial, rendMaterial;
 
 // sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
-// console.log(sectionsElements);
-
-// svg
 const circle1 = document.querySelector('#circleOne');
 const circle2 = document.querySelector('#circleTwo');
 const circle3 = document.querySelector('#circleThree');
-// console.log(circle1);
-// console.log(circle2);
-// console.log(circle3);
 
 // split load text
 new SplitType(".LoadingText");
@@ -28,7 +22,6 @@ new SplitType(".LoadingText");
 //intro
 const landingText = sectionsElements[1];
 const introTextFirstLine = landingText.querySelector('h4');
-// const introTextSecondLine = landingText.querySelector('h1');
 const introTextThirdLine = landingText.querySelector('p');
 
 window.onload = function() {

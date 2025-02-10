@@ -231,7 +231,6 @@ vec3 curl(float x, float y, float z) {
     return curl;
 }
 
-// Add a function to calculate the force vector towards the original position
 vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
 
     vec3 direction = normalize(originalPos - currentPos);
@@ -258,7 +257,7 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     vec3 textPos = texture2D(textPosTex, vUv).xyz;
     
     vec3 mousePos3D = vec3(mouse.xy, 0.0);
-    float ellipsoidRadiusXY = 5.0;
+    float ellipsoidRadiusXY = 7.5;
     float ellipsoidRadiusZ = 50.0; 
     
     // Calculate the distance from the particle position to the ellipsoid center

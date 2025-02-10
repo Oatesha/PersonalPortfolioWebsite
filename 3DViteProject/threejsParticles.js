@@ -9,42 +9,42 @@ import { simvertFBO } from './glsl/simvertFBO.js';
 import { simfragFBO } from './glsl/simfragFBO.js';
 import { imageVertexShader } from './glsl/imageVertexShader.js';
 import { imageFragmentShader } from './glsl/imageFragmentShader.js';
+import { GLTFLoader, ThreeMFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
-import { GLTFLoader } from 'three/examples/jsm/Addons.js';
-import { OrbitControls } from 'three/examples/jsm/Addons.js';
 
-// Create a new dat.GUI instance
-// const gui = new GUI();
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let renderTargetB, renderTargetA, simMaterial, renderMaterial, fbo, points, 
-textGeometry, imageMat, image, elementHeight, elementWidth, img, mesh;
+let canvasBoundingRect, imageMat, sampler, projectImageSection, renderMaterial, simMaterial,
+ mesh, renderTargetA, renderTargetB, fbo
 
-let scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
-const renderer = new THREE.WebGLRenderer({alpha: true});
-const controls = new OrbitControls(camera, renderer.domElement);
-renderer.setPixelRatio(window.devicePixelRatio);
-console.log(window.innerWidth + " thisis da height and width " + window.innerHeight)
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.domElement.id = 'threeJSCanvas'; 
-document.body.appendChild( renderer.domElement );
-
-let imageScene = new THREE.Scene();
-export const imagecam = new THREE.PerspectiveCamera(10, window.innerWidth/window.innerHeight, 0.001, 30000);
-const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
-
-// const controls = new OrbitControls( camera, renderer.domElement );
-// controls.autoRotate = true;
-// imageRenderer.setPixelRatio(window.devicePixelRatio)
-
-imagecam.aspect = window.innerWidth / window.innerHeight;
-imagecam.updateProjectionMatrix();
-
-// const controls = new OrbitControls( imagecam, imageRenderer.domElement );
-
 export const mobile = detectMob();
+
+// main simulation variables
+const renderer = new THREE.WebGLRenderer({alpha: true});
+const simScene = new THREE.Scene();
+
+
+// image rendering variables
+const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
+const imageScene = new THREE.Scene();
+const imagecam = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, 0.001, 30000);
+
+
+// mouse event variables
+const pointer = new THREE.Vector2();
+const imagePointer = new THREE.Vector2();
+const prevImagePointer = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+
+const dummyGeom = new THREE.PlaneGeometry(512, 512);
+const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
+const dummyObject = new THREE.Mesh(dummyGeom, dummyMat);
+dummyObject.position.set (0, 0, 0);
+
+const textureLoader = new THREE.TextureLoader();
+const loadedTextures = [];
 
 // list of textures in order of project pos-index 0 through to max length
 const textures = [
@@ -61,44 +61,41 @@ const mobileTextures = [
   '/VendettaMob.png'
 ]
 
-
-const projectImageSection = document.querySelector(".project-image-section.project-section");
-
-if (mobile) {
-  img = document.createElement("img");
-  img.src = mobileTextures[0];
-  projectImageSection.appendChild(img);
-} 
-else {
-  projectImageSection.appendChild(imageRenderer.domElement);
-  setImageRendererSize();
+function main () {
+  initScene();
+  initHtml();
+  initImageScene();
+  initImageMesh();
+  preloadTextures();
+  initEvents()
+  loadModelGeometries();
 }
 
+function initScene() {  
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.domElement.id = 'threeJSCanvas'; 
+  document.body.appendChild( renderer.domElement );
 
-// renderer.setClearColor(0x0A0A09);
-renderer.setClearColor(0x000000, 0);
+  renderer.setClearColor(0x000000, 0);
+}
 
-const pointer = new THREE.Vector2();
-const imagePointer = new THREE.Vector2();
-const prevImagePointer = new THREE.Vector2();
+function initImageScene() {
+  imagecam.aspect = window.innerWidth / window.innerHeight;
+  imagecam.updateProjectionMatrix();
 
+  projectImageSection = document.querySelector(".project-image-section.project-section");
 
-const raycaster = new THREE.Raycaster();
-
-const dummyGeom = new THREE.PlaneGeometry(512, 512);
-const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
-const dummyObject = new THREE.Mesh(dummyGeom, dummyMat);
-dummyObject.position.set (0, 0, 0);
-
-// background div 
-const backgroundAnim = document.querySelector(".BackgroundAnimation");
-
-const textureLoader = new THREE.TextureLoader();
-
-
-
-
-let loadedTextures = [];
+  if (mobile) {
+    img = document.createElement("img");
+    img.src = mobileTextures[0];
+    projectImageSection.appendChild(img);
+  } 
+  else {
+    projectImageSection.appendChild(imageRenderer.domElement);
+    setImageRendererSize();
+  }
+}
 
 function preloadTextures() {
   textures.forEach((textureUrl, index) => {
@@ -122,11 +119,8 @@ function preloadTextures() {
 
 function setImageRendererSize() {
   
-  // const controls = new OrbitControls(imagecam, imageRenderer.domElement);
-  
   // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
   var cs = getComputedStyle(projectImageSection);
-  
   
   var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
@@ -134,15 +128,9 @@ function setImageRendererSize() {
   var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
   var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
   
-  // console.log(`${paddingX} ${paddingY} ${borderX} ${borderY} borders`);
-  // console.log(`${projectImageSection.offsetWidth} ${projectImageSection.offsetHeight}`);
-  
   // Element width and height minus padding and border
-  elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
-  elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
-
-  // console.log(elementHeight + " " + elementWidth);
-
+  var elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
+  var elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
 
   imageRenderer.setSize(elementWidth, elementHeight, false);
   adjustCameraFov();
@@ -154,9 +142,6 @@ function adjustCameraFov() {
   const planeAspectRatio = 21/9;
   imagecam.aspect = window.innerWidth / window.innerHeight;
   
-  
-  // console.log(imagecam.aspect + " " + planeAspectRatio);
-  
   if (imagecam.aspect > planeAspectRatio) {
 		imagecam.fov = fov;
 	} 
@@ -167,85 +152,62 @@ function adjustCameraFov() {
 		const newCameraHeight = cameraHeight / ratio;
 		imagecam.fov = MathUtils.radToDeg(Math.atan(newCameraHeight)) * 2;
 	}
-  
   imagecam.updateProjectionMatrix();
 }
 
+function onPointerMove( event ) {
 
-let rect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
-function initEvents() {
-  window.addEventListener( 'resize', onWindowResize, false );
-  // Listen for scroll event on the window
-  window.addEventListener('scroll', handleScroll);
+  pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-  function handleScroll() {
-    // console.log("scrolling");
+  prevImagePointer.x = imagePointer.x;
+  prevImagePointer.y = imagePointer.y;
 
-    moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
-
-    var activeSection = document.querySelector('[status="active"]')
-    if (activeSection.getAttribute('pos-index') == 1 || mobile) {
-      return;
-    }
-
-    rect = activeSection.childNodes[1].querySelector("canvas").getBoundingClientRect();
-  }
+  // divide by the canvas boudning box so that the pointer works for just the image
+  imagePointer.x = (((event.clientX - canvasBoundingRect.left) / (canvasBoundingRect.width)));
+  imagePointer.y = (1 - ((event.clientY - canvasBoundingRect.top) / (canvasBoundingRect.height)));
   
-  function onWindowResize(){
+  moveBackgroundAnim(event.clientX, event.clientY, false);
+}
 
-    camera.aspect = window.innerWidth / window.innerHeight;
-    // camera.left = ( (window.innerWidth)) / -150;
-    // camera.right = ((window.innerWidth)) / 150;
-    camera.updateProjectionMatrix();
-    renderer.setSize( window.innerWidth, window.innerHeight );
-
-
-
-    // scale images to try and maintain aspect ratio
-    setImageRendererSize();
-    initHtml();
-
-  }
+function initEvents() {
 
   document.addEventListener( 'pointermove', onPointerMove );
 
-  function onPointerMove( event ) {
+  // hacky, this is the canvas bounding box for images
+  canvasBoundingRect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
 
-    pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-    // let padding = rect.height - elementHeight
+  window.addEventListener( 'resize', onWindowResize, false );
+  // Listen for scroll event on the window
+  window.addEventListener('scroll', handleScroll);
+}
 
-    prevImagePointer.x = imagePointer.x;
-    prevImagePointer.y = imagePointer.y;
+function handleScroll() {
+  // console.log("scrolling");
 
-    // divide by the canvas boudning box so that the pointer works for just the image
-    imagePointer.x = (((event.clientX - rect.left) / (rect.width)));
-    imagePointer.y = (1 - ((event.clientY - rect.top) / (rect.height)));
-    
-    
-    moveBackgroundAnim(event.clientX, event.clientY, false);
-
-
+  moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
+  
+  var activeSection = document.querySelector('[status="active"]')
+  if (activeSection.getAttribute('pos-index') == 1 || mobile) {
+    return;
   }
 
+  canvasBoundingRect = activeSection.childNodes[1].querySelector("canvas").getBoundingClientRect();
+}
+  
+function onWindowResize(){
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  // camera.left = ( (window.innerWidth)) / -150;
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  setImageRendererSize();
   initHtml();
-  preloadTextures();
 
-  // const modelLoader = new GLTFLoader();
-
-  // modelLoader.load( 'path/to/model.glb', function ( gltf ) {
-
-  // 	scene.add( gltf.scene );
-
-  // }, undefined, function ( error ) {
-
-  // 	console.error( error );
-
-  // } );
-
+}
   
+function initImageMesh() {
   const imageGeo = new THREE.PlaneGeometry(21, 9);
-  
+
   imageGeo.center();
   imageMat = new THREE.ShaderMaterial({
     uniforms: {
@@ -259,52 +221,44 @@ function initEvents() {
     fragmentShader: imageFragmentShader,
   })
   
-  image = new THREE.Mesh(imageGeo, imageMat);
+  var image = new THREE.Mesh(imageGeo, imageMat);
   
-  var tex = textureLoader.load("/Minecraftle.png", (tex) => {
+  textureLoader.load("/Minecraftle.png", (tex) => {
     tex.needsUpdate = true;
     imageMat.uniforms.u_texture.value = tex
-    
-    
-
     const boxSize = 1.0;
     const ratio = tex.image.height / tex.image.width;
-    // console.log(tex.image.height + " " + tex.image.width);
     image.scale.set(boxSize * ratio, boxSize * ratio, 1.0)
   });
-  
+
   imageScene.add(image);
-
-
   imagecam.position.set(0, 0, 10);
   imagecam.lookAt(0, 0, 0);
+}
 
+function loadModelGeometries() {
+  // const loader = new FontLoader();
+  // loader.load( '/Epilogue Medium_Regular.json', 
+  // function ( font ) {
 
-  const loader = new FontLoader();
-  loader.load( '/Epilogue Medium_Regular.json', 
-  function ( font ) {
-
-    textGeometry = new TextGeometry('Harrison', {
-      size: 10,
-      height: 0,
-      font: font,
-      style: 'normal',
-      bevelSize: 0.25,
-      bevelThickness: 0.50,
-      bevelEnabled: true,
-    });  
+  //   var textGeometry = new TextGeometry('Harrison', {
+  //     size: 10,
+  //     height: 0,
+  //     font: font,
+  //     style: 'normal',
+  //     bevelSize: 0.25,
+  //     bevelThickness: 0.50,
+  //     bevelEnabled: true,
+  //   });  
 
     const modelLoader = new GLTFLoader();
-    modelLoader.load( 'models/radiant_pillar_baked3.glb', function ( gltf ) {
+    modelLoader.load( 'models/radiant_pillar_baked.glb', function ( gltf ) {
       gltf.scene.traverse((child) => {
         if (child.isMesh) {
-          console.log(child);
           mesh = child.clone();
           mesh.geometry = child.geometry.clone();
-
+          mesh.geometry.center()
           mesh.geometry.scale(0.1, 0.1, 0.1);
-          // mesh.geometry.center();
-          // mesh.geometry.setFromVector3(new THREE.Vector3(90, 90, 0));        
         }
       });
   
@@ -313,18 +267,18 @@ function initEvents() {
   
     console.error( error );
   
-    } );
-  });
-}
-
+    });
+  }
+  
 let scrollLeft = 0, scrollTop = 0;
 
+
+var backgroundAnim = document.querySelector(".BackgroundAnimation");
 let tweenX = gsap.quickTo(backgroundAnim, "left", { duration: 0.4, ease: "power3" }),
 tweenY = gsap.quickTo(backgroundAnim, "top", { duration: 0.4, ease: "power3" });
 
 function moveBackgroundAnim(x, y, scrolling) {
   if (scrolling) {
-    // console.log("scrolling update");
     scrollLeft = (window.scrollX !== undefined) ? window.scrollX : (document.documentElement || document.body.parentNode || document.body).scrollLeft;
     scrollTop = (window.scrollY !== undefined) ? window.scrollY : (document.documentElement || document.body.parentNode || document.body).scrollTop;  
   }
@@ -357,7 +311,7 @@ function initHtml() {
   element1.style.height = (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
   element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";
 
-  // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be that
+  // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be half that
   element1.style.left = ((canvasWidth - (canvasHeight * 1.232)) / 2) -2.5 + "px";
 
 
@@ -380,6 +334,26 @@ function detectMob() {
   });
 }
 
+// Function to sample positions and return them as an array of Vector3
+function samplePositions(numSamples) {
+  let positions = [];
+  // Build a Mesh Surface Sampler to sample positions from the geometry
+  sampler = new MeshSurfaceSampler(mesh).build();
+  for (let i = 0; i < numSamples; i++) {
+    let position = new THREE.Vector4();
+    let normals = new THREE.Vector3();
+    let colour = new THREE.Color();
+
+    sampler.sample(position, normals, colour);
+    // pack rgb values as three 8 bit integers between 0-255 into the 4th float of the vector so that they can fit into
+    // the alpha channel of our data texture.
+    let packedRGB = ((colour.r * 255) << 16) | ((colour.g * 255) << 8) | ((colour.b * 255))
+    position.w = packedRGB;
+    positions.push(position);
+  }
+  return positions;
+}
+
 function initFBO() {
   // verify browser can support float textures
   if (!renderer.capabilities.floatVertexTextures) {
@@ -390,8 +364,9 @@ function initFBO() {
     alert("For the best viewing experience with all the features please view on desktop");
   }
 
-  let w, h = 512;
-  console.log(h)
+  let w = 512;
+  let h = w;
+
   // init positions in data texture
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
@@ -426,36 +401,6 @@ function initFBO() {
   // textGeometry.center();
   // let mesh = new THREE.Mesh(gltf1.geometry);
 
-  // Build a Mesh Surface Sampler to sample positions from the geometry
-  let sampler = new MeshSurfaceSampler(mesh).build();
-  console.log(mesh)
-  // Function to sample positions and return them as an array of Vector3
-  function samplePositions(numSamples) {
-    let positions = [];
-    for (let i = 0; i < numSamples; i++) {
-      let position = new THREE.Vector4();
-      let colour = new THREE.Vector3();
-      let breh = new THREE.Vector3();
-
-      sampler.sample(position, breh, colour);
-      // pack rgb values as three 8 bit integers between 0-255 into the 4th float of the vector so that they can fit into
-      // the alpha channel of our data texture.
-      let packedRGB = ((colour.r * 255) << 16) | ((colour.g * 255) << 8) | ((colour.b * 255))
-      position.w = packedRGB;
-      positions.push(position);
-    }
-    let RGBPacked = positions[0];
-    console.log(RGBPacked)
-    let r = (((RGBPacked) >> 16) & 0xFF) / 255.0;
-    let g = (((RGBPacked) >> 8) & 0xFF) / 255.0;
-    let b = (RGBPacked & 0xFF) / 255.0;
-    console.log(r)
-    console.log(g)
-    console.log(b)
-
-    return positions;
-  }
-
   // Number of initial positions to sample
   const numInitialPositions = w * h;
   // Sample initial positions
@@ -485,7 +430,6 @@ function initFBO() {
   textDataTex.needsUpdate = true;
   
   // init simulation mat with above created data texture
-  // Export the simMaterial
   simMaterial = new THREE.ShaderMaterial({
     uniforms: { 
       posTex: { value: dataTex },
@@ -536,9 +480,6 @@ function initFBO() {
   renderer.clear(),
   renderer.render(fbo.scene, fbo.camera),
   renderer.setRenderTarget(null)
-  
-
-
     
   renderMaterial = new THREE.ShaderMaterial({
     uniforms: { posTex: { value: null },
@@ -571,10 +512,12 @@ function initFBO() {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     
-    points = new THREE.Points(geometry, renderMaterial);
-    scene.add(points);
+    var points = new THREE.Points(geometry, renderMaterial);
+    simScene.add(points);
     renderMaterial.uniforms.posTex.value = dataTex;
-    render()
+
+    render();
+
   }
   
   const clock = new THREE.Clock();
@@ -592,7 +535,7 @@ function initFBO() {
     renderer.setRenderTarget(null);
     renderMaterial.uniforms.posTex.value = renderTargetB.texture;
     
-    renderer.render(scene, camera);
+    renderer.render(simScene, camera);
     
     raycaster.setFromCamera(pointer, camera);
     
@@ -618,10 +561,8 @@ function initFBO() {
       imagePointer.y,
     )
   }
-  
 
-  initEvents();
-
+  main()
 // Export a function to get the simMaterial instance
 export function getSimMaterial() {
   return simMaterial;
@@ -632,9 +573,7 @@ export function getRenderMaterial() {
 }
 
 export function updateImageTexture(index) {
-  // console.log(loadedTextures);
   if (loadedTextures[index] == null || textures[index] == null) {
-    // console.log("null");
     return;
   }
 
