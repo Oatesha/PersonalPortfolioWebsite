@@ -11,12 +11,13 @@ import { imageVertexShader } from './glsl/imageVertexShader.js';
 import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import { GLTFLoader, ThreeMFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
+import { initAnim } from './animation.js';
 
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
 let canvasBoundingRect, imageMat, sampler, projectImageSection, renderMaterial, simMaterial,
- mesh, renderTargetA, renderTargetB, fbo
+ mesh, renderTargetA, renderTargetB, fbo, img
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
 export const mobile = detectMob();
@@ -258,7 +259,7 @@ function loadModelGeometries() {
           mesh = child.clone();
           mesh.geometry = child.geometry.clone();
           mesh.geometry.center()
-          mesh.geometry.scale(0.1, 0.1, 0.1);
+          mesh.geometry.scale(0.08, 0.08, 0.08);
         }
       });
   
@@ -293,10 +294,10 @@ function initHtml() {
   element1.style.position = "absolute";
   
   if (mobile) {
-    element1.style.top = "30%";
+    element1.style.top = "20%";
     element1.style.left = "5%";
 
-    element1.style.height = "20%"
+    element1.style.height = "60%"
     return;
   }
   
@@ -308,12 +309,13 @@ function initHtml() {
   var centerY = canvasHeight / 2; 
 
   // element1.style.left = centerX + "px" (these values only work for desktop);
-  element1.style.height = (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
-  element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";
+  element1.style.height = 2.25 * (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
+  // element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";
+  element1.style.top =  100 + "px";
+
 
   // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be half that
   element1.style.left = ((canvasWidth - (canvasHeight * 1.232)) / 2) -2.5 + "px";
-
 
 }
 
@@ -414,7 +416,6 @@ function initFBO() {
     initialPositionsArray[index * 4 + 2] = position.z;
     initialPositionsArray[index * 4 + 3] = position.w;
   });
-  console.log(initialPositionsArray)
   let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
   let textDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
   
@@ -517,7 +518,7 @@ function initFBO() {
     renderMaterial.uniforms.posTex.value = dataTex;
 
     render();
-
+    initAnim();
   }
   
   const clock = new THREE.Clock();
@@ -579,7 +580,7 @@ export function updateImageTexture(index) {
 
   if (mobile) {
     img.src = mobileTextures[index];
-    console.log(img.src);
+    // console.log(img.src);
     
   }
 

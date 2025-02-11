@@ -23,47 +23,44 @@ new SplitType(".LoadingText");
 const landingText = sectionsElements[1];
 const introTextFirstLine = landingText.querySelector('h4');
 const introTextThirdLine = landingText.querySelector('p');
+const loadingAnimationTimeline = gsap.timeline();
 
 window.onload = function() {
-    
-    initAnim();
-    console.log("loaded");
+    initLoadingAnim();
 };
 
-function initAnim() {
-
+function initLoadingAnim() {
+    console.log("loading anim started");
+    
+    // animate chars moving up
+    loadingAnimationTimeline.to(".char", {
+        y: 0,
+        stagger: 0.1,
+        delay: 0.2,
+        duration: 0.5,
+        ease: "circ",
+        onComplete: scrollDownSmoothly,
+    });
+    loadingAnimationTimeline.to(".LoadingText", {
+        autoAlpha: 1,
+    }, "<")
+    
     // init svg anim
     const backgroundBlobTimeline = gsap.timeline({
         repeat: -1,
         yoyo: true,
         repeatDelay: 2,
     });
+    InitBackgroundBlobAnimationTimeline(backgroundBlobTimeline);
+}
+
+export function initAnim() {
 
     // Init animation timeline
     simMaterial = getSimMaterial();
     rendMaterial = getRenderMaterial();
     InitLandingAnimationTimeline();
     InitMiddlePageAnimationTimeline();
-
-    InitBackgroundBlobAnimationTimeline(backgroundBlobTimeline);
-    
-    const animationTimeline = gsap.timeline({
-        delay: 1.5,
-    });
-
-    // animate chars moving up and then scroll down to landing section
-    animationTimeline.to(".char", {
-        y: 0,
-        stagger: 0.1,
-        delay: 0.2,
-        duration: 0.5,
-        ease: "circ",
-    });
-    animationTimeline.to(".LoadingText", {
-        autoAlpha: 1,
-        onComplete: scrollDownSmoothly,
-    }, "<")
-
 }
 
 function scrollDownSmoothly() {
