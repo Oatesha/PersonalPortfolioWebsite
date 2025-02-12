@@ -13,7 +13,7 @@ export const vertexShader = /* glsl */`
     // read this particle's position, which is stored as a pixel color
     vec3 pos = texture2D(posTex, position.xy).xyz;
 
-    vColour = texture2D(posTex, position.xy).w; 
+    vColour = texture2D(posTex, position.xy).a; 
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPosition;

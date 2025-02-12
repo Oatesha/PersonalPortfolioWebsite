@@ -23,7 +23,7 @@ export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.i
 export const mobile = detectMob();
 
 // main simulation variables
-const renderer = new THREE.WebGLRenderer({alpha: true});
+export const renderer = new THREE.WebGLRenderer({alpha: true});
 const simScene = new THREE.Scene();
 
 
@@ -347,9 +347,16 @@ function samplePositions(numSamples) {
 
     sampler.sample(position, normals, colour);
     // pack rgb values as three 8 bit integers between 0-255 into the 4th float of the vector so that they can fit into
-    // the alpha channel of our data texture.
-    let packedRGB = ((colour.r * 255) << 16) | ((colour.g * 255) << 8) | ((colour.b * 255))
-    position.w = packedRGB;
+    // the alpha channel of the data texture.
+    let r = Math.round(colour.r * 255);
+    let g = Math.round(colour.g * 255); 
+    let b = Math.round(colour.b * 255);
+
+    let packedRGB = (r << 16) | (g << 8) | b;
+
+    // divide so that float we pack is in the range of 0-1 to not lose precision, likely an error somewhere here but it looks good enough
+    position.w = packedRGB / (Math.pow(2, 24) - 1);
+
     positions.push(position);
   }
   return positions;
@@ -365,7 +372,7 @@ function initFBO() {
     alert("For the best viewing experience with all the features please view on desktop");
   }
 
-  let w = 512;
+  let w = 1024;
   let h = w;
 
   // init positions in data texture

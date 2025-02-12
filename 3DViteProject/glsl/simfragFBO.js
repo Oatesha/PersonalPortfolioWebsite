@@ -284,7 +284,5 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     }
 
     gl_FragColor = vec4(pos, Colour);
-
-
   }
 `;
