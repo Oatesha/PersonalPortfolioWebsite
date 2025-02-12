@@ -1,7 +1,7 @@
 import { gsap } from "gsap";
 import { Observer } from "gsap/all";
 import { animateParticlesIn, animateParticlesOut } from "./animation";
-import { updateImageTexture } from "./threejsParticles";
+import { updateImageTexture } from "./main.js";
 import { Flip } from "gsap/all";
 
 gsap.registerPlugin(Observer, Flip);

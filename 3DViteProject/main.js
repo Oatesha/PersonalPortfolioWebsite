@@ -9,7 +9,7 @@ import { simvertFBO } from './glsl/simvertFBO.js';
 import { simfragFBO } from './glsl/simfragFBO.js';
 import { imageVertexShader } from './glsl/imageVertexShader.js';
 import { imageFragmentShader } from './glsl/imageFragmentShader.js';
-import { GLTFLoader, ThreeMFLoader } from 'three/examples/jsm/Addons.js';
+import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { initAnim } from './animation.js';
 
@@ -31,7 +31,8 @@ const simScene = new THREE.Scene();
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 const imageScene = new THREE.Scene();
 const imagecam = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, 0.001, 30000);
-
+imagecam.aspect = window.innerWidth / window.innerHeight;
+imagecam.updateProjectionMatrix();
 
 // mouse event variables
 const pointer = new THREE.Vector2();
@@ -82,8 +83,6 @@ function initScene() {
 }
 
 function initImageScene() {
-  imagecam.aspect = window.innerWidth / window.innerHeight;
-  imagecam.updateProjectionMatrix();
 
   projectImageSection = document.querySelector(".project-image-section.project-section");
 
@@ -95,6 +94,7 @@ function initImageScene() {
   else {
     projectImageSection.appendChild(imageRenderer.domElement);
     setImageRendererSize();
+    adjustCameraFov();
   }
 }
 
@@ -122,7 +122,7 @@ function setImageRendererSize() {
   
   // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
   var cs = getComputedStyle(projectImageSection);
-  
+  console.log(cs);
   var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   
@@ -132,9 +132,9 @@ function setImageRendererSize() {
   // Element width and height minus padding and border
   var elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
   var elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
-
+  console.log(elementWidth);
+  console.log(elementHeight);
   imageRenderer.setSize(elementWidth, elementHeight, false);
-  adjustCameraFov();
 }
 
 // https://discourse.threejs.org/t/keeping-an-object-scaled-based-on-the-bounds-of-the-canvas-really-battling-to-explain-this-one/17574/10
@@ -233,7 +233,7 @@ function initImageMesh() {
   });
 
   imageScene.add(image);
-  imagecam.position.set(0, 0, 10);
+  imagecam.position.set(0, 0, 1.5);
   imagecam.lookAt(0, 0, 0);
 }
 
@@ -301,7 +301,6 @@ function initHtml() {
     return;
   }
   
-
   // Get canvas element and its dimensions
   var canvas = renderer.domElement;
   var canvasWidth = canvas.width;
@@ -525,6 +524,7 @@ function initFBO() {
   function render() {
     requestAnimationFrame(render);
     simMaterial.uniforms.time.value = clock.getElapsedTime();
+    imageRenderer.render(imageScene, imagecam);
 
     // Swap renderTargetA and renderTargetB
     var temp = renderTargetA;
@@ -543,11 +543,9 @@ function initFBO() {
     let intersects = raycaster.intersectObject(dummyObject);
     if (intersects.length > 0) {
       let {x,y} = intersects[0].point;
-      // console.log(intersects[0].point)
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
 
-    imageRenderer.render(imageScene, imagecam);
 
     // console.log(imagePointer);
     // console.log(prevImagePointer);

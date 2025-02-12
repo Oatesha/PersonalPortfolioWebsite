@@ -21,7 +21,7 @@ export const vertexShader = /* glsl */`
     gl_PointSize = pointSize;
 
     // Size attenuation;
-    gl_PointSize *= step(1.0 - (1.0/64.0), position.z) + 0.5;
+    // gl_PointSize *= step(1.0 - (1.0/64.0), position.z) + 0.5;
   }
 
 

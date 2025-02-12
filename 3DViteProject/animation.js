@@ -3,7 +3,7 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 // import Lenis from '@studio-freight/lenis'
 import SplitType from 'split-type'
-import { camera, getSimMaterial, getRenderMaterial, mobile } from "./threejsParticles";
+import { camera, getSimMaterial, getRenderMaterial, mobile } from "./main";
 
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
@@ -18,6 +18,7 @@ const circle3 = document.querySelector('#circleThree');
 
 // split load text
 new SplitType(".LoadingText");
+new SplitType(".MyName")
 
 //intro
 const landingText = sectionsElements[1];
@@ -152,31 +153,19 @@ function InitMiddlePageAnimationTimeline() {
             scrub: true,
         },
     });
-    middlePageTl.to(camera.position, {x: "-=90"});
-    middlePageTl.to(simMaterial.uniforms.state, {value: 1});
-    middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5})
-}
-
-// slope and function for widths around 1920-3440 need to fix this to be responsive on all
-export function animateParticlesIn() {
-    const slope = 1/760;
-    const yIntercept = 93;
-    const idealX = (slope * innerWidth) + yIntercept;
-    gsap.set(camera.position, {y: "-25", x: "+=" + (mobile ? "90" : idealX)})
-    gsap.to(camera.position, {
+    middlePageTl.to(camera.position, {
         duration: 1.5,
         z: mobile ? "36" : "18",
         y: mobile ? "-10" : "-2.5",
     })
+    middlePageTl.to(simMaterial.uniforms.state, {value: 1});
+    middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5})
+}
+
+export function animateParticlesIn() {
+    gsap.to()
 }
 
 export function animateParticlesOut() {
-    const slope = 1/760;
-    const yIntercept = 93;
-    const idealX = (slope * innerWidth) + yIntercept;
-    gsap.to(camera.position, {
-        duration: 1.5,
-        x: "-=" + (mobile ? "90" : idealX),
-        z: mobile ? "150" : "50",
-    })
+
 }
