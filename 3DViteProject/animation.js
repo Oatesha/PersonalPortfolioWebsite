@@ -4,10 +4,10 @@ import { ScrollToPlugin } from "gsap/all";
 import SplitType from 'split-type'
 import { camera, getSimMaterial, getRenderMaterial, mobile } from "./main";
 
-
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 let simMaterial, rendMaterial;
+let cameraBobbingAnim;
 
 // sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
@@ -55,12 +55,12 @@ function initLoadingAnim() {
 }
 
 export function initAnim() {
-
     // Init animation timeline
     simMaterial = getSimMaterial();
     rendMaterial = getRenderMaterial();
     InitLandingAnimationTimeline();
     InitMiddlePageAnimationTimeline();
+    InitCameraBobbing();
 }
 
 function scrollDownSmoothly() {
@@ -74,7 +74,6 @@ function scrollDownSmoothly() {
 }
 
 function InitBackgroundBlobAnimationTimeline(timeline) {
-
     timeline.to(circle1, {
         duration: 4,
         y: "-=5vh",
@@ -150,12 +149,21 @@ function InitMiddlePageAnimationTimeline() {
             start: "55% center",
             end: () => `+=${sectionsElements[1].getBoundingClientRect().height * 1.5}`,
             scrub: true,
+            onEnter: () => cameraBobbingAnim.pause(),
+            onLeaveBack: () => cameraBobbingAnim.resume(),
         },
     });
     middlePageTl.to(camera.position, { z: -10, duration: 1.0 });
     middlePageTl.to(simMaterial.uniforms.state, {value: 1});
     middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5});
 }
+
+function InitCameraBobbing() {
+    cameraBobbingAnim = gsap.timeline({ paused: true, repeat: -1, yoyo: true });
+    cameraBobbingAnim.to(camera.position, { y: "+=2", duration: 3, ease: "sine.inOut" });
+    cameraBobbingAnim.play();
+}
+
 
 export function animateParticlesIn() {
     gsap.to(camera.position, { z: 20, duration: 1.0 });
@@ -164,5 +172,5 @@ export function animateParticlesIn() {
 
 export function animateParticlesOut() {
     gsap.to(camera.position, { z: -10, duration: 0.5 });
-
+    gsap.set(camera.position, {x: 0, y: 0, duration: 2.0})
 }
