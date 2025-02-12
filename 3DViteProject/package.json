@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,10 +14,10 @@
   },
   "dependencies": {
     "@studio-freight/lenis": "^1.0.39",
+    "detect-gpu": "^5.0.68",
     "gsap": "^3.12.5",
     "scramble-text": "^0.0.9",
     "split-type": "^0.3.4",
     "three": "^0.161.0"
   }
-  
 }

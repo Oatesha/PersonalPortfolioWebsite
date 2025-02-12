@@ -12,6 +12,7 @@ import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { initAnim } from './animation.js';
+import { getGPUTier } from 'detect-gpu';
 
 const root = document.documentElement;
 root.dataset.theme = 'dark';
@@ -122,7 +123,6 @@ function setImageRendererSize() {
   
   // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
   var cs = getComputedStyle(projectImageSection);
-  console.log(cs);
   var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   
@@ -355,7 +355,8 @@ function samplePositions(numSamples) {
   return positions;
 }
 
-function initFBO() {
+
+async function initFBO() {
   // verify browser can support float textures
   if (!renderer.capabilities.floatVertexTextures) {
     alert(' * Browser does not support float shaders particles will not render properly');
@@ -365,7 +366,10 @@ function initFBO() {
     alert("For the best viewing experience with all the features please view on desktop");
   }
 
-  let w = 1024;
+  let gputier = await getGPUTier();
+  // console.log(gputier);
+  let w = mobile ? 128 : 128 * Math.pow(2, gputier.tier);
+  console.log(w)
   let h = w;
 
   // init positions in data texture
