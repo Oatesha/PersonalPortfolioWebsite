@@ -175,17 +175,14 @@ function initEvents() {
 
   document.addEventListener( 'pointermove', onPointerMove );
 
-  // hacky, this is the canvas bounding box for images
+  // hacky
   canvasBoundingRect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
 
   window.addEventListener( 'resize', onWindowResize, false );
-  // Listen for scroll event on the window
   window.addEventListener('scroll', handleScroll);
 }
 
 function handleScroll() {
-  // console.log("scrolling");
-
   moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
   
   var activeSection = document.querySelector('[status="active"]')
@@ -199,7 +196,6 @@ function handleScroll() {
 function onWindowResize(){
 
   camera.aspect = window.innerWidth / window.innerHeight;
-  // camera.left = ( (window.innerWidth)) / -150;
   renderer.setSize( window.innerWidth, window.innerHeight );
   setImageRendererSize();
   initHtml();
@@ -305,11 +301,7 @@ function initHtml() {
   var canvas = renderer.domElement;
   var canvasWidth = canvas.width;
   var canvasHeight = canvas.height;
-  var centerY = canvasHeight / 2; 
 
-  // element1.style.left = centerX + "px" (these values only work for desktop);
-  // element1.style.height = 2.25 * (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
-  // element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";
   element1.style.height = "90%"
   element1.style.top =  "5%";
 
@@ -347,8 +339,8 @@ function samplePositions(numSamples) {
     let colour = new THREE.Color();
 
     sampler.sample(position, normals, colour);
-    // pack rgb values as three 8 bit integers between 0-255 into the 4th float of the vector so that they can fit into
-    // the alpha channel of the data texture.
+
+    // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture.
     let r = Math.round(colour.r * 255);
     let g = Math.round(colour.g * 255); 
     let b = Math.round(colour.b * 255);
@@ -404,11 +396,6 @@ function initFBO() {
       cubePos[index + 3] = 1.0;
     }
   }
-  
-
-  // Set up a geometry to sample positions from
-  // textGeometry.center();
-  // let mesh = new THREE.Mesh(gltf1.geometry);
 
   // Number of initial positions to sample
   const numInitialPositions = w * h;
