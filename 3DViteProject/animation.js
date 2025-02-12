@@ -2,7 +2,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import SplitType from 'split-type'
-import { camera, renderer, getSimMaterial, getRenderMaterial, mobile } from "./main";
+import { camera, getSimMaterial, getRenderMaterial, mobile } from "./main";
 
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
@@ -152,15 +152,17 @@ function InitMiddlePageAnimationTimeline() {
             scrub: true,
         },
     });
+    middlePageTl.to(camera.position, { z: -10, duration: 1.0 });
     middlePageTl.to(simMaterial.uniforms.state, {value: 1});
-    middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5})
+    middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5});
 }
 
 export function animateParticlesIn() {
-    console.log(renderer.domElement);
-    // gsap.to(renderer.domElement.style, { display: "block", duration: 0.5 });
+    gsap.to(camera.position, { z: 20, duration: 1.0 });
+    gsap.set(camera.position, {x: 6, y: -3.0})
 }
 
 export function animateParticlesOut() {
-    // gsap.to(renderer.domElement.style, { display: "none", duration: 0.5 });
+    gsap.to(camera.position, { z: -10, duration: 0.5 });
+
 }

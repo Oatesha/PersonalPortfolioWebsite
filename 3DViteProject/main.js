@@ -19,11 +19,11 @@ root.dataset.theme = 'dark';
 let canvasBoundingRect, imageMat, sampler, projectImageSection, renderMaterial, simMaterial,
  mesh, renderTargetA, renderTargetB, fbo, img
 
-export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 30000);
+export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
 
 // main simulation variables
-export const renderer = new THREE.WebGLRenderer({alpha: true});
+const renderer = new THREE.WebGLRenderer({alpha: true});
 const simScene = new THREE.Scene();
 
 
@@ -308,9 +308,10 @@ function initHtml() {
   var centerY = canvasHeight / 2; 
 
   // element1.style.left = centerX + "px" (these values only work for desktop);
-  element1.style.height = 2.25 * (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
+  // element1.style.height = 2.25 * (canvasHeight * 0.2321) + 0.2321 * canvasHeight + "px";
   // element1.style.top = (centerY) - ((canvasHeight * 0.2321) + 0.2321 * canvasHeight) / 2 + "px";
-  element1.style.top =  100 + "px";
+  element1.style.height = "90%"
+  element1.style.top =  "5%";
 
 
   // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be half that
