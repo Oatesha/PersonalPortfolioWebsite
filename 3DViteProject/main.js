@@ -367,8 +367,8 @@ async function initFBO() {
   }
 
   let gputier = await getGPUTier();
-  // console.log(gputier);
-  let w = mobile ? 128 : 128 * Math.pow(2, gputier.tier);
+  console.log(gputier);
+  let w = mobile ? 256 : 128 * Math.pow(2, gputier.tier);
   console.log(w)
   let h = w;
 
