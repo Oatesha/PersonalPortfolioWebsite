@@ -154,7 +154,6 @@ p {
   }
 }
 
-
 .MenuContainer {
   position: fixed;
   top: 0;
@@ -219,8 +218,6 @@ p {
   color: #fcfffc;
   
 }
-
-
 
 .ProjectSection > project[status="inactive"] {
   transform: translateX(-100%);

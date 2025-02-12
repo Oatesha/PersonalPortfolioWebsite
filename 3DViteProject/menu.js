@@ -1,7 +1,7 @@
 import { gsap } from "gsap";
 import { Observer } from "gsap/all";
 import { animateParticlesIn, animateParticlesOut } from "./animation";
-import { imagecam, updateImageTexture } from "./threejsParticles";
+import { updateImageTexture } from "./main.js";
 import { Flip } from "gsap/all";
 
 gsap.registerPlugin(Observer, Flip);
@@ -13,7 +13,6 @@ gsap.registerPlugin(Observer, Flip);
 
 let nextProjectSection = 0;
 let currentCanvasPointer = 0;
-
 
 // fix the hamburgerMenu when i find a use for it
 // hamburgerMenu.addEventListener("click", toggleMenu);
@@ -95,9 +94,8 @@ function initObservers() {
   });
 }
 
-// animate button on hover state true for entering hover false for exiting direction being true for left false for right
+// animate button on hover
 function projectButtonHover (state, button, direction) {
-  // console.log(button)
   var targetButton = button.querySelector('path');
 
   if (state) {
@@ -109,27 +107,24 @@ function projectButtonHover (state, button, direction) {
     }
 }
 
-// similar function but increase scale rather than move direction for the github hover
 function githubButtonHover (state, button) {
-  // console.log(button)
   var targetButton = button
 
   if (state) {
-      // Enter hover state
       gsap.to(targetButton, { scale: 1.25, duration: 0.3, ease: "back.out(4)" });
     } else {
-      // Exit hover state
       gsap.to(targetButton, { scale: 1, duration: 0.3, ease: "back.out(4)" });
     }
 }
 
 
-let lastTween = gsap.timeline();;
+let lastTween = gsap.timeline();
+
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {
 
+  // prevents pressing next section before the current one has animated in
   if (lastTween.isActive()) {
-    // console.log("last tween is active")
     return;
   }
 
@@ -144,12 +139,11 @@ function projectButtonPress(button) {
   const nextProject = document.querySelector(`[pos-index="${nextProjectSection}"]`);
   const currentCanvasElement = document.querySelector(`[pos-index="${currentCanvasPointer}"]`);
 
-  
   if (currentProject.getAttribute("pos-index") == 1) {
     animateParticlesOut();
   }
-  lastTween
-  .to(currentProject, { duration: 1.5, x: pointerIncrement == 1 ? '-100%' : '100%', ease: "power3.out"})
+
+  lastTween.to(currentProject, { duration: 1.5, x: pointerIncrement == 1 ? '-100%' : '100%', ease: "power3.out"})
   .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, nextProjectSection], "<1.25")
   .fromTo(nextProject, { x: pointerIncrement == 1 ? '100%' : '-100%', opacity: "0" }, { duration: 1.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-1.25");
 }
@@ -164,7 +158,6 @@ function switchImageCanvasSection(project, currentCanvasElement, currentProject,
     animateParticlesIn();
     return;
   }
-  
   
   const currentCanvasNode = currentCanvasElement.children[0].children[0];
   
@@ -184,6 +177,5 @@ function switchImageCanvasSection(project, currentCanvasElement, currentProject,
 
   currentCanvasPointer = project.getAttribute("pos-index");
   updateImageTexture(nextProjectSection);
-
 
 }
