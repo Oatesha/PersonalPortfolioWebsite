@@ -4,7 +4,7 @@ Welcome to my personal portfolio website! This project is built using Three.js, 
 
 ## Features
 
-- **3D Particle Renderer**: A particle renderering engine utilising ThreeJS and the FBO technique to display interactive particles.
+- **3D Particle Renderer**: A particle renderering engine utilising ThreeJS and an extra simulation render pass to display interactive particles.
 - **Project Showcase**: Discover my latest projects, each with a dedicated section featuring descriptions, screenshots, and live demos (where applicable).
 - **Interactive Shaders**: Images that have custom shaders to apply interactive effects.
 
