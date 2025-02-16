@@ -18,7 +18,7 @@ const root = document.documentElement;
 root.dataset.theme = 'dark';
 
 let canvasBoundingRect, imageMat, sampler, projectImageSection, renderMaterial, simMaterial,
- shipMesh, sentinelMesh, renderTargetA, renderTargetB, fbo, img
+ shipMesh, renderTargetA, renderTargetB, fbo, img
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
@@ -48,9 +48,6 @@ dummyObject.position.set (0, 0, 0);
 
 const textureLoader = new THREE.TextureLoader();
 const loadedTextures = [];
-
-const particleGeometry = new THREE.BufferGeometry();
-   
 
 // list of textures in order of project pos-index 0 through to max length
 const textures = [
@@ -268,23 +265,6 @@ function loadModelGeometries() {
 
     console.error( error );
     });
-
-  modelLoader.load( 'models/sentinel.glb', function ( gltf ) {
-    gltf.scene.traverse((child) => {
-      if (child.isMesh) {
-        sentinelMesh = child.clone();
-        sentinelMesh.geometry = child.geometry.clone();
-        sentinelMesh.geometry.center()
-        sentinelMesh.geometry.scale(0.2, 0.2, 0.2);
-
-        console.log(sentinelMesh);
-
-      }
-    });
-  }, undefined, function ( error ) {
-
-  console.error( error );
-  });
 }
   
 let scrollLeft = 0, scrollTop = 0;
@@ -328,7 +308,6 @@ function initHtml() {
 
   // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be half that
   element1.style.left = ((canvasWidth - (canvasHeight * 1.232)) / 2) -2.5 + "px";
-
 }
 
 // https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
@@ -351,7 +330,7 @@ function detectMob() {
 // Function to sample positions and return them as an array of Vector3
 function samplePositions(numSamples, Mesh) {
   let positions = [];
-  let colours = new Float32Array(numSamples * 4);
+
   // Build a Mesh Surface Sampler to sample positions from the geometry
   sampler = new MeshSurfaceSampler(Mesh).build();
   for (let i = 0; i < numSamples; i++) {
@@ -361,29 +340,16 @@ function samplePositions(numSamples, Mesh) {
 
     sampler.sample(position, normals, colour);
 
-    // // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture.
-    // let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
-    // let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255)); 
-    // let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
+    // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture
+    // Likely I've messed something up here but looks the same in blender
+    let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
+    let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255)); 
+    let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
 
-    // let packedRGB = (r << 16) | (g << 8) | b;
-    // // console.log(Mesh)
-    // // console.log(colour)
-    // // console.log(r)
-    // // console.log(g)
-    // // console.log(b)
-    // position.w = packedRGB;
+    let packedRGB = (r << 16) | (g << 8) | b;
+    position.w = packedRGB;
     positions.push(position);
-    // Fill the typed array at the proper index
-    colours[i * 4 + 0] = colour.r;
-    colours[i * 4 + 1] = colour.g;
-    colours[i * 4 + 2] = colour.b;
-    colours[i * 4 + 3] = 1.0;
   }
-    // Create a BufferAttribute from the colors array
-    const colorAttribute = new THREE.BufferAttribute(colours, 4);
-    particleGeometry.setAttribute('aColor', colorAttribute);
-    console.log(particleGeometry)
   return positions;
 }
 
@@ -416,7 +382,7 @@ async function initFBO() {
       initPos[index] =  distance * Math.sin(theta) * Math.cos(phi)
       initPos[index + 1] =  distance * Math.sin(theta) * Math.sin(phi);
       initPos[index + 2] =  1.0 * Math.cos(theta);
-      initPos[index + 3] =  1.0; // this value will not have any impact
+      initPos[index + 3] =  1.0;
     }
   }
 
@@ -425,9 +391,6 @@ async function initFBO() {
 
   // Sample initial positions
   let initialShipPositions = samplePositions(numInitialPositions, shipMesh);
-  let initialSentinelPositions = samplePositions(numInitialPositions, sentinelMesh);
-
-  // Convert initial positions to Float32Array for use in DataTexture
   let initialPositionsArray = new Float32Array(numInitialPositions * 4);
   initialShipPositions.forEach((position, index) => {
     initialPositionsArray[index * 4] = position.x;
@@ -436,29 +399,12 @@ async function initFBO() {
     initialPositionsArray[index * 4 + 3] = position.w;
   });
 
-  // Convert initial positions to Float32Array for use in DataTexture
-  let initialsentinelPositionsArray = new Float32Array(numInitialPositions * 4);
-  initialSentinelPositions.forEach((position, index) => {
-      initialsentinelPositionsArray[index * 4] = position.x;
-      initialsentinelPositionsArray[index * 4 + 1] = position.y;
-      initialsentinelPositionsArray[index * 4 + 2] = position.z;
-      initialsentinelPositionsArray[index * 4 + 3] = position.w;
-  });
-
   let initialCircleDataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
   let initialShipDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
-  let initialsentinelDataTex = new THREE.DataTexture(initialsentinelPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
   
-  
-  // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
   initialShipDataTex.minFilter = THREE.NearestFilter;
   initialShipDataTex.magFilter = THREE.NearestFilter;
   initialShipDataTex.needsUpdate = true;
-
-  // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
-  initialsentinelDataTex.minFilter = THREE.NearestFilter;
-  initialsentinelDataTex.magFilter = THREE.NearestFilter;
-  initialsentinelDataTex.needsUpdate = true;
   
   // init simulation mat with above created data texture
   simMaterial = new THREE.ShaderMaterial({
@@ -470,7 +416,6 @@ async function initFBO() {
       mixValue: {value: 1.0},
       posTex: { value: initialCircleDataTex },
       shipPosTex: { value: initialShipDataTex }, 
-      sentinelPosTex: { value: initialsentinelDataTex }, 
       mouse: { value : new THREE.Vector2(-100,-100) },
     },
     vertexShader: simvertFBO,
@@ -491,7 +436,7 @@ async function initFBO() {
   // scene to render simulation texture so that we can 'ping-pong' the renderer between different render targets to update positions 
   fbo = new FBO(w, simMaterial);
   
-  // create render targets a + b to which the simulation will be rendered
+  // create sim render target
   renderTargetA = new THREE.WebGLRenderTarget(w, h, {
     wrapS: THREE.RepeatWrapping,
     wrapT: THREE.RepeatWrapping,
@@ -536,11 +481,8 @@ async function initFBO() {
       positions[index + 2] = 1.0;
       uvs[index] = i / w
       uvs[index + 1] = j / w; 
-      
-      
     }
   }
-    
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particleGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     
@@ -577,10 +519,6 @@ async function initFBO() {
       let {x,y} = intersects[0].point;
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
-
-
-    // console.log(imagePointer);
-    // console.log(prevImagePointer);
     
     imageMat.uniforms.u_PrevMouse.value.set(
       prevImagePointer.x,
@@ -610,8 +548,6 @@ export function updateImageTexture(index) {
 
   if (mobile) {
     img.src = mobileTextures[index];
-    // console.log(img.src);
-    
   }
 
   imageMat.uniforms.u_texture.value = loadedTextures[index];

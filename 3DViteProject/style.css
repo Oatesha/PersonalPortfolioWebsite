@@ -28,13 +28,6 @@ body {
   width: 100%;
   height: 100%;
   z-index: -1;
-  /* background-color: var(--background); */
-  /* filter: contrast(100%) brightness(100%);
-  background:
-  linear-gradient(0deg, #393632, #1f2833),
-  url("data:image/svg+xml,%3Csvg viewBox='0 0 341 341' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='20' numOctaves='5' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.5'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-   */
-  
 }
 
 h1 {
@@ -82,7 +75,6 @@ a {
   color: var(--accent);
 }
 
-/* Styles for mobile screens */
 @media (max-width: 800px) {
   h1 {
     font-size: 2.027rem;
@@ -202,7 +194,6 @@ a {
   right: 0;
   width: 100%;
   height: 100%;
-  /* cursor: pointer; */
   z-index: 6;
 }
 
@@ -279,10 +270,10 @@ project {
   }
 
 }
+
 /*
 top two sections of grid
 */
-
 project > .project-image-section {
   overflow: hidden;
 }
@@ -306,7 +297,6 @@ project > .project-description-section p {
 /*
 bottom two sections of grid
 */
-
 project > .project-title-section {
   display: flex;
   justify-content: space-around;
@@ -342,9 +332,7 @@ project > .project-nav-section #buttonSVGOne {
   border-right: 2px solid var(--accent);
 }
 
-
 .BackgroundAnimation {
-  
   transform: translate(-50%, -50%);
   height: 50vh;
   width: 50vw;
@@ -402,20 +390,6 @@ project > .project-nav-section #buttonSVGOne {
   z-index: 999;
 }
 
-/* .indicator-box {
-  background-color: var(--background);
-  color: var(--secondary);
-  padding: 10px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.indicatorBox.active {
-  background-color: var(--accent);
-  color: var(--primary);
-} */
-
 .ScrollIndicator {
   position: absolute;
   right: 50vw;
@@ -453,8 +427,6 @@ project > .project-nav-section #buttonSVGOne {
   display: flex;
   align-items: center;
   background-color: var(--background);
-
-  
 }
 
 .LandingPageSection {
@@ -478,7 +450,6 @@ project > .project-nav-section #buttonSVGOne {
 .LandingPageContent p, h4 {
   margin: 0;
 }
-
 
 .ProjectSection {
   height: 100vh;
@@ -522,8 +493,7 @@ project > .project-nav-section #buttonSVGOne {
   gap: 1.5rem;
 }
 
-.attribution-item {
-
+.attribution {
   background: rgba(255, 255, 255, 0.05);
   padding: 1rem;
   border-radius: 8px;
