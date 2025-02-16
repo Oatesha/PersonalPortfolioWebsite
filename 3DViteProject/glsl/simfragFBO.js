@@ -1,12 +1,10 @@
 export const simfragFBO = /* glsl */`
 
   uniform sampler2D posTex;
-  uniform sampler2D originalPosTex;
-  uniform sampler2D textPosTex;
+  uniform sampler2D shipPosTex;
   uniform vec2 mouse;
   uniform int state;
   uniform float maxDist;
-  uniform float mixValue;
   uniform float time;
 
   varying vec2 vUv;
@@ -245,16 +243,18 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
 
   float frequency = 0.35;
   float amplitude = 0.09;
+  float mixVal = 0.0;
+
   void main() {
 
     float maxDistance = maxDist;
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    float Colour = texture2D(textPosTex, vUv).w;
+    float shipColour = texture2D(shipPosTex, vUv).w;
+
     
     // Read the original position without mouse
-    vec3 originalPos = texture2D(originalPosTex, vUv).xyz;
-    vec3 textPos = texture2D(textPosTex, vUv).xyz;
+    vec3 originalShipPos = texture2D(shipPosTex, vUv).xyz;
     
     vec3 mousePos3D = vec3(mouse.xy, 0.0);
     float ellipsoidRadiusXY = 7.5;
@@ -278,11 +278,27 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     }
     
     else {
-      vec3 force = forceToOriginalPos(pos, mix(originalPos, textPos, mixValue));
+    // float cycleTime = mod(time, 40.0); // Total cycle duration is 30 seconds
+
+    // if (cycleTime < 10.0) {
+    //   mixVal = 0.0;
+    // } 
+    // else if (cycleTime < 20.0) {
+    //   float t = (cycleTime - 10.0) / 10.0;
+    //   mixVal = smoothstep(0.0, 1.0, t * 2.0); 
+    // } 
+    // else if (cycleTime > 20.0 && cycleTime < 30.0) {
+    //   mixVal = 1.0;
+    // } 
+    // else {
+    //   float t = (cycleTime - 30.0) / 10.0;
+    //   mixVal = smoothstep(1.0, 0.0, t * 2.0); 
+    // }
+
+      vec3 force = forceToOriginalPos(pos, originalShipPos);
       pos += force * 0.05;
-      // pos.y +=  sin(time);
     }
 
-    gl_FragColor = vec4(pos, Colour);
+    gl_FragColor = vec4(pos, shipColour);
   }
 `;

@@ -164,7 +164,6 @@ function InitCameraBobbing() {
     cameraBobbingAnim.play();
 }
 
-
 export function animateParticlesIn() {
     gsap.to(camera.position, { z: mobile ? 30 : 20, duration: 1.0 });
     gsap.set(camera.position, {x: mobile ? 0.0 : 6, y: mobile ? -7.0 : -3.0})

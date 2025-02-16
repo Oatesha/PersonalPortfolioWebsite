@@ -18,7 +18,7 @@ const root = document.documentElement;
 root.dataset.theme = 'dark';
 
 let canvasBoundingRect, imageMat, sampler, projectImageSection, renderMaterial, simMaterial,
- mesh, renderTargetA, renderTargetB, fbo, img
+ shipMesh, sentinelMesh, renderTargetA, renderTargetB, fbo, img
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
@@ -48,6 +48,9 @@ dummyObject.position.set (0, 0, 0);
 
 const textureLoader = new THREE.TextureLoader();
 const loadedTextures = [];
+
+const particleGeometry = new THREE.BufferGeometry();
+   
 
 // list of textures in order of project pos-index 0 through to max length
 const textures = [
@@ -252,20 +255,37 @@ function loadModelGeometries() {
     modelLoader.load( 'models/radiant_pillar_baked.glb', function ( gltf ) {
       gltf.scene.traverse((child) => {
         if (child.isMesh) {
-          mesh = child.clone();
-          mesh.geometry = child.geometry.clone();
-          mesh.geometry.center()
-          mesh.geometry.scale(0.08, 0.08, 0.08);
+          shipMesh = child.clone();
+          shipMesh.geometry = child.geometry.clone();
+          console.log(shipMesh)
+          shipMesh.geometry.center()
+          shipMesh.geometry.scale(0.085, 0.085, 0.085);
         }
       });
   
       initFBO();
     }, undefined, function ( error ) {
-  
+
     console.error( error );
-  
     });
-  }
+
+  modelLoader.load( 'models/sentinel.glb', function ( gltf ) {
+    gltf.scene.traverse((child) => {
+      if (child.isMesh) {
+        sentinelMesh = child.clone();
+        sentinelMesh.geometry = child.geometry.clone();
+        sentinelMesh.geometry.center()
+        sentinelMesh.geometry.scale(0.2, 0.2, 0.2);
+
+        console.log(sentinelMesh);
+
+      }
+    });
+  }, undefined, function ( error ) {
+
+  console.error( error );
+  });
+}
   
 let scrollLeft = 0, scrollTop = 0;
 
@@ -329,29 +349,41 @@ function detectMob() {
 }
 
 // Function to sample positions and return them as an array of Vector3
-function samplePositions(numSamples) {
+function samplePositions(numSamples, Mesh) {
   let positions = [];
+  let colours = new Float32Array(numSamples * 4);
   // Build a Mesh Surface Sampler to sample positions from the geometry
-  sampler = new MeshSurfaceSampler(mesh).build();
+  sampler = new MeshSurfaceSampler(Mesh).build();
   for (let i = 0; i < numSamples; i++) {
     let position = new THREE.Vector4();
     let normals = new THREE.Vector3();
-    let colour = new THREE.Color();
+    let colour = new THREE.Vector3();
 
     sampler.sample(position, normals, colour);
 
-    // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture.
-    let r = Math.round(colour.r * 255);
-    let g = Math.round(colour.g * 255); 
-    let b = Math.round(colour.b * 255);
+    // // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture.
+    // let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
+    // let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255)); 
+    // let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
 
-    let packedRGB = (r << 16) | (g << 8) | b;
-
-    // divide so that float we pack is in the range of 0-1 to not lose precision, likely an error somewhere here but it looks good enough
-    position.w = packedRGB / (Math.pow(2, 24) - 1);
-
+    // let packedRGB = (r << 16) | (g << 8) | b;
+    // // console.log(Mesh)
+    // // console.log(colour)
+    // // console.log(r)
+    // // console.log(g)
+    // // console.log(b)
+    // position.w = packedRGB;
     positions.push(position);
+    // Fill the typed array at the proper index
+    colours[i * 4 + 0] = colour.r;
+    colours[i * 4 + 1] = colour.g;
+    colours[i * 4 + 2] = colour.b;
+    colours[i * 4 + 3] = 1.0;
   }
+    // Create a BufferAttribute from the colors array
+    const colorAttribute = new THREE.BufferAttribute(colours, 4);
+    particleGeometry.setAttribute('aColor', colorAttribute);
+    console.log(particleGeometry)
   return positions;
 }
 
@@ -369,10 +401,10 @@ async function initFBO() {
   let gputier = await getGPUTier();
   console.log(gputier);
   let w = mobile ? 256 : 128 * Math.pow(2, gputier.tier);
-  console.log(w)
+  // let w = 2;
   let h = w;
 
-  // init positions in data texture
+  // init positions in data texture used if i want a circle that eventually becomes the model
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < w; j++) {
@@ -387,57 +419,58 @@ async function initFBO() {
       initPos[index + 3] =  1.0; // this value will not have any impact
     }
   }
-  
-  // init positions in data texture
-  let cubePos = new Float32Array(w * h * 4);
-  for (let i = 0; i < w; i++) {
-    for (let j = 0; j < w; j++) {
-      let index = (i + j * w) * 4;
-      
-      cubePos[index] = 5 * Math.random();
-      cubePos[index + 1] =  5 * Math.random();
-      cubePos[index + 2] = (Math.random() ),
-      cubePos[index + 3] = 1.0;
-    }
-  }
 
   // Number of initial positions to sample
   const numInitialPositions = w * h;
+
   // Sample initial positions
-  let initialPositions = samplePositions(numInitialPositions);
+  let initialShipPositions = samplePositions(numInitialPositions, shipMesh);
+  let initialSentinelPositions = samplePositions(numInitialPositions, sentinelMesh);
 
   // Convert initial positions to Float32Array for use in DataTexture
   let initialPositionsArray = new Float32Array(numInitialPositions * 4);
-  initialPositions.forEach((position, index) => {
+  initialShipPositions.forEach((position, index) => {
     initialPositionsArray[index * 4] = position.x;
     initialPositionsArray[index * 4 + 1] = position.y;
     initialPositionsArray[index * 4 + 2] = position.z;
     initialPositionsArray[index * 4 + 3] = position.w;
   });
-  let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
-  let textDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+
+  // Convert initial positions to Float32Array for use in DataTexture
+  let initialsentinelPositionsArray = new Float32Array(numInitialPositions * 4);
+  initialSentinelPositions.forEach((position, index) => {
+      initialsentinelPositionsArray[index * 4] = position.x;
+      initialsentinelPositionsArray[index * 4 + 1] = position.y;
+      initialsentinelPositionsArray[index * 4 + 2] = position.z;
+      initialsentinelPositionsArray[index * 4 + 3] = position.w;
+  });
+
+  let initialCircleDataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
+  let initialShipDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+  let initialsentinelDataTex = new THREE.DataTexture(initialsentinelPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
   
   
   // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
-  dataTex.minFilter = THREE.NearestFilter;
-  dataTex.magFilter = THREE.NearestFilter;
-  dataTex.needsUpdate = true;
+  initialShipDataTex.minFilter = THREE.NearestFilter;
+  initialShipDataTex.magFilter = THREE.NearestFilter;
+  initialShipDataTex.needsUpdate = true;
 
   // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
-  textDataTex.minFilter = THREE.NearestFilter;
-  textDataTex.magFilter = THREE.NearestFilter;
-  textDataTex.needsUpdate = true;
+  initialsentinelDataTex.minFilter = THREE.NearestFilter;
+  initialsentinelDataTex.magFilter = THREE.NearestFilter;
+  initialsentinelDataTex.needsUpdate = true;
   
   // init simulation mat with above created data texture
   simMaterial = new THREE.ShaderMaterial({
     uniforms: { 
-      posTex: { value: dataTex },
+      posTex: { value: initialShipDataTex },
       state: { value: 0 },
       maxDist: { value: 1.0 },
       time: {value: 0.0},
       mixValue: {value: 1.0},
-      originalPosTex: { value: dataTex },
-      textPosTex: { value: textDataTex }, 
+      posTex: { value: initialCircleDataTex },
+      shipPosTex: { value: initialShipDataTex }, 
+      sentinelPosTex: { value: initialsentinelDataTex }, 
       mouse: { value : new THREE.Vector2(-100,-100) },
     },
     vertexShader: simvertFBO,
@@ -490,7 +523,7 @@ async function initFBO() {
     fragmentShader: fragmentShader,
   });
   
-  var geometry = new THREE.BufferGeometry();
+  var particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
   for (let i = 0; i < w; i++) {
@@ -508,12 +541,12 @@ async function initFBO() {
     }
   }
     
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     
-    var points = new THREE.Points(geometry, renderMaterial);
+    var points = new THREE.Points(particleGeometry, renderMaterial);
     simScene.add(points);
-    renderMaterial.uniforms.posTex.value = dataTex;
+    renderMaterial.uniforms.posTex.value = initialShipDataTex;
 
     render();
     initAnim();

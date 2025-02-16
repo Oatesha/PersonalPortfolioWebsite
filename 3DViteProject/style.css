@@ -78,6 +78,10 @@ p {
   padding: 0;
 }
 
+a {
+  color: var(--accent);
+}
+
 /* Styles for mobile screens */
 @media (max-width: 800px) {
   h1 {
@@ -349,8 +353,7 @@ project > .project-nav-section #buttonSVGOne {
   z-index: -9;
   border-radius: 100%;
   position: absolute;
-  /* background: radial-gradient(circle, #ff0000 20%, #00ff00 40%, #0000ff 60%);
-  box-shadow: 0 0 0 100px #ff0000, 0 0 0 200px #00ff00, 0 0 0 300px #0000ff; */
+  overflow: hidden; 
 }
 
 .SvgContainer {
@@ -424,6 +427,7 @@ project > .project-nav-section #buttonSVGOne {
   height: 100vh;
   width: 100vw;
   perspective: 1px;
+  padding-bottom: 60px;
 }
 
 .LoadingText {
@@ -480,14 +484,51 @@ project > .project-nav-section #buttonSVGOne {
   height: 100vh;
   position: relative;
   overflow-x: hidden;
+  margin-bottom: 23vw;
 }
 
 .ProjectList {
   display: flex;
   flex-direction: column;
-
 }
 
+.attribution-section {
+  width: 100%;
+  height: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  border-top: 2px solid var(--accent);
+  padding: 1rem;
+}
+
+.attribution-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.attribution-header {
+  color: var(--text);
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: bold;
+}
+
+.attribution-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.attribution-item {
+
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+}
 
 #circleOne {
   --color-stop-1: #e76f51;
@@ -541,4 +582,3 @@ html.lenis, html.lenis body {
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
 }
-
