@@ -28,13 +28,6 @@ body {
   width: 100%;
   height: 100%;
   z-index: -1;
-  /* background-color: var(--background); */
-  /* filter: contrast(100%) brightness(100%);
-  background:
-  linear-gradient(0deg, #393632, #1f2833),
-  url("data:image/svg+xml,%3Csvg viewBox='0 0 341 341' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='20' numOctaves='5' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.5'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-   */
-  
 }
 
 h1 {
@@ -78,7 +71,10 @@ p {
   padding: 0;
 }
 
-/* Styles for mobile screens */
+a {
+  color: var(--accent);
+}
+
 @media (max-width: 800px) {
   h1 {
     font-size: 2.027rem;
@@ -198,7 +194,6 @@ p {
   right: 0;
   width: 100%;
   height: 100%;
-  /* cursor: pointer; */
   z-index: 6;
 }
 
@@ -275,10 +270,10 @@ project {
   }
 
 }
+
 /*
 top two sections of grid
 */
-
 project > .project-image-section {
   overflow: hidden;
 }
@@ -302,7 +297,6 @@ project > .project-description-section p {
 /*
 bottom two sections of grid
 */
-
 project > .project-title-section {
   display: flex;
   justify-content: space-around;
@@ -338,9 +332,7 @@ project > .project-nav-section #buttonSVGOne {
   border-right: 2px solid var(--accent);
 }
 
-
 .BackgroundAnimation {
-  
   transform: translate(-50%, -50%);
   height: 50vh;
   width: 50vw;
@@ -349,8 +341,7 @@ project > .project-nav-section #buttonSVGOne {
   z-index: -9;
   border-radius: 100%;
   position: absolute;
-  /* background: radial-gradient(circle, #ff0000 20%, #00ff00 40%, #0000ff 60%);
-  box-shadow: 0 0 0 100px #ff0000, 0 0 0 200px #00ff00, 0 0 0 300px #0000ff; */
+  overflow: hidden; 
 }
 
 .SvgContainer {
@@ -399,20 +390,6 @@ project > .project-nav-section #buttonSVGOne {
   z-index: 999;
 }
 
-/* .indicator-box {
-  background-color: var(--background);
-  color: var(--secondary);
-  padding: 10px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.indicatorBox.active {
-  background-color: var(--accent);
-  color: var(--primary);
-} */
-
 .ScrollIndicator {
   position: absolute;
   right: 50vw;
@@ -424,6 +401,7 @@ project > .project-nav-section #buttonSVGOne {
   height: 100vh;
   width: 100vw;
   perspective: 1px;
+  padding-bottom: 60px;
 }
 
 .LoadingText {
@@ -449,8 +427,6 @@ project > .project-nav-section #buttonSVGOne {
   display: flex;
   align-items: center;
   background-color: var(--background);
-
-  
 }
 
 .LandingPageSection {
@@ -475,19 +451,54 @@ project > .project-nav-section #buttonSVGOne {
   margin: 0;
 }
 
-
 .ProjectSection {
   height: 100vh;
   position: relative;
   overflow-x: hidden;
+  margin-bottom: 23vw;
 }
 
 .ProjectList {
   display: flex;
   flex-direction: column;
-
 }
 
+.attribution-section {
+  width: 100%;
+  height: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  border-top: 2px solid var(--accent);
+  padding: 1rem;
+}
+
+.attribution-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.attribution-header {
+  color: var(--text);
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: bold;
+}
+
+.attribution-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.attribution {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+}
 
 #circleOne {
   --color-stop-1: #e76f51;
@@ -541,4 +552,3 @@ html.lenis, html.lenis body {
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
 }
-

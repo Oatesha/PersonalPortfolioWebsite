@@ -7,7 +7,7 @@ varying vec2 vUv;
 varying float vColour; 
 
 void main() {
-    int RGBPacked = floatBitsToInt(vColour);
+    int RGBPacked = int(vColour);
     float r = float((RGBPacked >> 16) & 0xFF) / 255.0;
     float g = float((RGBPacked >>  8) & 0xFF) / 255.0;
     float b = float((RGBPacked) & 0xFF) / 255.0;

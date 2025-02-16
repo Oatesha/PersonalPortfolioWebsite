@@ -12,12 +12,13 @@ import { imageFragmentShader } from './glsl/imageFragmentShader.js';
 import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { initAnim } from './animation.js';
+import { getGPUTier } from 'detect-gpu';
 
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
 let canvasBoundingRect, imageMat, sampler, projectImageSection, renderMaterial, simMaterial,
- mesh, renderTargetA, renderTargetB, fbo, img
+ shipMesh, renderTargetA, renderTargetB, fbo, img
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
@@ -122,7 +123,6 @@ function setImageRendererSize() {
   
   // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
   var cs = getComputedStyle(projectImageSection);
-  console.log(cs);
   var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   
@@ -252,20 +252,20 @@ function loadModelGeometries() {
     modelLoader.load( 'models/radiant_pillar_baked.glb', function ( gltf ) {
       gltf.scene.traverse((child) => {
         if (child.isMesh) {
-          mesh = child.clone();
-          mesh.geometry = child.geometry.clone();
-          mesh.geometry.center()
-          mesh.geometry.scale(0.08, 0.08, 0.08);
+          shipMesh = child.clone();
+          shipMesh.geometry = child.geometry.clone();
+          console.log(shipMesh)
+          shipMesh.geometry.center()
+          shipMesh.geometry.scale(0.085, 0.085, 0.085);
         }
       });
   
       initFBO();
     }, undefined, function ( error ) {
-  
+
     console.error( error );
-  
     });
-  }
+}
   
 let scrollLeft = 0, scrollTop = 0;
 
@@ -308,7 +308,6 @@ function initHtml() {
 
   // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be half that
   element1.style.left = ((canvasWidth - (canvasHeight * 1.232)) / 2) -2.5 + "px";
-
 }
 
 // https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
@@ -329,33 +328,33 @@ function detectMob() {
 }
 
 // Function to sample positions and return them as an array of Vector3
-function samplePositions(numSamples) {
+function samplePositions(numSamples, Mesh) {
   let positions = [];
+
   // Build a Mesh Surface Sampler to sample positions from the geometry
-  sampler = new MeshSurfaceSampler(mesh).build();
+  sampler = new MeshSurfaceSampler(Mesh).build();
   for (let i = 0; i < numSamples; i++) {
     let position = new THREE.Vector4();
     let normals = new THREE.Vector3();
-    let colour = new THREE.Color();
+    let colour = new THREE.Vector3();
 
     sampler.sample(position, normals, colour);
 
-    // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture.
-    let r = Math.round(colour.r * 255);
-    let g = Math.round(colour.g * 255); 
-    let b = Math.round(colour.b * 255);
+    // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture
+    // Likely I've messed something up here but looks the same in blender
+    let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
+    let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255)); 
+    let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
 
     let packedRGB = (r << 16) | (g << 8) | b;
-
-    // divide so that float we pack is in the range of 0-1 to not lose precision, likely an error somewhere here but it looks good enough
-    position.w = packedRGB / (Math.pow(2, 24) - 1);
-
+    position.w = packedRGB;
     positions.push(position);
   }
   return positions;
 }
 
-function initFBO() {
+
+async function initFBO() {
   // verify browser can support float textures
   if (!renderer.capabilities.floatVertexTextures) {
     alert(' * Browser does not support float shaders particles will not render properly');
@@ -365,10 +364,13 @@ function initFBO() {
     alert("For the best viewing experience with all the features please view on desktop");
   }
 
-  let w = 1024;
+  let gputier = await getGPUTier();
+  console.log(gputier);
+  let w = mobile ? 256 : 128 * Math.pow(2, gputier.tier);
+  // let w = 2;
   let h = w;
 
-  // init positions in data texture
+  // init positions in data texture used if i want a circle that eventually becomes the model
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < w; j++) {
@@ -380,60 +382,40 @@ function initFBO() {
       initPos[index] =  distance * Math.sin(theta) * Math.cos(phi)
       initPos[index + 1] =  distance * Math.sin(theta) * Math.sin(phi);
       initPos[index + 2] =  1.0 * Math.cos(theta);
-      initPos[index + 3] =  1.0; // this value will not have any impact
-    }
-  }
-  
-  // init positions in data texture
-  let cubePos = new Float32Array(w * h * 4);
-  for (let i = 0; i < w; i++) {
-    for (let j = 0; j < w; j++) {
-      let index = (i + j * w) * 4;
-      
-      cubePos[index] = 5 * Math.random();
-      cubePos[index + 1] =  5 * Math.random();
-      cubePos[index + 2] = (Math.random() ),
-      cubePos[index + 3] = 1.0;
+      initPos[index + 3] =  1.0;
     }
   }
 
   // Number of initial positions to sample
   const numInitialPositions = w * h;
-  // Sample initial positions
-  let initialPositions = samplePositions(numInitialPositions);
 
-  // Convert initial positions to Float32Array for use in DataTexture
+  // Sample initial positions
+  let initialShipPositions = samplePositions(numInitialPositions, shipMesh);
   let initialPositionsArray = new Float32Array(numInitialPositions * 4);
-  initialPositions.forEach((position, index) => {
+  initialShipPositions.forEach((position, index) => {
     initialPositionsArray[index * 4] = position.x;
     initialPositionsArray[index * 4 + 1] = position.y;
     initialPositionsArray[index * 4 + 2] = position.z;
     initialPositionsArray[index * 4 + 3] = position.w;
   });
-  let dataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
-  let textDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
-  
-  
-  // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
-  dataTex.minFilter = THREE.NearestFilter;
-  dataTex.magFilter = THREE.NearestFilter;
-  dataTex.needsUpdate = true;
 
-  // let dataTex = new THREE.DataTexture(texture.image, w, h, THREE.RGBAFormat, THREE.FloatType);
-  textDataTex.minFilter = THREE.NearestFilter;
-  textDataTex.magFilter = THREE.NearestFilter;
-  textDataTex.needsUpdate = true;
+  let initialCircleDataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
+  let initialShipDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+  
+  initialShipDataTex.minFilter = THREE.NearestFilter;
+  initialShipDataTex.magFilter = THREE.NearestFilter;
+  initialShipDataTex.needsUpdate = true;
   
   // init simulation mat with above created data texture
   simMaterial = new THREE.ShaderMaterial({
     uniforms: { 
-      posTex: { value: dataTex },
+      posTex: { value: initialShipDataTex },
       state: { value: 0 },
       maxDist: { value: 1.0 },
       time: {value: 0.0},
       mixValue: {value: 1.0},
-      originalPosTex: { value: dataTex },
-      textPosTex: { value: textDataTex }, 
+      posTex: { value: initialCircleDataTex },
+      shipPosTex: { value: initialShipDataTex }, 
       mouse: { value : new THREE.Vector2(-100,-100) },
     },
     vertexShader: simvertFBO,
@@ -454,7 +436,7 @@ function initFBO() {
   // scene to render simulation texture so that we can 'ping-pong' the renderer between different render targets to update positions 
   fbo = new FBO(w, simMaterial);
   
-  // create render targets a + b to which the simulation will be rendered
+  // create sim render target
   renderTargetA = new THREE.WebGLRenderTarget(w, h, {
     wrapS: THREE.RepeatWrapping,
     wrapT: THREE.RepeatWrapping,
@@ -486,7 +468,7 @@ function initFBO() {
     fragmentShader: fragmentShader,
   });
   
-  var geometry = new THREE.BufferGeometry();
+  var particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
   for (let i = 0; i < w; i++) {
@@ -499,17 +481,14 @@ function initFBO() {
       positions[index + 2] = 1.0;
       uvs[index] = i / w
       uvs[index + 1] = j / w; 
-      
-      
     }
   }
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-    
-    var points = new THREE.Points(geometry, renderMaterial);
+    var points = new THREE.Points(particleGeometry, renderMaterial);
     simScene.add(points);
-    renderMaterial.uniforms.posTex.value = dataTex;
+    renderMaterial.uniforms.posTex.value = initialShipDataTex;
 
     render();
     initAnim();
@@ -540,10 +519,6 @@ function initFBO() {
       let {x,y} = intersects[0].point;
       simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
     }
-
-
-    // console.log(imagePointer);
-    // console.log(prevImagePointer);
     
     imageMat.uniforms.u_PrevMouse.value.set(
       prevImagePointer.x,
@@ -573,8 +548,6 @@ export function updateImageTexture(index) {
 
   if (mobile) {
     img.src = mobileTextures[index];
-    // console.log(img.src);
-    
   }
 
   imageMat.uniforms.u_texture.value = loadedTextures[index];

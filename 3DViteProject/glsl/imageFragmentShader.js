@@ -23,9 +23,6 @@ void main() {
     vec4 colorG = texture2D(u_texture, uv + vec2(strength * u_aberrationIntensity * 0.005, 0.0));
     vec4 colorB = texture2D(u_texture, uv - vec2(strength * u_aberrationIntensity * 0.005, 0.0));
     gl_FragColor = vec4(colorR.r, colorG.g, colorB.b, 1.0);
-
-
-
     
 }
 `;
