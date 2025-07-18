@@ -367,8 +367,9 @@ async function initFBO() {
   let gputier = await getGPUTier();
   console.log(gputier);
   let w = mobile ? 256 : 256 * Math.pow(2, gputier.tier);
-  // let w = 2;
   let h = w;
+
+  console.log(w)
 
   // init positions in data texture used if i want a circle that eventually becomes the model
   let initPos = new Float32Array(w * h * 4);
