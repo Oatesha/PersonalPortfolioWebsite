@@ -47,9 +47,13 @@ const introTextFirstLine = landingText.querySelector('h4');
 const introTextThirdLine = landingText.querySelector('p');
 const loadingAnimationTimeline = gsap.timeline();
 
-window.onload = function() {
+// this module sits behind an async import chain so load has sometimes already
+// fired by the time it runs, and a window.onload assignment was dropped
+if (document.readyState === "complete") {
     initLoadingAnim();
-};
+} else {
+    window.addEventListener("load", initLoadingAnim, { once: true });
+}
 
 function initLoadingAnim() {
     // animate chars moving up
@@ -91,12 +95,26 @@ export function initAnim() {
 }
 
 function scrollDownSmoothly() {
-    gsap.to(window, {
+    // Anyone who starts scrolling during these two and a half seconds was
+    // fighting the tween for the rest of its duration. First input wins.
+    const userInput = ["wheel", "touchstart", "keydown", "pointerdown"];
+    const release = () => userInput.forEach((type) => window.removeEventListener(type, stop));
+    const stop = () => {
+        tween.kill();
+        release();
+    };
+
+    const tween = gsap.to(window, {
         delay: 0.25,
-        duration: 2.5, 
-        scrollTo: { y: window.innerHeight }, 
-        ease: "noneOut",
+        duration: 2.5,
+        scrollTo: { y: () => window.innerHeight },
+        // "noneOut" is not a GSAP ease. It silently fell back to the default,
+        // which is power1.out, so this states what was already happening.
+        ease: "power1.out",
+        onComplete: release,
     });
+
+    userInput.forEach((type) => window.addEventListener(type, stop, { passive: true }));
 }
 
 function InitBackgroundBlobAnimationTimeline(timeline) {
@@ -181,7 +199,10 @@ function InitMiddlePageAnimationTimeline() {
             trigger: ".LandingPageSection",
             start: "55% center",
             end: () => `+=${sectionsElements[1].getBoundingClientRect().height * 1.5}`,
-            scrub: true,
+            // A number rather than true. scrub: true locks the timeline to the
+            // scroll position exactly, so every stutter in the wheel or
+            // trackpad shows up directly in the camera. This adds catch-up.
+            scrub: 0.6,
             onEnter: () => cameraBobbingAnim.pause(),
             onLeaveBack: () => cameraBobbingAnim.resume(),
         },
