@@ -94,17 +94,29 @@ function initObservers() {
   });
 }
 
-// animate button on hover
+// each arrow path carries a rotate() transform, so the x gsap decomposes out of
+// it is 0.293 for one arrow and 18.121 for the other, not zero. remember it per
+// element and always return to it
+const restingX = new WeakMap();
+
+// animate button on hover, both ends absolute so repeated hovers can't walk
+// the arrow away
 function projectButtonHover (state, button, direction) {
   var targetButton = button.querySelector('path');
 
-  if (state) {
-      // Enter hover state
-      gsap.to(targetButton, { x: direction ? "-=20%" : "+=20%", duration: 0.3, ease: "back.out(2)" });
-    } else {
-      // Exit hover state
-      gsap.to(targetButton, { x: direction ? "0%" : "100%", duration: 0.3, ease: "back.out(2)" });
-    }
+  if (!restingX.has(targetButton)) {
+    restingX.set(targetButton, gsap.getProperty(targetButton, "x"));
+  }
+
+  var rest = restingX.get(targetButton);
+  var nudge = targetButton.getBBox().width * 0.2 * (direction ? -1 : 1);
+
+  gsap.to(targetButton, {
+    x: state ? rest + nudge : rest,
+    duration: 0.3,
+    ease: "back.out(2)",
+    overwrite: "auto",
+  });
 }
 
 function githubButtonHover (state, button) {
@@ -118,16 +130,13 @@ function githubButtonHover (state, button) {
 }
 
 
-// Panels slide with a CSS transform, which moves the image box without changing
-// its size, so neither ResizeObserver nor the scroll listener notices. Drop the
-// rig's cached rect on every frame of a transition so the model tracks the box.
-let lastTween = gsap.timeline({ onUpdate: invalidateRigRect });
+let lastTween = null;
 
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {
 
   // prevents pressing next section before the current one has animated in
-  if (lastTween.isActive()) {
+  if (lastTween && lastTween.isActive()) {
     return;
   }
 
@@ -145,6 +154,11 @@ function projectButtonPress(button) {
   if (currentProject.getAttribute("pos-index") == 1) {
     animateParticlesOut();
   }
+
+  // a fresh timeline per press, so the isActive() gate above stays meaningful.
+  // panels slide with a css transform, which moves the image box without
+  // changing its size, so nothing else notices it move
+  lastTween = gsap.timeline({ onUpdate: invalidateRigRect });
 
   lastTween.to(currentProject, { duration: 1.5, x: pointerIncrement == 1 ? '-100%' : '100%', ease: "power3.out"})
   .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, nextProjectSection], "<1.25")
