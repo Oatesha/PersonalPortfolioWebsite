@@ -2,10 +2,22 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import SplitType from 'split-type'
+import Lenis from "lenis";
 import { getSimMaterial, getRenderMaterial } from "./main";
 import { rig, setRigTarget } from "./cameraRig.js";
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
+// Lenis was already a dependency and style.css already carried its classes, but
+// nothing ever constructed it, so the page ran on native scroll while a GSAP
+// scrollTo fought it. Driven from gsap's ticker rather than its own requestAnimationFrame
+// so scrolling, tweening and rendering all advance on one clock.
+export const lenis = new Lenis({ autoRaf: false });
+
+lenis.on("scroll", ScrollTrigger.update);
+gsap.ticker.add((time) => lenis.raf(time * 1000));
+// Lenis integrates its own delta; gsap's lag correction would fight it.
+gsap.ticker.lagSmoothing(0);
 
 if (import.meta.env.DEV) {
     window.__ST = ScrollTrigger;
@@ -100,18 +112,16 @@ function scrollDownSmoothly() {
     const userInput = ["wheel", "touchstart", "keydown", "pointerdown"];
     const release = () => userInput.forEach((type) => window.removeEventListener(type, stop));
     const stop = () => {
-        tween.kill();
+        // Cancel the pending start, and halt the run in progress where it is.
+        delayed.kill();
+        lenis.scrollTo(lenis.animatedScroll, { immediate: true });
         release();
     };
 
-    const tween = gsap.to(window, {
-        delay: 0.25,
-        duration: 2.5,
-        scrollTo: { y: () => window.innerHeight },
-        // "noneOut" is not a GSAP ease. It silently fell back to the default,
-        // which is power1.out, so this states what was already happening.
-        ease: "power1.out",
-        onComplete: release,
+    // Routed through Lenis rather than ScrollToPlugin so the two are not both
+    // writing the scroll position.
+    const delayed = gsap.delayedCall(0.25, () => {
+        lenis.scrollTo(window.innerHeight, { duration: 2.5, onComplete: release });
     });
 
     userInput.forEach((type) => window.addEventListener(type, stop, { passive: true }));

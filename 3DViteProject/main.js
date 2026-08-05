@@ -502,14 +502,14 @@ async function initFBO() {
     simScene.add(points);
     renderMaterial.uniforms.posTex.value = initialShipDataTex;
 
-    render();
+    // on gsap's ticker rather than its own raf, so scrolling, tweening and
+    // rendering advance on one clock in a fixed order instead of racing
+    gsap.ticker.add(render);
     initAnim();
   }
   
   const clock = new THREE.Clock();
   function render() {
-    requestAnimationFrame(render);
-
     // A backgrounded tab still gets throttled frames on some browsers, and
     // there is nothing to see, so skip the two render passes entirely.
     if (document.hidden) {
