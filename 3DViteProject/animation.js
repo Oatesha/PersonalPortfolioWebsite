@@ -2,12 +2,25 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import SplitType from 'split-type'
-import { camera, getSimMaterial, getRenderMaterial, mobile } from "./main";
+import { getSimMaterial, getRenderMaterial } from "./main";
+import { rig } from "./cameraRig.js";
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
+if (import.meta.env.DEV) {
+    window.__ST = ScrollTrigger;
+    window.__gsap = gsap;
+}
+
 let simMaterial, rendMaterial;
 let cameraBobbingAnim;
+
+// Camera framing is expressed as a fraction of the distance at which the model
+// exactly fills its target box, so these read the same at every resolution.
+// 1.0 fills the box; small negative values sit inside the particle cloud.
+const INSIDE_MODEL_FIT = -0.07;
+const THROUGH_MODEL_FIT = -0.15;
+const BOB_AMPLITUDE = 2;
 
 // sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
@@ -56,9 +69,16 @@ export function initAnim() {
     // Init animation timeline
     simMaterial = getSimMaterial();
     rendMaterial = getRenderMaterial();
+    // The middle page timeline is built by the landing timeline's onComplete.
+    // Both drive rig.fit, and a scrubbed ScrollTrigger renders progress 0 on
+    // every frame it sits before its start, so building them together let the
+    // scrub overwrite the intro's fly-out each frame and pin the camera.
     InitLandingAnimationTimeline();
-    InitMiddlePageAnimationTimeline();
     InitCameraBobbing();
+    // These triggers are built after the GLB and the GPU tier probe have
+    // resolved, long after load, so ScrollTrigger has already done its own
+    // refresh pass and left them with an unmeasured start and end.
+    ScrollTrigger.refresh();
 }
 
 function scrollDownSmoothly() {
@@ -130,11 +150,18 @@ function InitLandingAnimationTimeline() {
             trigger: ".LandingPageSection",
             start: "-50px center",
         },
+        // Hand rig.fit over to the scroll-scrubbed timeline only once the
+        // fly-out has finished, so the two never own it at the same time.
+        onComplete: () => {
+            InitMiddlePageAnimationTimeline();
+            ScrollTrigger.refresh();
+        },
     });
 
     // Animate the text elements
     introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
-    introTl.fromTo(camera.position, {z: -5}, {z: mobile ? 150 : 75, duration: 1.75});
+    // Pull out from inside the model until it exactly fills its box.
+    introTl.fromTo(rig, { fit: INSIDE_MODEL_FIT }, { fit: 1.0, duration: 1.75 });
     introTl.fromTo(simMaterial.uniforms.mixValue, {value: 0.0}, {value: 1.0, duration: 2.0}, "-=1.75");
     introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
 }
@@ -150,23 +177,23 @@ function InitMiddlePageAnimationTimeline() {
             onLeaveBack: () => cameraBobbingAnim.resume(),
         },
     });
-    middlePageTl.to(camera.position, { z: -10, duration: 1.0 });
+    middlePageTl.to(rig, { fit: THROUGH_MODEL_FIT, duration: 1.0 });
     middlePageTl.to(simMaterial.uniforms.state, {value: 1});
     middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5});
 }
 
 function InitCameraBobbing() {
     cameraBobbingAnim = gsap.timeline({ paused: true, repeat: -1, yoyo: true });
-    cameraBobbingAnim.to(camera.position, { y: "+=2", duration: 3, ease: "sine.inOut" });
+    // Absolute, not relative. A "+=2" tween captures its start value once, so it
+    // snapped whenever anything else wrote to the camera's y position.
+    cameraBobbingAnim.to(rig, { bobY: BOB_AMPLITUDE, duration: 3, ease: "sine.inOut" });
     cameraBobbingAnim.play();
 }
 
 export function animateParticlesIn() {
-    gsap.to(camera.position, { z: mobile ? 30 : 20, duration: 1.0 });
-    gsap.set(camera.position, {x: mobile ? 0.0 : 6, y: mobile ? -7.0 : -3.0})
+    gsap.to(rig, { fit: 1.0, duration: 1.0 });
 }
 
 export function animateParticlesOut() {
-    gsap.to(camera.position, { z: -10, duration: 0.5 });
-    gsap.set(camera.position, {x: 0, y: 0, duration: 2.0})
+    gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: 0.5 });
 }

@@ -13,6 +13,7 @@ import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { initAnim } from './animation.js';
 import { getGPUTier } from 'detect-gpu';
+import { rig, initRig, updateCameraFraming } from './cameraRig.js';
 import './menu.js';
 
 const root = document.documentElement;
@@ -67,6 +68,7 @@ const mobileTextures = [
 
 function main () {
   initScene();
+  initRig();
   initHtml();
   initImageScene();
   initImageMesh();
@@ -220,8 +222,8 @@ function onWindowResize(){
   // devicePixelRatio changes when the window moves between displays or the
   // browser zoom level changes, so re-apply it rather than only reading it once.
   renderer.setPixelRatio(currentPixelRatio());
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+  // The main camera's aspect and projection matrix are owned by the rig, which
+  // rebuilds them from the target box every frame.
   renderer.setSize( window.innerWidth, window.innerHeight );
   setImageRendererSize();
   adjustCameraFov();
@@ -283,6 +285,11 @@ function loadModelGeometries() {
           shipMesh.geometry = child.geometry.clone();
           shipMesh.geometry.center()
           shipMesh.geometry.scale(0.085, 0.085, 0.085);
+
+          // The rig frames the camera against the model's actual extent rather
+          // than a hardcoded distance, so it needs the bounding sphere.
+          shipMesh.geometry.computeBoundingSphere();
+          rig.radius = shipMesh.geometry.boundingSphere.radius;
         }
       });
   
@@ -526,6 +533,7 @@ async function initFBO() {
     }
 
     simMaterial.uniforms.time.value = clock.getElapsedTime();
+    updateCameraFraming(camera);
     imageRenderer.render(imageScene, imagecam);
 
     // Swap renderTargetA and renderTargetB
