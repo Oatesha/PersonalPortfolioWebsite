@@ -6,6 +6,9 @@ export const simfragFBO = /* glsl */`
   uniform int state;
   uniform float maxDist;
   uniform float time;
+  // Frame delta relative to 60Hz. The integrators below use fixed timesteps, so
+  // without this the whole simulation runs 2.4x faster on a 144Hz display.
+  uniform float dtScale;
 
   varying vec2 vUv;
   
@@ -271,7 +274,7 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     }
     
     if (state == 1) {
-      vec3 dpos = thomasAttractor(pos);
+      vec3 dpos = thomasAttractor(pos) * dtScale;
       pos.x += dpos.x;
       pos.y += dpos.y;
       pos.z += dpos.z;
@@ -296,7 +299,7 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     // }
 
       vec3 force = forceToOriginalPos(pos, originalShipPos);
-      pos += force * 0.05;
+      pos += force * 0.05 * dtScale;
     }
 
     gl_FragColor = vec4(pos, shipColour);

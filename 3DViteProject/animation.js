@@ -19,11 +19,6 @@ gsap.ticker.add((time) => lenis.raf(time * 1000));
 // Lenis integrates its own delta; gsap's lag correction would fight it.
 gsap.ticker.lagSmoothing(0);
 
-if (import.meta.env.DEV) {
-    window.__ST = ScrollTrigger;
-    window.__gsap = gsap;
-}
-
 let simMaterial, rendMaterial;
 let cameraBobbingAnim;
 let middlePageTrigger = null;

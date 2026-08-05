@@ -39,11 +39,8 @@ export function setRigTarget(element) {
 }
 
 export function initRig() {
-  if (import.meta.env.DEV) {
-    window.__rig = rig;
-  }
-  // getBoundingClientRect forces layout, and GSAP writes transforms every frame
-  // during a project transition, so read it only when something has changed.
+  // getBoundingClientRect forces layout and gsap writes transforms every frame
+  // during a project transition, so only read it when something has changed
   resizeObserver = new ResizeObserver(invalidateRigRect);
   window.addEventListener('resize', invalidateRigRect);
   window.addEventListener('scroll', invalidateRigRect, { passive: true });

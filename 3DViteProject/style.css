@@ -375,7 +375,10 @@ project > .project-nav-section #buttonSVGOne {
   left: 0;
   width: 100vw;
   height: 100vh;
-  backdrop-filter: blur(100px);
+  /* a full viewport backdrop-filter is recomposited over the live canvas every
+     frame and the cost scales with the radius. lower than this resolves the
+     gradient blobs into distinct circles and changes the design */
+  backdrop-filter: blur(64px);
   z-index: -1;
   overflow: auto;
 }

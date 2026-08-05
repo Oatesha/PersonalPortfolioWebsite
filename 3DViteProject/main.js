@@ -44,10 +44,12 @@ const imagePointer = new THREE.Vector2();
 const prevImagePointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
-const dummyGeom = new THREE.PlaneGeometry(512, 512);
-const dummyMat = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
-const dummyObject = new THREE.Mesh(dummyGeom, dummyMat);
-dummyObject.position.set (0, 0, 0);
+// The pointer is projected onto the z=0 plane to drive the simulation's mouse
+// repulsion. A maths plane does this without geometry, a material or a mesh.
+const mousePlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+const mouseHit = new THREE.Vector3();
+
+let imageSectionVisible = true;
 
 const textureLoader = new THREE.TextureLoader();
 const loadedTextures = [];
@@ -112,6 +114,10 @@ function initImageScene() {
     // The box is sized by the grid, which reflows for reasons a window resize
     // listener never sees, so observe the element itself.
     new ResizeObserver(setImageRendererSize).observe(projectImageSection);
+
+    new IntersectionObserver((entries) => {
+      imageSectionVisible = entries[0].isIntersecting;
+    }).observe(projectImageSection);
   }
 }
 
@@ -423,6 +429,7 @@ async function initFBO() {
       state: { value: 0 },
       maxDist: { value: 1.0 },
       time: {value: 0.0},
+      dtScale: {value: 1.0},
       mixValue: {value: 1.0},
       posTex: { value: initialCircleDataTex },
       shipPosTex: { value: initialShipDataTex },
@@ -509,6 +516,8 @@ async function initFBO() {
   }
   
   const clock = new THREE.Clock();
+  let elapsed = 0;
+
   function render() {
     // A backgrounded tab still gets throttled frames on some browsers, and
     // there is nothing to see, so skip the two render passes entirely.
@@ -516,9 +525,22 @@ async function initFBO() {
       return;
     }
 
-    simMaterial.uniforms.time.value = clock.getElapsedTime();
+    // getElapsedTime consumes the delta internally, so take the delta once and
+    // accumulate. The simulation steps by dtScale rather than a fixed amount,
+    // so it runs at the same rate on a 60Hz and a 144Hz display instead of
+    // 2.4x faster on the latter. Capped so a dropped frame cannot blow up the
+    // chaotic attractor.
+    const delta = clock.getDelta();
+    elapsed += delta;
+    simMaterial.uniforms.time.value = elapsed;
+    simMaterial.uniforms.dtScale.value = Math.min(delta * 60, 2);
+
     updateCameraFraming(camera);
-    imageRenderer.render(imageScene, imagecam);
+
+    // Only draw the screenshot when its panel is actually on screen.
+    if (imageSectionVisible) {
+      imageRenderer.render(imageScene, imagecam);
+    }
 
     // Swap renderTargetA and renderTargetB
     var temp = renderTargetA;
@@ -532,14 +554,14 @@ async function initFBO() {
     
     renderer.render(simScene, camera);
     
+    // Intersect the z=0 plane directly. This used to raycast against a 512x512
+    // Mesh built only to stand in for that plane, and allocated a Vector2 every
+    // frame for the result.
     raycaster.setFromCamera(pointer, camera);
-    
-    let intersects = raycaster.intersectObject(dummyObject);
-    if (intersects.length > 0) {
-      let {x,y} = intersects[0].point;
-      simMaterial.uniforms.mouse.value = new THREE.Vector2(x,y);
+    if (raycaster.ray.intersectPlane(mousePlane, mouseHit)) {
+      simMaterial.uniforms.mouse.value.set(mouseHit.x, mouseHit.y);
     }
-    
+
     imageMat.uniforms.u_PrevMouse.value.set(
       prevImagePointer.x,
       prevImagePointer.y,
