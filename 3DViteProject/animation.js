@@ -30,8 +30,6 @@ window.onload = function() {
 };
 
 function initLoadingAnim() {
-    console.log("loading anim started");
-    
     // animate chars moving up
     loadingAnimationTimeline.to(".char", {
         y: 0,
@@ -64,7 +62,6 @@ export function initAnim() {
 }
 
 function scrollDownSmoothly() {
-    console.log("initanim oncomplete");
     gsap.to(window, {
         delay: 0.25,
         duration: 2.5, 

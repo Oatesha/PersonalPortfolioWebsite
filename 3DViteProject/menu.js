@@ -79,7 +79,6 @@ function initObservers() {
   const gitButtons = document.querySelectorAll('.project-title-section svg')
   gitButtons.forEach(element => {
     const link = element.dataset.link;
-    console.log(link);
     Observer.create({
       type: "pointer",
       target: element,

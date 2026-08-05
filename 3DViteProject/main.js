@@ -13,6 +13,7 @@ import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { initAnim } from './animation.js';
 import { getGPUTier } from 'detect-gpu';
+import './menu.js';
 
 const root = document.documentElement;
 root.dataset.theme = 'dark';
@@ -132,8 +133,6 @@ function setImageRendererSize() {
   // Element width and height minus padding and border
   var elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
   var elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
-  console.log(elementWidth);
-  console.log(elementHeight);
   imageRenderer.setSize(elementWidth, elementHeight, false);
 }
 
@@ -254,7 +253,6 @@ function loadModelGeometries() {
         if (child.isMesh) {
           shipMesh = child.clone();
           shipMesh.geometry = child.geometry.clone();
-          console.log(shipMesh)
           shipMesh.geometry.center()
           shipMesh.geometry.scale(0.085, 0.085, 0.085);
         }
@@ -357,19 +355,12 @@ function samplePositions(numSamples, Mesh) {
 async function initFBO() {
   // verify browser can support float textures
   if (!renderer.capabilities.floatVertexTextures) {
-    alert(' * Browser does not support float shaders particles will not render properly');
-  }
-  
-  if (mobile) {
-    alert("For the best viewing experience with all the features please view on desktop");
+    console.warn('Browser does not support float vertex textures, particles will not render properly');
   }
 
   let gputier = await getGPUTier();
-  console.log(gputier);
   let w = mobile ? 256 : 256 * Math.pow(2, gputier.tier);
   let h = w;
-
-  console.log(w)
 
   // init positions in data texture used if i want a circle that eventually becomes the model
   let initPos = new Float32Array(w * h * 4);
