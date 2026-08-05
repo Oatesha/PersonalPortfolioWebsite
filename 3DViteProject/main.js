@@ -400,14 +400,13 @@ async function initFBO() {
   
   // init simulation mat with above created data texture
   simMaterial = new THREE.ShaderMaterial({
-    uniforms: { 
-      posTex: { value: initialShipDataTex },
+    uniforms: {
       state: { value: 0 },
       maxDist: { value: 1.0 },
       time: {value: 0.0},
       mixValue: {value: 1.0},
       posTex: { value: initialCircleDataTex },
-      shipPosTex: { value: initialShipDataTex }, 
+      shipPosTex: { value: initialShipDataTex },
       mouse: { value : new THREE.Vector2(-100,-100) },
     },
     vertexShader: simvertFBO,
@@ -463,16 +462,18 @@ async function initFBO() {
   var particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
-  for (let i = 0; i < w; i++) {
-    
-    for (let j = 0; j < w; j++) {
-      
+  // Each particle stores the coordinate of the simulation texel it reads from in
+  // its position attribute, which main.vertFBO samples with texture2D(posTex, position.xy).
+  // Sample texel centres so NearestFilter cannot land on a texel boundary.
+  for (let j = 0; j < w; j++) {
+    for (let i = 0; i < w; i++) {
+
       let index = (i + j * w);
-      positions[index] = Math.random();
-      positions[index + 1] = 1.0;
-      positions[index + 2] = 1.0;
-      uvs[index] = i / w
-      uvs[index + 1] = j / w; 
+      positions[index * 3] = (i + 0.5) / w;
+      positions[index * 3 + 1] = (j + 0.5) / w;
+      positions[index * 3 + 2] = 0.0;
+      uvs[index * 2] = (i + 0.5) / w;
+      uvs[index * 2 + 1] = (j + 0.5) / w;
     }
   }
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
