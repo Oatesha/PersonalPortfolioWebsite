@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { MathUtils } from 'three';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
@@ -33,9 +32,11 @@ const simScene = new THREE.Scene();
 // image rendering variables
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 const imageScene = new THREE.Scene();
-const imagecam = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, 0.001, 30000);
-imagecam.aspect = window.innerWidth / window.innerHeight;
-imagecam.updateProjectionMatrix();
+// orthographic over a unit quad. the image is fitted to the box in the shader
+// from the two aspects, so the camera needs no aspect of its own and nothing
+// has to be recomputed when the window changes shape
+const imagecam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
+imagecam.position.z = 1;
 
 // mouse event variables
 const pointer = new THREE.Vector2();
@@ -104,9 +105,13 @@ function initImageScene() {
     projectImageSection.appendChild(img);
   } 
   else {
+    imageRenderer.setPixelRatio(currentPixelRatio());
     projectImageSection.appendChild(imageRenderer.domElement);
     setImageRendererSize();
-    adjustCameraFov();
+
+    // The box is sized by the grid, which reflows for reasons a window resize
+    // listener never sees, so observe the element itself.
+    new ResizeObserver(setImageRendererSize).observe(projectImageSection);
   }
 }
 
@@ -131,38 +136,38 @@ function preloadTextures() {
 }
 
 function setImageRendererSize() {
-  
+  if (mobile) {
+    return;
+  }
+
+  // size against whichever panel currently holds the canvas, menu.js moves it
+  // between projects as they slide past
+  var box = imageRenderer.domElement.parentElement || projectImageSection;
+
   // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
-  var cs = getComputedStyle(projectImageSection);
+  var cs = getComputedStyle(box);
   var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-  
+
   var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
   var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-  
-  // Element width and height minus padding and border
-  var elementWidth = projectImageSection.offsetWidth - paddingX - borderX;
-  var elementHeight = projectImageSection.offsetHeight - paddingY - borderY;
-  imageRenderer.setSize(elementWidth, elementHeight, false);
-}
 
-// https://discourse.threejs.org/t/keeping-an-object-scaled-based-on-the-bounds-of-the-canvas-really-battling-to-explain-this-one/17574/10
-function adjustCameraFov() {
-  const fov = 100;
-  const planeAspectRatio = 21/9;
-  imagecam.aspect = window.innerWidth / window.innerHeight;
-  
-  if (imagecam.aspect > planeAspectRatio) {
-		imagecam.fov = fov;
-	} 
-  else {
-		// window too narrow
-		const cameraHeight = Math.tan(MathUtils.degToRad(fov / 2));
-		const ratio = imagecam.aspect / planeAspectRatio;
-		const newCameraHeight = cameraHeight / ratio;
-		imagecam.fov = MathUtils.radToDeg(Math.atan(newCameraHeight)) * 2;
-	}
-  imagecam.updateProjectionMatrix();
+  // Element width and height minus padding and border
+  var elementWidth = box.offsetWidth - paddingX - borderX;
+  var elementHeight = box.offsetHeight - paddingY - borderY;
+
+  if (elementWidth < 1 || elementHeight < 1) {
+    return;
+  }
+
+  imageRenderer.setPixelRatio(currentPixelRatio());
+  imageRenderer.setSize(elementWidth, elementHeight);
+
+  if (imageMat) {
+    imageMat.uniforms.u_planeAspect.value = elementWidth / elementHeight;
+  }
+
+  refreshCanvasBoundingRect();
 }
 
 function onPointerMove( event ) {
@@ -174,9 +179,11 @@ function onPointerMove( event ) {
   prevImagePointer.y = imagePointer.y;
 
   // divide by the canvas boudning box so that the pointer works for just the image
-  imagePointer.x = (((event.clientX - canvasBoundingRect.left) / (canvasBoundingRect.width)));
-  imagePointer.y = (1 - ((event.clientY - canvasBoundingRect.top) / (canvasBoundingRect.height)));
-  
+  if (canvasBoundingRect) {
+    imagePointer.x = (((event.clientX - canvasBoundingRect.left) / (canvasBoundingRect.width)));
+    imagePointer.y = (1 - ((event.clientY - canvasBoundingRect.top) / (canvasBoundingRect.height)));
+  }
+
   moveBackgroundAnim(event.clientX, event.clientY, false);
 }
 
@@ -184,8 +191,7 @@ function initEvents() {
 
   document.addEventListener( 'pointermove', onPointerMove );
 
-  // hacky
-  canvasBoundingRect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
+  refreshCanvasBoundingRect();
 
   window.addEventListener( 'resize', requestResize, false );
   window.addEventListener('scroll', handleScroll);
@@ -209,56 +215,61 @@ function requestResize() {
 function handleScroll() {
   moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
   
-  var activeSection = document.querySelector('[status="active"]')
-  if (activeSection.getAttribute('pos-index') == 1 || mobile) {
+  refreshCanvasBoundingRect();
+}
+
+// the image shader takes the pointer in the image's own 0..1 space, so it needs
+// the rect of whichever panel holds the canvas
+function refreshCanvasBoundingRect() {
+  if (mobile) {
     return;
   }
 
-  canvasBoundingRect = activeSection.childNodes[1].querySelector("canvas").getBoundingClientRect();
+  var canvas = document.querySelector('[status="active"] .project-image-section canvas');
+  if (canvas) {
+    canvasBoundingRect = canvas.getBoundingClientRect();
+  }
 }
   
 function onWindowResize(){
 
-  // devicePixelRatio changes when the window moves between displays or the
-  // browser zoom level changes, so re-apply it rather than only reading it once.
+  // devicePixelRatio changes when the window moves between displays or the zoom
+  // level changes. the camera's aspect and projection matrix belong to the rig,
+  // which rebuilds them from the target box every frame
   renderer.setPixelRatio(currentPixelRatio());
-  // The main camera's aspect and projection matrix are owned by the rig, which
-  // rebuilds them from the target box every frame.
   renderer.setSize( window.innerWidth, window.innerHeight );
   setImageRendererSize();
-  adjustCameraFov();
 
 }
   
 function initImageMesh() {
-  const imageGeo = new THREE.PlaneGeometry(21, 9);
+  // Fills the orthographic frustum exactly. The image is fitted inside it by
+  // the shader, so the quad never needs rescaling per texture or per window.
+  const imageGeo = new THREE.PlaneGeometry(2, 2);
 
-  imageGeo.center();
   imageMat = new THREE.ShaderMaterial({
+    transparent: true,
     uniforms: {
-      u_texture: { type: "t", value: null },
-      u_Mouse: { type: "v2", value: new THREE.Vector2() },      
-      u_PrevMouse: { type: "v2", value: new THREE.Vector2() },
-      u_aberrationIntensity: { type: "f", value: 1.0 },    
-
+      u_texture: { value: null },
+      u_Mouse: { value: new THREE.Vector2() },
+      u_PrevMouse: { value: new THREE.Vector2() },
+      u_aberrationIntensity: { value: 1.0 },
+      u_planeAspect: { value: 1.0 },
+      u_texAspect: { value: 1.0 },
     },
     vertexShader: imageVertexShader,
     fragmentShader: imageFragmentShader,
   })
-  
+
   var image = new THREE.Mesh(imageGeo, imageMat);
-  
-  textureLoader.load("/Minecraftle.png", (tex) => {
+
+  textureLoader.load(textures[0], (tex) => {
     tex.needsUpdate = true;
-    imageMat.uniforms.u_texture.value = tex
-    const boxSize = 1.0;
-    const ratio = tex.image.height / tex.image.width;
-    image.scale.set(boxSize * ratio, boxSize * ratio, 1.0)
+    imageMat.uniforms.u_texture.value = tex;
+    imageMat.uniforms.u_texAspect.value = tex.image.width / tex.image.height;
   });
 
   imageScene.add(image);
-  imagecam.position.set(0, 0, 1.5);
-  imagecam.lookAt(0, 0, 0);
 }
 
 function loadModelGeometries() {
@@ -559,9 +570,11 @@ export function updateImageTexture(index) {
     img.src = mobileTextures[index];
   }
 
-  imageMat.uniforms.u_texture.value = loadedTextures[index];
+  const texture = loadedTextures[index];
+  imageMat.uniforms.u_texture.value = texture;
   imageMat.uniforms.u_texture.needsUpdate = true;
-
+  // Screenshots are not all the same shape, and the shader fits by aspect.
+  imageMat.uniforms.u_texAspect.value = texture.image.width / texture.image.height;
 }
     
   
