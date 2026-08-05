@@ -75,8 +75,16 @@ function main () {
   loadModelGeometries();
 }
 
-function initScene() {  
-  renderer.setPixelRatio(window.devicePixelRatio);
+// Uncapped devicePixelRatio costs 9x the fragment work on a 3x display for no
+// visible gain on a particle field, so clamp it.
+const MAX_PIXEL_RATIO = 2;
+
+function currentPixelRatio() {
+  return Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+}
+
+function initScene() {
+  renderer.setPixelRatio(currentPixelRatio());
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.domElement.id = 'threeJSCanvas'; 
   document.body.appendChild( renderer.domElement );
@@ -177,8 +185,23 @@ function initEvents() {
   // hacky
   canvasBoundingRect = document.querySelector('[status="active"]').childNodes[1].childNodes[0].getBoundingClientRect();
 
-  window.addEventListener( 'resize', onWindowResize, false );
+  window.addEventListener( 'resize', requestResize, false );
   window.addEventListener('scroll', handleScroll);
+}
+
+// resize fires far faster than we can usefully respond to and onWindowResize
+// reads layout, so coalesce bursts into one handler per frame
+let resizePending = false;
+
+function requestResize() {
+  if (resizePending) {
+    return;
+  }
+  resizePending = true;
+  requestAnimationFrame(() => {
+    resizePending = false;
+    onWindowResize();
+  });
 }
 
 function handleScroll() {
@@ -194,9 +217,14 @@ function handleScroll() {
   
 function onWindowResize(){
 
+  // devicePixelRatio changes when the window moves between displays or the
+  // browser zoom level changes, so re-apply it rather than only reading it once.
+  renderer.setPixelRatio(currentPixelRatio());
   camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
   renderer.setSize( window.innerWidth, window.innerHeight );
   setImageRendererSize();
+  adjustCameraFov();
   initHtml();
 
 }
@@ -490,6 +518,13 @@ async function initFBO() {
   const clock = new THREE.Clock();
   function render() {
     requestAnimationFrame(render);
+
+    // A backgrounded tab still gets throttled frames on some browsers, and
+    // there is nothing to see, so skip the two render passes entirely.
+    if (document.hidden) {
+      return;
+    }
+
     simMaterial.uniforms.time.value = clock.getElapsedTime();
     imageRenderer.render(imageScene, imagecam);
 
