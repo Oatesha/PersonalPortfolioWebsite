@@ -433,22 +433,43 @@ project > .project-nav-section #buttonSVGOne {
   height: 100vh;
   margin-bottom: 46vw;
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 2rem;
+  padding: 5vh 5vw;
+  box-sizing: border-box;
 }
 
 .LandingPageContent {
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   text-wrap: wrap;
-  min-width: 500px;
-}
-
-.LandingPageContent p {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
+  min-width: 0;
 }
 
 .LandingPageContent p, h4 {
   margin: 0;
+}
+
+/* Reserves the right half of the landing grid for the particle model. It has
+   no painted content of its own; the fullscreen canvas draws into its rect. */
+.LandingStage {
+  min-width: 0;
+}
+
+@media (width < 800px) {
+  .LandingPageSection {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 10vh 5vw;
+  }
+
+  .LandingPageContent {
+    justify-content: flex-start;
+    gap: 1rem;
+  }
 }
 
 .ProjectSection {

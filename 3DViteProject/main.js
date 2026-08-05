@@ -13,7 +13,7 @@ import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { initAnim } from './animation.js';
 import { getGPUTier } from 'detect-gpu';
-import { rig, initRig, updateCameraFraming } from './cameraRig.js';
+import { rig, initRig, setRigTarget, updateCameraFraming } from './cameraRig.js';
 import './menu.js';
 
 const root = document.documentElement;
@@ -69,7 +69,7 @@ const mobileTextures = [
 function main () {
   initScene();
   initRig();
-  initHtml();
+  setRigTarget(document.querySelector('.LandingStage'));
   initImageScene();
   initImageMesh();
   preloadTextures();
@@ -227,7 +227,6 @@ function onWindowResize(){
   renderer.setSize( window.innerWidth, window.innerHeight );
   setImageRendererSize();
   adjustCameraFov();
-  initHtml();
 
 }
   
@@ -315,32 +314,6 @@ function moveBackgroundAnim(x, y, scrolling) {
   tweenX(x + scrollLeft);
   tweenY(y + scrollTop);
   
-}
-
-function initHtml() {
-
-  var element1 = document.querySelector(".LandingPageContent");
-  element1.style.position = "absolute";
-  
-  if (mobile) {
-    element1.style.top = "20%";
-    element1.style.left = "5%";
-
-    element1.style.height = "60%"
-    return;
-  }
-  
-  // Get canvas element and its dimensions
-  var canvas = renderer.domElement;
-  var canvasWidth = canvas.width;
-  var canvasHeight = canvas.height;
-
-  element1.style.height = "90%"
-  element1.style.top =  "5%";
-
-
-  // width is canvasheight * 1.232 half that width exists on the left of the center so left needs to be half that
-  element1.style.left = ((canvasWidth - (canvasHeight * 1.232)) / 2) -2.5 + "px";
 }
 
 // https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
