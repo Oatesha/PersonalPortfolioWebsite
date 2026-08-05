@@ -1,6 +1,7 @@
 import { gsap } from "gsap";
 import { Observer } from "gsap/all";
 import { animateParticlesIn, animateParticlesOut } from "./animation";
+import { invalidateRigRect } from "./cameraRig.js";
 import { updateImageTexture } from "./main.js";
 import { Flip } from "gsap/all";
 
@@ -117,7 +118,10 @@ function githubButtonHover (state, button) {
 }
 
 
-let lastTween = gsap.timeline();
+// Panels slide with a CSS transform, which moves the image box without changing
+// its size, so neither ResizeObserver nor the scroll listener notices. Drop the
+// rig's cached rect on every frame of a transition so the model tracks the box.
+let lastTween = gsap.timeline({ onUpdate: invalidateRigRect });
 
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {

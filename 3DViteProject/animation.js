@@ -3,7 +3,7 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import SplitType from 'split-type'
 import { getSimMaterial, getRenderMaterial } from "./main";
-import { rig } from "./cameraRig.js";
+import { rig, setRigTarget } from "./cameraRig.js";
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
@@ -14,6 +14,9 @@ if (import.meta.env.DEV) {
 
 let simMaterial, rendMaterial;
 let cameraBobbingAnim;
+let middlePageTrigger = null;
+// True while the project whose "screenshot" is the particle model is on screen.
+let particleProjectActive = false;
 
 // Camera framing is expressed as a fraction of the distance at which the model
 // exactly fills its target box, so these read the same at every resolution.
@@ -21,6 +24,12 @@ let cameraBobbingAnim;
 const INSIDE_MODEL_FIT = -0.07;
 const THROUGH_MODEL_FIT = -0.15;
 const BOB_AMPLITUDE = 2;
+
+// Past the landing the simulation stops holding particles on the ship surface
+// and runs the Thomas attractor instead, which occupies a far smaller volume.
+// Framing has to follow that, otherwise the camera keeps fitting the ship's
+// bounding sphere and the attractor renders as a speck.
+const ATTRACTOR_RADIUS = 8;
 
 // sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
@@ -178,8 +187,40 @@ function InitMiddlePageAnimationTimeline() {
         },
     });
     middlePageTl.to(rig, { fit: THROUGH_MODEL_FIT, duration: 1.0 });
+    // Scrubbed alongside the state flip, so scrolling back up restores the
+    // ship's framing as the particles settle back onto its surface.
+    middlePageTl.to(rig, { radius: ATTRACTOR_RADIUS, duration: 1.0 }, "<");
     middlePageTl.to(simMaterial.uniforms.state, {value: 1});
     middlePageTl.to(rendMaterial.uniforms.pointSize, {value: 0.5});
+
+    middlePageTrigger = middlePageTl.scrollTrigger;
+    InitProjectContextTrigger();
+}
+
+// Past its end a scrubbed timeline holds its final value on every update, so
+// while the project section is on screen the middle page scrub would keep
+// yanking rig.fit back to THROUGH_MODEL_FIT and undo whatever the project
+// navigation asked for. Ownership of the camera is handed over explicitly.
+function InitProjectContextTrigger() {
+    ScrollTrigger.create({
+        trigger: ".ProjectSection",
+        start: "top center",
+        onEnter: () => {
+            middlePageTrigger.disable(false);
+            if (particleProjectActive) {
+                frameParticleProject();
+            }
+        },
+        onLeaveBack: () => {
+            setRigTarget(document.querySelector('.LandingStage'));
+            middlePageTrigger.enable();
+        },
+    });
+}
+
+function frameParticleProject() {
+    setRigTarget(document.querySelector('project[pos-index="1"] .project-image-section'));
+    gsap.to(rig, { fit: 1.0, duration: 1.0, overwrite: "auto" });
 }
 
 function InitCameraBobbing() {
@@ -190,10 +231,15 @@ function InitCameraBobbing() {
     cameraBobbingAnim.play();
 }
 
+// The particle project has no screenshot; the model itself is its image. Frame
+// it into that project's image box so it lands in the panel rather than being
+// nudged towards it with hardcoded camera offsets.
 export function animateParticlesIn() {
-    gsap.to(rig, { fit: 1.0, duration: 1.0 });
+    particleProjectActive = true;
+    frameParticleProject();
 }
 
 export function animateParticlesOut() {
-    gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: 0.5 });
+    particleProjectActive = false;
+    gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: 0.5, overwrite: "auto" });
 }
