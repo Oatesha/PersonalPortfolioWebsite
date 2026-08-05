@@ -436,15 +436,15 @@ project > .project-nav-section #buttonSVGOne {
   height: 100vh;
   margin-bottom: 46vw;
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: stretch;
-  gap: 2rem;
   padding: 5vh 5vw;
   box-sizing: border-box;
 }
 
+/* layered over the stage. the canvas is at z-index -1 and this is in flow, so
+   the text paints over the ship without either needing a stacking order */
 .LandingPageContent {
+  position: relative;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -456,22 +456,18 @@ project > .project-nav-section #buttonSVGOne {
   margin: 0;
 }
 
-/* Reserves the right half of the landing grid for the particle model. It has
-   no painted content of its own; the fullscreen canvas draws into its rect. */
+/* The box the particle model is framed into: the whole landing viewport,
+   ignoring the section padding, so the ship is as large as the screen allows.
+   It has no painted content of its own; the fullscreen canvas draws into its
+   rect. */
 .LandingStage {
-  min-width: 0;
+  position: absolute;
+  inset: 0;
 }
 
 @media (width < 800px) {
   .LandingPageSection {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
     padding: 10vh 5vw;
-  }
-
-  .LandingPageContent {
-    justify-content: flex-start;
-    gap: 1rem;
   }
 }
 

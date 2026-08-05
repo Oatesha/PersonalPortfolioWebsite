@@ -6,8 +6,10 @@ export const simfragFBO = /* glsl */`
   uniform int state;
   uniform float maxDist;
   uniform float time;
-  // Frame delta relative to 60Hz. The integrators below use fixed timesteps, so
-  // without this the whole simulation runs 2.4x faster on a 144Hz display.
+  // How many 60Hz frames' worth of simulation to advance this frame: the frame
+  // delta relative to 60Hz, times SIM_SPEED. The integrators below use fixed
+  // timesteps, so without the delta term the whole simulation runs 2.4x faster
+  // on a 144Hz display than on a 60Hz one.
   uniform float dtScale;
 
   varying vec2 vUv;

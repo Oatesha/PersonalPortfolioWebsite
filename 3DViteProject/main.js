@@ -84,6 +84,13 @@ function main () {
 // visible gain on a particle field, so clamp it.
 const MAX_PIXEL_RATIO = 2;
 
+// Simulation rate, in 60Hz frames per real frame. Making the sim frame-rate
+// independent pinned it to 60Hz, which is a lot slower than the 144Hz the look
+// had actually been tuned against, so the speed is asked for explicitly rather
+// than inherited from whatever the display happens to do. 2.4 == 144/60, i.e.
+// the motion a 144Hz display used to get, now on every display.
+const SIM_SPEED = 2.4;
+
 function currentPixelRatio() {
   return Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
 }
@@ -303,9 +310,21 @@ function loadModelGeometries() {
           shipMesh.geometry.scale(0.085, 0.085, 0.085);
 
           // The rig frames the camera against the model's actual extent rather
-          // than a hardcoded distance, so it needs the bounding sphere.
+          // than a hardcoded distance, so it needs the bounding volume. The
+          // sphere sets the overall scale that the animations tween; the box
+          // gives the silhouette, which for a flat model like this ship is much
+          // smaller than the sphere on two of three axes.
           shipMesh.geometry.computeBoundingSphere();
-          rig.radius = shipMesh.geometry.boundingSphere.radius;
+          shipMesh.geometry.computeBoundingBox();
+          const { radius } = shipMesh.geometry.boundingSphere;
+          const halfExtent = shipMesh.geometry.boundingBox.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+          rig.radius = radius;
+          // Mutated rather than replaced: the middle page timeline tweens this
+          // object, so swapping it out would leave the tween writing to a
+          // detached one.
+          rig.extent.x = halfExtent.x / radius;
+          rig.extent.y = halfExtent.y / radius;
+          rig.extent.z = halfExtent.z / radius;
         }
       });
   
@@ -533,7 +552,7 @@ async function initFBO() {
     const delta = clock.getDelta();
     elapsed += delta;
     simMaterial.uniforms.time.value = elapsed;
-    simMaterial.uniforms.dtScale.value = Math.min(delta * 60, 2);
+    simMaterial.uniforms.dtScale.value = Math.min(delta * 60, 2) * SIM_SPEED;
 
     updateCameraFraming(camera);
 
