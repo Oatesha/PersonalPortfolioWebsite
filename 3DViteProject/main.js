@@ -338,9 +338,29 @@ function loadModelGeometries() {
     });
 }
   
-// Module scope so the particle count control can reach it after initFBO.
+// side of the sim texture, so the ceiling on particle count: 1024 * 1024 is
+// 1,048,576. every texel is stepped every frame whether or not it gets drawn,
+// so raising this costs sim work on every machine
+const DESKTOP_TEXTURE_SIDE = 1024;
+const MOBILE_TEXTURE_SIDE = 256;
+
+// the counts the slider stops on. they don't have to be square numbers, only
+// the texture is square and the control draws a prefix of it
+const PARTICLE_STEPS = [25000, 50000, 100000, 250000, 500000, 750000, 1000000];
+
+// where the slider starts, by gpu tier. detect-gpu is conservative so this is a
+// starting point rather than a limit, every step stays reachable
+function defaultCountForTier(tier) {
+  if (tier >= 3) return 1000000;
+  if (tier === 2) return 500000;
+  if (tier === 1) return 250000;
+  return 100000;
+}
+
+// module scope so the count control can reach them after initFBO
 let particleGeometry = null;
 let particleTotal = 0;
+let defaultParticleCount = 250000;
 
 let scrollLeft = 0, scrollTop = 0;
 
@@ -410,8 +430,11 @@ async function initFBO() {
   }
 
   let gputier = await getGPUTier();
-  let w = mobile ? 256 : 256 * Math.pow(2, gputier.tier);
+  // the texture is square and every texel is one particle, so its side is the
+  // hard ceiling on count
+  let w = mobile ? MOBILE_TEXTURE_SIDE : DESKTOP_TEXTURE_SIDE;
   let h = w;
+  defaultParticleCount = defaultCountForTier(gputier.tier);
 
   // init positions in data texture used if i want a circle that eventually becomes the model
   let initPos = new Float32Array(w * h * 4);
@@ -616,22 +639,37 @@ export function getSimMaterial() {
   return simMaterial;
 }
 
-// How many particles the simulation texture holds. It is sized off the GPU
-// tier, so this is 65k on a tier 0 card and 4.2M on a tier 3 one.
+// how many particles the sim texture holds, 1,048,576 on desktop
 export function getParticleTotal() {
   return particleTotal;
+}
+
+// the counts the slider stops on, clamped to what this device's texture can
+// supply. mobile's only holds 65k so it gets the low steps
+export function getParticleSteps() {
+  const steps = PARTICLE_STEPS.filter((count) => count <= particleTotal);
+  // if the round steps stop well short of the texture, add the real total so
+  // the top of the slider is actually the top
+  if (!steps.length || steps[steps.length - 1] < particleTotal * 0.9) {
+    steps.push(particleTotal);
+  }
+  return steps;
+}
+
+export function getDefaultParticleCount() {
+  return defaultParticleCount;
 }
 
 // draws a prefix of the particle buffer rather than all of it. the sim still
 // steps every particle, so this is a render cost control and not a sim one. a
 // prefix is a fair sample because samplePositions walks the mesh in random order
-export function setParticleFraction(fraction) {
+export function setParticleCount(count) {
   if (!particleGeometry) {
     return 0;
   }
-  const count = Math.max(1, Math.round(particleTotal * fraction));
-  particleGeometry.setDrawRange(0, count);
-  return count;
+  const drawn = Math.max(1, Math.min(Math.round(count), particleTotal));
+  particleGeometry.setDrawRange(0, drawn);
+  return drawn;
 }
 
 export function getRenderMaterial() {

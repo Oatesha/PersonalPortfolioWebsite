@@ -27,7 +27,11 @@
       </label>
       <label class="viewer-control" for="particleCountInput">
         <span class="viewer-control-name">Particles</span>
-        <input type="range" id="particleCountInput" min="2" max="100" step="1" value="100">
+        <!-- Range and graduations are filled in by viewerControls.js: the steps
+             depend on the simulation texture size, which is not known until the
+             GPU tier probe has resolved. -->
+        <input type="range" id="particleCountInput" min="0" max="1" step="1" value="0" list="particleCountTicks">
+        <datalist id="particleCountTicks"></datalist>
         <output for="particleCountInput">&hellip;</output>
       </label>
     </div>

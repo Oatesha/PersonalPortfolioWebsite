@@ -322,13 +322,43 @@ project > .project-image-section {
   opacity: 0.75;
 }
 
+/* Graduations. Chrome draws tick marks for a range with a datalist, but only
+   while the control keeps its native appearance, and appearance: none is what
+   lets the rest of this match the page. So the ticks are painted onto the track:
+   a repeating gradient whose period is --tick-gap, set from viewerControls.js
+   because the number of steps depends on the device. --tick-gap is unset on the
+   size slider, which is continuous and gets a plain line. */
 .viewer-control input[type="range"] {
   appearance: none;
-  width: clamp(4.5rem, 10vw, 9rem);
-  height: 2px;
-  background: color-mix(in srgb, var(--text) 40%, transparent);
-  border-radius: 2px;
+  width: clamp(5rem, 11vw, 10rem);
+  height: 12px;
+  background: transparent;
   cursor: pointer;
+}
+
+.viewer-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 12px;
+  background-repeat: no-repeat;
+  background-position: left center;
+  /* Ticks sit above a 2px rule through the middle. */
+  background-image:
+    repeating-linear-gradient(to right,
+      color-mix(in srgb, var(--text) 55%, transparent) 0 1px,
+      transparent 1px var(--tick-gap, 100%)),
+    linear-gradient(color-mix(in srgb, var(--text) 35%, transparent) 0 0);
+  background-size: calc(100% - 1px) 10px, 100% 2px;
+}
+
+.viewer-control input[type="range"]::-moz-range-track {
+  height: 12px;
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-image:
+    repeating-linear-gradient(to right,
+      color-mix(in srgb, var(--text) 55%, transparent) 0 1px,
+      transparent 1px var(--tick-gap, 100%)),
+    linear-gradient(color-mix(in srgb, var(--text) 35%, transparent) 0 0);
+  background-size: calc(100% - 1px) 10px, 100% 2px;
 }
 
 .viewer-control input[type="range"]::-webkit-slider-thumb {

@@ -1,5 +1,11 @@
 import { gsap } from "gsap";
-import { getRenderMaterial, getParticleTotal, setParticleFraction } from "./main.js";
+import {
+  getRenderMaterial,
+  getParticleTotal,
+  getParticleSteps,
+  getDefaultParticleCount,
+  setParticleCount,
+} from "./main.js";
 
 // particle size and count controls at the top of the page
 
@@ -15,6 +21,7 @@ let sizeInput = null;
 let countInput = null;
 let sizeOutput = null;
 let countOutput = null;
+let steps = [];
 
 const formatCount = new Intl.NumberFormat();
 
@@ -28,12 +35,51 @@ function applySize() {
 }
 
 function applyCount() {
-  const fraction = Number(countInput.value) / 100;
-  const drawn = setParticleFraction(fraction);
-  const total = getParticleTotal();
-  countOutput.textContent = total
-    ? formatCount.format(drawn)
-    : `${countInput.value}%`;
+  if (!steps.length) {
+    return;
+  }
+  const wanted = steps[Number(countInput.value)];
+  countOutput.textContent = formatCount.format(setParticleCount(wanted) || wanted);
+}
+
+// The slider runs over indices into the step list rather than over particle
+// counts, so every position is a stop and the graduations the browser draws
+// from the datalist line up with the values you can actually land on. A
+// continuous slider over 1..1,048,576 could not do either.
+function buildCountSteps() {
+  steps = getParticleSteps();
+
+  countInput.min = 0;
+  countInput.max = Math.max(0, steps.length - 1);
+  countInput.step = 1;
+
+  // Spacing of the graduations painted on the track. See the range rules in
+  // style.css for why they are not the browser's own datalist ticks.
+  const intervals = Math.max(1, steps.length - 1);
+  countInput.style.setProperty("--tick-gap", `${100 / intervals}%`);
+
+  const ticks = document.querySelector("#particleCountTicks");
+  if (ticks) {
+    ticks.replaceChildren(
+      ...steps.map((count) => {
+        const option = document.createElement("option");
+        option.value = String(steps.indexOf(count));
+        option.label = formatCount.format(count);
+        return option;
+      }),
+    );
+  }
+
+  // Nearest step to the tier's suggestion, so the opening count is one the
+  // slider can actually sit on.
+  const wanted = getDefaultParticleCount();
+  let nearest = 0;
+  steps.forEach((count, index) => {
+    if (Math.abs(count - wanted) < Math.abs(steps[nearest] - wanted)) {
+      nearest = index;
+    }
+  });
+  countInput.value = String(nearest);
 }
 
 // Polled from gsap's ticker rather than a setTimeout, so this is on the same
@@ -43,8 +89,10 @@ function waitForSimulation() {
     gsap.delayedCall(READY_POLL, waitForSimulation);
     return;
   }
-  // Push the panel's own values through now that there is something to
-  // receive them, so the sliders and the scene agree from the start.
+  // The step list depends on the texture size, which is only known once the
+  // tier probe has resolved, so the count slider is built here rather than in
+  // the markup.
+  buildCountSteps();
   applySize();
   applyCount();
 }
