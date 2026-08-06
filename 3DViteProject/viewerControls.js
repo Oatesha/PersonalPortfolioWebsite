@@ -7,92 +7,130 @@ import {
   setParticleCount,
 } from "./main.js";
 
-// particle size and count controls at the top of the page
+// particle size and count controls at the top of the page. both sliders run
+// over indices into a list of stops rather than continuously, so every position
+// is a value you can land on
 
 const SIZE_INPUT = "#particleSizeInput";
 const COUNT_INPUT = "#particleCountInput";
 
-// The simulation texture is sized off the GPU tier, so the total is not known
-// until initFBO has run. Everything here polls for it rather than being
-// sequenced after it, because the panel is in the document from first paint.
+// gl_PointSize in pixels. coarse at the bottom where half a pixel is the
+// difference between a haze and a solid, wider at the top where it isn't
+const SIZE_STEPS = [0.5, 1, 1.5, 2, 3, 4, 6, 8];
+
+// the sim texture is sized in initFBO behind the gpu tier probe, so the total
+// isn't known up front and the panel is in the document from first paint
 const READY_POLL = 0.25;
 
 let sizeInput = null;
 let countInput = null;
 let sizeOutput = null;
 let countOutput = null;
-let steps = [];
+let countSteps = [];
 
-const formatCount = new Intl.NumberFormat();
+// counts read as 65k and 1M rather than 65,536 and 1,048,576
+function abbreviate(count) {
+  if (count >= 1000000) {
+    const millions = count / 1000000;
+    return `${Number.isInteger(millions) ? millions : millions.toFixed(1)}M`;
+  }
+  if (count >= 1000) {
+    const thousands = count / 1000;
+    return `${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}k`;
+  }
+  return String(count);
+}
+
+function formatSize(size) {
+  return size.toFixed(1);
+}
 
 function applySize() {
   const material = getRenderMaterial();
-  const value = Number(sizeInput.value);
-  sizeOutput.textContent = value.toFixed(1);
+  const size = SIZE_STEPS[Number(sizeInput.value)];
+  sizeOutput.textContent = formatSize(size);
   if (material) {
-    material.uniforms.pointSize.value = value;
+    material.uniforms.pointSize.value = size;
   }
 }
 
 function applyCount() {
-  if (!steps.length) {
+  if (!countSteps.length) {
     return;
   }
-  const wanted = steps[Number(countInput.value)];
-  countOutput.textContent = formatCount.format(setParticleCount(wanted) || wanted);
+  const wanted = countSteps[Number(countInput.value)];
+  countOutput.textContent = abbreviate(setParticleCount(wanted) || wanted);
 }
 
-// The slider runs over indices into the step list rather than over particle
-// counts, so every position is a stop and the graduations the browser draws
-// from the datalist line up with the values you can actually land on. A
-// continuous slider over 1..1,048,576 could not do either.
-function buildCountSteps() {
-  steps = getParticleSteps();
+// Widths are reserved for the longest label the control will ever show, so the
+// panel holds still while you drag instead of growing and shrinking each time
+// the number changes magnitude.
+function reserveWidth(output, labels) {
+  const widest = labels.reduce((longest, label) => Math.max(longest, label.length), 1);
+  output.style.minWidth = `${widest}ch`;
+}
 
-  countInput.min = 0;
-  countInput.max = Math.max(0, steps.length - 1);
-  countInput.step = 1;
+// The graduations are painted onto the track from a repeating gradient whose
+// period is set here, because Chrome only draws its own datalist ticks while
+// the control keeps its native appearance and appearance: none is what lets the
+// panel match the page. The datalist is still populated: it costs nothing and
+// assistive tech reads it.
+function buildSlider(input, listId, stops, format, startIndex) {
+  input.min = 0;
+  input.max = Math.max(0, stops.length - 1);
+  input.step = 1;
+  input.value = String(startIndex);
 
-  // Spacing of the graduations painted on the track. See the range rules in
-  // style.css for why they are not the browser's own datalist ticks.
-  const intervals = Math.max(1, steps.length - 1);
-  countInput.style.setProperty("--tick-gap", `${100 / intervals}%`);
+  const intervals = Math.max(1, stops.length - 1);
+  input.style.setProperty("--tick-gap", `${100 / intervals}%`);
 
-  const ticks = document.querySelector("#particleCountTicks");
+  const ticks = document.querySelector(listId);
   if (ticks) {
     ticks.replaceChildren(
-      ...steps.map((count) => {
+      ...stops.map((stop, index) => {
         const option = document.createElement("option");
-        option.value = String(steps.indexOf(count));
-        option.label = formatCount.format(count);
+        option.value = String(index);
+        option.label = format(stop);
         return option;
       }),
     );
   }
 
-  // Nearest step to the tier's suggestion, so the opening count is one the
-  // slider can actually sit on.
-  const wanted = getDefaultParticleCount();
+  return stops.map(format);
+}
+
+function nearestIndex(stops, wanted) {
   let nearest = 0;
-  steps.forEach((count, index) => {
-    if (Math.abs(count - wanted) < Math.abs(steps[nearest] - wanted)) {
+  stops.forEach((stop, index) => {
+    if (Math.abs(stop - wanted) < Math.abs(stops[nearest] - wanted)) {
       nearest = index;
     }
   });
-  countInput.value = String(nearest);
+  return nearest;
 }
 
-// Polled from gsap's ticker rather than a setTimeout, so this is on the same
-// clock as everything else on the page and stops while the tab is hidden.
+// polled off gsap's ticker rather than setTimeout so it's on the same clock as
+// everything else and stops while the tab is hidden
 function waitForSimulation() {
   if (!getRenderMaterial() || !getParticleTotal()) {
     gsap.delayedCall(READY_POLL, waitForSimulation);
     return;
   }
-  // The step list depends on the texture size, which is only known once the
-  // tier probe has resolved, so the count slider is built here rather than in
-  // the markup.
-  buildCountSteps();
+
+  // the count's stops depend on the texture size, only known once the tier
+  // probe resolves, so build this slider here rather than in the markup
+  countSteps = getParticleSteps();
+  reserveWidth(
+    countOutput,
+    buildSlider(
+      countInput,
+      "#particleCountTicks",
+      countSteps,
+      abbreviate,
+      nearestIndex(countSteps, getDefaultParticleCount()),
+    ),
+  );
+
   applySize();
   applyCount();
 }
@@ -107,6 +145,19 @@ function initViewerControls() {
 
   sizeOutput = document.querySelector(`output[for="${sizeInput.id}"]`);
   countOutput = document.querySelector(`output[for="${countInput.id}"]`);
+
+  // size doesn't depend on anything the sim has to resolve, so it's live from
+  // first paint
+  reserveWidth(
+    sizeOutput,
+    buildSlider(
+      sizeInput,
+      "#particleSizeTicks",
+      SIZE_STEPS,
+      formatSize,
+      nearestIndex(SIZE_STEPS, 2),
+    ),
+  );
 
   sizeInput.addEventListener("input", applySize);
   countInput.addEventListener("input", applyCount);

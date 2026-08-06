@@ -315,9 +315,10 @@ project > .project-image-section {
 }
 
 .viewer-control output {
-  /* Tabular so the panel does not jog as the number changes width. */
+  /* Tabular figures, plus a min-width reserved by viewerControls.js for the
+     longest label the control can show. Between them the panel holds still
+     while you drag, instead of shuffling every time the number changes width. */
   font-variant-numeric: tabular-nums;
-  min-width: 4.5ch;
   text-align: right;
   opacity: 0.75;
 }
@@ -326,8 +327,8 @@ project > .project-image-section {
    while the control keeps its native appearance, and appearance: none is what
    lets the rest of this match the page. So the ticks are painted onto the track:
    a repeating gradient whose period is --tick-gap, set from viewerControls.js
-   because the number of steps depends on the device. --tick-gap is unset on the
-   size slider, which is continuous and gets a plain line. */
+   because the number of stops differs between the two sliders and, for the
+   count, between devices. */
 .viewer-control input[type="range"] {
   appearance: none;
   width: clamp(5rem, 11vw, 10rem);
