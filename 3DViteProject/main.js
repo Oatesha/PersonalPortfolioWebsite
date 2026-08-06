@@ -14,6 +14,7 @@ import { initAnim } from './animation.js';
 import { getGPUTier } from 'detect-gpu';
 import { rig, initRig, setRigTarget, updateCameraFraming } from './cameraRig.js';
 import './menu.js';
+import './attractors.js';
 
 const root = document.documentElement;
 root.dataset.theme = 'dark';
@@ -449,6 +450,11 @@ async function initFBO() {
       maxDist: { value: 1.0 },
       time: {value: 0.0},
       dtScale: {value: 1.0},
+      // idle sits at morph 1, fully arrived at attractorTo
+      attractorFrom: {value: 0},
+      attractorTo: {value: 0},
+      morph: {value: 1.0},
+      cloudRadius: {value: 1.0},
       mixValue: {value: 1.0},
       posTex: { value: initialCircleDataTex },
       shipPosTex: { value: initialShipDataTex },
@@ -496,9 +502,12 @@ async function initFBO() {
     
   renderMaterial = new THREE.ShaderMaterial({
     uniforms: { posTex: { value: null },
+    // static, and the only place the ship's sampled colours are read from
+    shipPosTex: { value: initialShipDataTex },
     mouse: { value : new THREE.Vector2(10,10)},
-    // uTexture: {value: texture}, 
+    // uTexture: {value: texture},
     pointSize: { value: 2.0 },
+    colourMix: { value: 0.0 },
     u_time: {value: 1.0}},
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
@@ -553,6 +562,9 @@ async function initFBO() {
     elapsed += delta;
     simMaterial.uniforms.time.value = elapsed;
     simMaterial.uniforms.dtScale.value = Math.min(delta * 60, 2) * SIM_SPEED;
+    // Follows the ship-to-attractor tween, so the mouse stays the same size
+    // relative to the cloud the whole way through it.
+    simMaterial.uniforms.cloudRadius.value = rig.radius;
 
     updateCameraFraming(camera);
 

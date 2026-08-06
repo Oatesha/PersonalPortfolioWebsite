@@ -37,14 +37,16 @@
       </section>
       
       <section class="LandingPageSection">
-        <!-- Empty layout box, full bleed. The particle model is framed into this
-             rect, so the WebGL canvas follows the layout instead of the layout
-             chasing it. The canvas sits at z-index -1, so the text below paints
-             over the ship. -->
+        <!-- empty layout box, the model is framed into this rect so the canvas
+             follows the layout instead of the layout chasing it -->
         <div class="LandingStage" aria-hidden="true"></div>
         <div class="LandingPageContent">
           <h4 class="MyName">Harrison Oates</h4>
-          <p>A recently graduated software engineer</p>
+          <div class="LandingPageFooter">
+            <p>A recently graduated software engineer</p>
+            <!-- buttons are filled in by attractors.js -->
+            <div class="attractor-switch"></div>
+          </div>
         </div>
       </section>
       
