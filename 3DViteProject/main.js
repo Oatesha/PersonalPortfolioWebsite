@@ -15,6 +15,7 @@ import { getGPUTier } from 'detect-gpu';
 import { rig, initRig, setRigTarget, updateCameraFraming } from './cameraRig.js';
 import './menu.js';
 import './attractors.js';
+import './viewerControls.js';
 
 const root = document.documentElement;
 root.dataset.theme = 'dark';
@@ -81,15 +82,16 @@ function main () {
   loadModelGeometries();
 }
 
-// Uncapped devicePixelRatio costs 9x the fragment work on a 3x display for no
-// visible gain on a particle field, so clamp it.
+// uncapped devicePixelRatio costs 9x the fragment work on a 3x display for no
+// visible gain on a particle field
 const MAX_PIXEL_RATIO = 2;
 
-// Simulation rate, in 60Hz frames per real frame. Making the sim frame-rate
-// independent pinned it to 60Hz, which is a lot slower than the 144Hz the look
-// had actually been tuned against, so the speed is asked for explicitly rather
-// than inherited from whatever the display happens to do. 2.4 == 144/60, i.e.
-// the motion a 144Hz display used to get, now on every display.
+// the ship's own framing, kept aside because rig.radius and rig.extent get
+// tweened away to the attractor's
+export const shipFraming = { radius: 1, extent: { x: 1, y: 1, z: 1 } };
+
+// sim rate in 60Hz frames per real frame, asked for explicitly rather than
+// inherited from whatever the display does. 2.4 == 144/60
 const SIM_SPEED = 2.4;
 
 function currentPixelRatio() {
@@ -310,22 +312,22 @@ function loadModelGeometries() {
           shipMesh.geometry.center()
           shipMesh.geometry.scale(0.085, 0.085, 0.085);
 
-          // The rig frames the camera against the model's actual extent rather
-          // than a hardcoded distance, so it needs the bounding volume. The
-          // sphere sets the overall scale that the animations tween; the box
-          // gives the silhouette, which for a flat model like this ship is much
-          // smaller than the sphere on two of three axes.
+          // the rig frames against the model's actual extent, so it needs
+          // both: the sphere sets the overall scale the animations tween, the
+          // box gives the silhouette
           shipMesh.geometry.computeBoundingSphere();
           shipMesh.geometry.computeBoundingBox();
           const { radius } = shipMesh.geometry.boundingSphere;
           const halfExtent = shipMesh.geometry.boundingBox.getSize(new THREE.Vector3()).multiplyScalar(0.5);
           rig.radius = radius;
-          // Mutated rather than replaced: the middle page timeline tweens this
-          // object, so swapping it out would leave the tween writing to a
-          // detached one.
+          // mutated, not replaced, the middle page timeline tweens this object
+          // and swapping it out leaves the tween writing to a detached one
           rig.extent.x = halfExtent.x / radius;
           rig.extent.y = halfExtent.y / radius;
           rig.extent.z = halfExtent.z / radius;
+
+          shipFraming.radius = rig.radius;
+          shipFraming.extent = { x: rig.extent.x, y: rig.extent.y, z: rig.extent.z };
         }
       });
   
@@ -336,6 +338,10 @@ function loadModelGeometries() {
     });
 }
   
+// Module scope so the particle count control can reach it after initFBO.
+let particleGeometry = null;
+let particleTotal = 0;
+
 let scrollLeft = 0, scrollTop = 0;
 
 
@@ -513,12 +519,11 @@ async function initFBO() {
     fragmentShader: fragmentShader,
   });
   
-  var particleGeometry = new THREE.BufferGeometry();
+  particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
-  // Each particle stores the coordinate of the simulation texel it reads from in
-  // its position attribute, which main.vertFBO samples with texture2D(posTex, position.xy).
-  // Sample texel centres so NearestFilter cannot land on a texel boundary.
+  // each particle stores the coordinate of the sim texel it reads from in its
+  // position attribute. texel centres, so NearestFilter can't land on a boundary
   for (let j = 0; j < w; j++) {
     for (let i = 0; i < w; i++) {
 
@@ -532,7 +537,8 @@ async function initFBO() {
   }
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particleGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-    
+    particleTotal = w * w;
+
     var points = new THREE.Points(particleGeometry, renderMaterial);
     simScene.add(points);
     renderMaterial.uniforms.posTex.value = initialShipDataTex;
@@ -608,6 +614,24 @@ async function initFBO() {
 // Export a function to get the simMaterial instance
 export function getSimMaterial() {
   return simMaterial;
+}
+
+// How many particles the simulation texture holds. It is sized off the GPU
+// tier, so this is 65k on a tier 0 card and 4.2M on a tier 3 one.
+export function getParticleTotal() {
+  return particleTotal;
+}
+
+// draws a prefix of the particle buffer rather than all of it. the sim still
+// steps every particle, so this is a render cost control and not a sim one. a
+// prefix is a fair sample because samplePositions walks the mesh in random order
+export function setParticleFraction(fraction) {
+  if (!particleGeometry) {
+    return 0;
+  }
+  const count = Math.max(1, Math.round(particleTotal * fraction));
+  particleGeometry.setDrawRange(0, count);
+  return count;
 }
 
 export function getRenderMaterial() {
