@@ -62,27 +62,21 @@ function applyCount() {
   countOutput.textContent = abbreviate(setParticleCount(wanted) || wanted);
 }
 
-// Widths are reserved for the longest label the control will ever show, so the
-// panel holds still while you drag instead of growing and shrinking each time
-// the number changes magnitude.
+// reserve the width of the longest label the control can ever show, so the row
+// holds still while you drag
 function reserveWidth(output, labels) {
   const widest = labels.reduce((longest, label) => Math.max(longest, label.length), 1);
   output.style.minWidth = `${widest}ch`;
 }
 
-// The graduations are painted onto the track from a repeating gradient whose
-// period is set here, because Chrome only draws its own datalist ticks while
-// the control keeps its native appearance and appearance: none is what lets the
-// panel match the page. The datalist is still populated: it costs nothing and
-// assistive tech reads it.
+// the stops aren't painted onto the track, both sliders run over an index so
+// the thumb lands on one anyway. the datalist is still filled in for screen
+// readers
 function buildSlider(input, listId, stops, format, startIndex) {
   input.min = 0;
   input.max = Math.max(0, stops.length - 1);
   input.step = 1;
   input.value = String(startIndex);
-
-  const intervals = Math.max(1, stops.length - 1);
-  input.style.setProperty("--tick-gap", `${100 / intervals}%`);
 
   const ticks = document.querySelector(listId);
   if (ticks) {

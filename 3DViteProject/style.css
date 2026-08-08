@@ -278,25 +278,20 @@ project > .project-image-section {
   overflow: hidden;
 }
 
-/* Particle size and count, fixed at the top of the viewport. Sits under the
-   hamburger's z-index so it can never cover the menu. */
+/* particle size and count, fixed at the top of the viewport, under the
+   hamburger's z-index so it can't cover the menu */
 .ViewerControls {
   position: fixed;
-  top: 1rem;
+  top: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.5rem 1.5rem;
-  padding: 0.6rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--background) 78%, transparent);
-  backdrop-filter: blur(12px);
-  opacity: 0.45;
-  transition: opacity 0.25s;
+  gap: 0.4rem 2.25rem;
+  opacity: 0.3;
+  transition: opacity 0.3s;
 }
 
 .ViewerControls:hover,
@@ -307,65 +302,55 @@ project > .project-image-section {
 .viewer-control {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
   color: var(--text);
-  font-size: clamp(0.7rem, 0.5rem + 0.3vw, 0.95rem);
-  letter-spacing: 0.04em;
+  font-size: clamp(0.6rem, 0.45rem + 0.2vw, 0.75rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.viewer-control output {
-  /* Tabular figures, plus a min-width reserved by viewerControls.js for the
-     longest label the control can show. Between them the panel holds still
-     while you drag, instead of shuffling every time the number changes width. */
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  opacity: 0.75;
+.viewer-control-name {
+  opacity: 0.6;
 }
 
-/* Graduations. Chrome draws tick marks for a range with a datalist, but only
-   while the control keeps its native appearance, and appearance: none is what
-   lets the rest of this match the page. So the ticks are painted onto the track:
-   a repeating gradient whose period is --tick-gap, set from viewerControls.js
-   because the number of stops differs between the two sliders and, for the
-   count, between devices. */
+.viewer-control output {
+  /* tabular figures, plus a min-width reserved by viewerControls.js, so the
+     row holds still while you drag */
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  letter-spacing: 0.06em;
+}
+
 .viewer-control input[type="range"] {
   appearance: none;
-  width: clamp(5rem, 11vw, 10rem);
-  height: 12px;
+  width: clamp(4.5rem, 9vw, 8rem);
+  height: 10px;
   background: transparent;
   cursor: pointer;
 }
 
+/* a hairline rule with a dot on it, the stops are stepped over rather than
+   drawn */
 .viewer-control input[type="range"]::-webkit-slider-runnable-track {
-  height: 12px;
-  background-repeat: no-repeat;
-  background-position: left center;
-  /* Ticks sit above a 2px rule through the middle. */
-  background-image:
-    repeating-linear-gradient(to right,
-      color-mix(in srgb, var(--text) 55%, transparent) 0 1px,
-      transparent 1px var(--tick-gap, 100%)),
-    linear-gradient(color-mix(in srgb, var(--text) 35%, transparent) 0 0);
-  background-size: calc(100% - 1px) 10px, 100% 2px;
+  height: 10px;
+  background: linear-gradient(color-mix(in srgb, var(--text) 30%, transparent) 0 0)
+    no-repeat center / 100% 1px;
 }
 
 .viewer-control input[type="range"]::-moz-range-track {
-  height: 12px;
-  background-repeat: no-repeat;
-  background-position: left center;
-  background-image:
-    repeating-linear-gradient(to right,
-      color-mix(in srgb, var(--text) 55%, transparent) 0 1px,
-      transparent 1px var(--tick-gap, 100%)),
-    linear-gradient(color-mix(in srgb, var(--text) 35%, transparent) 0 0);
-  background-size: calc(100% - 1px) 10px, 100% 2px;
+  height: 10px;
+  background: linear-gradient(color-mix(in srgb, var(--text) 30%, transparent) 0 0)
+    no-repeat center / 100% 1px;
 }
 
 .viewer-control input[type="range"]::-webkit-slider-thumb {
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
+  /* centres the dot on a 1px rule inside a 10px track box, chrome positions the
+     thumb from the top of that box */
+  margin-top: 1px;
   border-radius: 50%;
   border: 0;
   background: var(--accent);
@@ -373,8 +358,8 @@ project > .project-image-section {
 }
 
 .viewer-control input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   border: 0;
   background: var(--accent);
@@ -386,7 +371,7 @@ project > .project-image-section {
     left: 0.75rem;
     right: 0.75rem;
     transform: none;
-    border-radius: 1rem;
+    gap: 0.4rem 1.25rem;
   }
 }
 
