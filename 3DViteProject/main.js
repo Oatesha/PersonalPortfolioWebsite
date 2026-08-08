@@ -6,8 +6,13 @@ import { vertexShader } from './glsl/main.vertFBO.js';
 import { fragmentShader } from './glsl/main.fragFBO.js';
 import { simvertFBO } from './glsl/simvertFBO.js';
 import { simfragFBO } from './glsl/simfragFBO.js';
-import { imageVertexShader } from './glsl/imageVertexShader.js';
-import { imageFragmentShader } from './glsl/imageFragmentShader.js';
+import {
+  initImageParticles,
+  setImageParticleAspect,
+  setImageParticleMouse,
+  setImageParticleTexture,
+  stepImageParticles,
+} from './imageParticles.js';
 import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { initAnim } from './animation.js';
@@ -20,7 +25,7 @@ import './viewerControls.js';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let canvasBoundingRect, imageMat, sampler, projectImageSection, renderMaterial, simMaterial,
+let canvasBoundingRect, sampler, projectImageSection, renderMaterial, simMaterial,
  shipMesh, renderTargetA, renderTargetB, fbo, img
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
@@ -43,8 +48,11 @@ imagecam.position.z = 1;
 // mouse event variables
 const pointer = new THREE.Vector2();
 const imagePointer = new THREE.Vector2();
-const prevImagePointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
+
+// whether the pointer is actually over the screenshot panel, outside it the
+// image's particles are left alone
+let imagePointerInside = false;
 
 // no cursor until the pointer has moved, ndc (0, 0) is the middle of the cloud
 let pointerActive = false;
@@ -74,7 +82,6 @@ function main () {
   initRig();
   setRigTarget(document.querySelector('.LandingStage'));
   initImageScene();
-  initImageMesh();
   preloadTextures();
   initEvents()
   loadModelGeometries();
@@ -117,15 +124,20 @@ function initImageScene() {
   else {
     imageRenderer.setPixelRatio(currentPixelRatio());
     projectImageSection.appendChild(imageRenderer.domElement);
+    initImageParticles(imageRenderer, imageScene);
     setImageRendererSize();
 
-    // The box is sized by the grid, which reflows for reasons a window resize
-    // listener never sees, so observe the element itself.
-    new ResizeObserver(setImageRendererSize).observe(projectImageSection);
+    // the box is sized by the grid, which reflows for reasons a window resize
+    // listener never sees, so observe the elements. all four, not just the one
+    // the canvas starts in, since menu.js moves it between the panels
+    const boxes = new ResizeObserver(setImageRendererSize);
+    document.querySelectorAll(".project-image-section").forEach((box) => boxes.observe(box));
 
+    // observe the canvas, not a panel: menu.js reparents it, and
+    // IntersectionObserver tracks the element through that
     new IntersectionObserver((entries) => {
-      imageSectionVisible = entries[0].isIntersecting;
-    }).observe(projectImageSection);
+      imageSectionVisible = entries[entries.length - 1].isIntersecting;
+    }).observe(imageRenderer.domElement);
   }
 }
 
@@ -135,8 +147,18 @@ function preloadTextures() {
       textureLoader.load(
         textureUrl,
         (texture) => {
+          // load bearing. the point shader reads these at an explicit mip
+          // level, and without a mip chain that read returns nothing
+          texture.generateMipmaps = true;
+          texture.minFilter = THREE.LinearMipmapLinearFilter;
+          texture.magFilter = THREE.LinearFilter;
           texture.needsUpdate = true;
           loadedTextures[index] = texture;
+          // the first project's screenshot is the one on screen when the
+          // section is reached, so hand it over as soon as it lands
+          if (index === 0) {
+            updateImageTexture(0);
+          }
         },
         undefined,
         (error) => {
@@ -176,10 +198,7 @@ function setImageRendererSize() {
 
   imageRenderer.setPixelRatio(currentPixelRatio());
   imageRenderer.setSize(elementWidth, elementHeight);
-
-  if (imageMat) {
-    imageMat.uniforms.u_planeAspect.value = elementWidth / elementHeight;
-  }
+  setImageParticleAspect(elementWidth / elementHeight);
 
   refreshCanvasBoundingRect();
 }
@@ -191,13 +210,12 @@ function onPointerMove( event ) {
   pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
   pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-  prevImagePointer.x = imagePointer.x;
-  prevImagePointer.y = imagePointer.y;
-
   // divide by the canvas boudning box so that the pointer works for just the image
   if (canvasBoundingRect) {
     imagePointer.x = (((event.clientX - canvasBoundingRect.left) / (canvasBoundingRect.width)));
     imagePointer.y = (1 - ((event.clientY - canvasBoundingRect.top) / (canvasBoundingRect.height)));
+    imagePointerInside = imagePointer.x >= 0 && imagePointer.x <= 1
+      && imagePointer.y >= 0 && imagePointer.y <= 1;
   }
 
   moveBackgroundAnim(event.clientX, event.clientY, false);
@@ -258,36 +276,6 @@ function onWindowResize(){
 
 }
   
-function initImageMesh() {
-  // Fills the orthographic frustum exactly. The image is fitted inside it by
-  // the shader, so the quad never needs rescaling per texture or per window.
-  const imageGeo = new THREE.PlaneGeometry(2, 2);
-
-  imageMat = new THREE.ShaderMaterial({
-    transparent: true,
-    uniforms: {
-      u_texture: { value: null },
-      u_Mouse: { value: new THREE.Vector2() },
-      u_PrevMouse: { value: new THREE.Vector2() },
-      u_aberrationIntensity: { value: 1.0 },
-      u_planeAspect: { value: 1.0 },
-      u_texAspect: { value: 1.0 },
-    },
-    vertexShader: imageVertexShader,
-    fragmentShader: imageFragmentShader,
-  })
-
-  var image = new THREE.Mesh(imageGeo, imageMat);
-
-  textureLoader.load(textures[0], (tex) => {
-    tex.needsUpdate = true;
-    imageMat.uniforms.u_texture.value = tex;
-    imageMat.uniforms.u_texAspect.value = tex.image.width / tex.image.height;
-  });
-
-  imageScene.add(image);
-}
-
 function loadModelGeometries() {
   // const loader = new FontLoader();
   // loader.load( '/Epilogue Medium_Regular.json', 
@@ -582,29 +570,32 @@ async function initFBO() {
   let elapsed = 0;
 
   function render() {
-    // A backgrounded tab still gets throttled frames on some browsers, and
-    // there is nothing to see, so skip the two render passes entirely.
+    // a backgrounded tab still gets throttled frames on some browsers and
+    // there's nothing to see, so skip both render passes
     if (document.hidden) {
       return;
     }
 
-    // getElapsedTime consumes the delta internally, so take the delta once and
-    // accumulate. The simulation steps by dtScale rather than a fixed amount,
-    // so it runs at the same rate on a 60Hz and a 144Hz display instead of
-    // 2.4x faster on the latter. Capped so a dropped frame cannot blow up the
-    // chaotic attractor.
+    // getElapsedTime consumes the delta internally, so take it once and
+    // accumulate. frameScale is how many 60Hz frames this frame was worth,
+    // capped so a dropped frame can't blow up the attractor. the ship runs at
+    // SIM_SPEED times it, the screenshot's springs take it unscaled
     const delta = clock.getDelta();
     elapsed += delta;
+    const frameScale = Math.min(delta * 60, 2);
     simMaterial.uniforms.time.value = elapsed;
-    simMaterial.uniforms.dtScale.value = Math.min(delta * 60, 2) * SIM_SPEED;
-    // Follows the ship-to-attractor tween, so the mouse stays the same size
-    // relative to the cloud the whole way through it.
+    simMaterial.uniforms.dtScale.value = frameScale * SIM_SPEED;
+    // follows the ship to attractor tween so the mouse stays the same size
+    // relative to the cloud the whole way through
     simMaterial.uniforms.cloudRadius.value = rig.radius;
 
     updateCameraFraming(camera);
 
-    // Only draw the screenshot when its panel is actually on screen.
-    if (imageSectionVisible) {
+    // only step and draw the screenshot when its panel is on screen. it's a
+    // million particles of its own on top of the ship's million
+    if (imageSectionVisible && !mobile) {
+      setImageParticleMouse(imagePointer.x, imagePointer.y, imagePointerInside);
+      stepImageParticles(frameScale);
       imageRenderer.render(imageScene, imagecam);
     }
 
@@ -629,16 +620,6 @@ async function initFBO() {
     // cursor's radius is measured against sits
     simMaterial.uniforms.mouseDepth.value = Math.max(camera.position.length(), 0.001);
     simMaterial.uniforms.mouseActive.value = pointerActive ? 1.0 : 0.0;
-
-    imageMat.uniforms.u_PrevMouse.value.set(
-      prevImagePointer.x,
-      prevImagePointer.y,
-    )
-    
-    imageMat.uniforms.u_Mouse.value.set(
-      imagePointer.x,
-      imagePointer.y,
-    )
   }
 
   main()
@@ -691,13 +672,12 @@ export function updateImageTexture(index) {
 
   if (mobile) {
     img.src = mobileTextures[index];
+    return;
   }
 
   const texture = loadedTextures[index];
-  imageMat.uniforms.u_texture.value = texture;
-  imageMat.uniforms.u_texture.needsUpdate = true;
-  // Screenshots are not all the same shape, and the shader fits by aspect.
-  imageMat.uniforms.u_texAspect.value = texture.image.width / texture.image.height;
+  // the screenshots aren't all the same shape
+  setImageParticleTexture(texture, texture.image.width / texture.image.height);
 }
     
   

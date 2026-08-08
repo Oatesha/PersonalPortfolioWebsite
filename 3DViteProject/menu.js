@@ -132,6 +132,13 @@ function githubButtonHover (state, button) {
 
 let lastTween = null;
 
+// how long the panels take to slide past each other, and where in that the
+// screenshot changes hands. the canvas moves at the peak of the scatter, when
+// there's nothing legible on it, so the handover is invisible
+const SLIDE_DURATION = 1.5;
+const CANVAS_HANDOVER = 0.5;
+const STATUS_SWITCH = 1.25;
+
 // Handles project section button presses takes in an int of which button we are using
 function projectButtonPress(button) {
 
@@ -160,39 +167,55 @@ function projectButtonPress(button) {
   // changing its size, so nothing else notices it move
   lastTween = gsap.timeline({ onUpdate: invalidateRigRect });
 
-  lastTween.to(currentProject, { duration: 1.5, x: pointerIncrement == 1 ? '-100%' : '100%', ease: "power3.out"})
-  .call(switchImageCanvasSection, [nextProject, currentCanvasElement, currentProject, nextProjectSection], "<1.25")
-  .fromTo(nextProject, { x: pointerIncrement == 1 ? '100%' : '-100%', opacity: "0" }, { duration: 1.5, opacity: "1", x: '0%', ease: "power3.out" }, "<-1.25");
+  lastTween
+    .to(currentProject, {
+      duration: SLIDE_DURATION,
+      x: pointerIncrement == 1 ? '-100%' : '100%',
+      ease: "power3.out",
+    }, 0)
+    .fromTo(nextProject,
+      { x: pointerIncrement == 1 ? '100%' : '-100%', opacity: "0" },
+      { duration: SLIDE_DURATION, opacity: "1", x: '0%', ease: "power3.out" },
+      0)
+    // on the press, so the screenshot is already in pieces by the time anything
+    // moves. does nothing for the particle project, it has no screenshot
+    .call(updateImageTexture, [nextProjectSection], 0)
+    .call(handOverImageCanvas, [nextProject, currentCanvasElement], CANVAS_HANDOVER)
+    .call(markProjectActive, [nextProject, currentProject, nextProjectSection], STATUS_SWITCH);
 }
 
-// hacky but works should revisit later and make this functionality way more elegant
-function switchImageCanvasSection(project, currentCanvasElement, currentProject, nextProjectSection) {
-  
-  currentProject.setAttribute("status", "inactive");
-  project.setAttribute("status", "active");
-  
-  if (nextProjectSection == 1) {
-    animateParticlesIn();
+// moves the one screenshot canvas into the panel sliding in. there's only ever
+// a single canvas since it's a webgl context, not a picture
+function handOverImageCanvas(project, currentCanvasElement) {
+  // the particle project's screenshot is the model itself, so the canvas stays
+  // put and rides the outgoing panel off screen
+  if (project.getAttribute("pos-index") == 1) {
     return;
   }
-  
-  const currentCanvasNode = currentCanvasElement.children[0].children[0];
-  
-  gsap.set(currentCanvasNode, {opacity: 0});
 
-  if (project.children[0].children[0]) {
-    project.children[0].children[0].replaceWith(currentCanvasNode);
+  const canvas = currentCanvasElement.children[0].children[0];
 
-  } 
-  
-  else {
-    project.children[0].appendChild(currentCanvasNode);
-
+  if (!canvas) {
+    return;
   }
 
-  gsap.to(currentCanvasNode, { opacity: 1, duration: 0.25});
+  const box = project.children[0];
 
+  if (box.children[0]) {
+    box.children[0].replaceWith(canvas);
+  } else {
+    box.appendChild(canvas);
+  }
+
+  // no fade in, the canvas arrives scattered and reforms into the right image
   currentCanvasPointer = project.getAttribute("pos-index");
-  updateImageTexture(nextProjectSection);
+}
 
+function markProjectActive(project, currentProject, nextProjectSection) {
+  currentProject.setAttribute("status", "inactive");
+  project.setAttribute("status", "active");
+
+  if (nextProjectSection == 1) {
+    animateParticlesIn();
+  }
 }
