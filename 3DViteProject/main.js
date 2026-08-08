@@ -46,10 +46,8 @@ const imagePointer = new THREE.Vector2();
 const prevImagePointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
-// The pointer is projected onto the z=0 plane to drive the simulation's mouse
-// repulsion. A maths plane does this without geometry, a material or a mesh.
-const mousePlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-const mouseHit = new THREE.Vector3();
+// no cursor until the pointer has moved, ndc (0, 0) is the middle of the cloud
+let pointerActive = false;
 
 let imageSectionVisible = true;
 
@@ -187,6 +185,8 @@ function setImageRendererSize() {
 }
 
 function onPointerMove( event ) {
+
+  pointerActive = true;
 
   pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
   pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
@@ -487,7 +487,13 @@ async function initFBO() {
       mixValue: {value: 1.0},
       posTex: { value: initialCircleDataTex },
       shipPosTex: { value: initialShipDataTex },
-      mouse: { value : new THREE.Vector2(-100,-100) },
+      // the cursor as the camera ray through the pointer, not a point on z = 0
+      mouseOrigin: { value: new THREE.Vector3() },
+      mouseDir: { value: new THREE.Vector3(0, 0, -1) },
+      // distance from the camera to the centre of the cloud, which is where the
+      // cursor's radius is quoted
+      mouseDepth: { value: 1.0 },
+      mouseActive: { value: 0.0 },
     },
     vertexShader: simvertFBO,
     fragmentShader: simfragFBO,
@@ -614,13 +620,15 @@ async function initFBO() {
     
     renderer.render(simScene, camera);
     
-    // Intersect the z=0 plane directly. This used to raycast against a 512x512
-    // Mesh built only to stand in for that plane, and allocated a Vector2 every
-    // frame for the result.
+    // setFromCamera reads the projection matrix, so the rig's view offset is
+    // already in it, and the world matrix is current from the render above
     raycaster.setFromCamera(pointer, camera);
-    if (raycaster.ray.intersectPlane(mousePlane, mouseHit)) {
-      simMaterial.uniforms.mouse.value.set(mouseHit.x, mouseHit.y);
-    }
+    simMaterial.uniforms.mouseOrigin.value.copy(raycaster.ray.origin);
+    simMaterial.uniforms.mouseDir.value.copy(raycaster.ray.direction);
+    // the cloud is centred on the origin, so this is how far off the thing the
+    // cursor's radius is measured against sits
+    simMaterial.uniforms.mouseDepth.value = Math.max(camera.position.length(), 0.001);
+    simMaterial.uniforms.mouseActive.value = pointerActive ? 1.0 : 0.0;
 
     imageMat.uniforms.u_PrevMouse.value.set(
       prevImagePointer.x,

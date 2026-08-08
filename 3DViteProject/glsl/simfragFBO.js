@@ -1,25 +1,34 @@
+import { glslRandom } from './random.js';
+
 export const simfragFBO = /* glsl */`
+
+  ${glslRandom}
 
   uniform sampler2D posTex;
   uniform sampler2D shipPosTex;
-  uniform vec2 mouse;
+  // the cursor as the camera ray through the pointer, origin and unit direction
+  // in world space. a particle is under the cursor when it is close to the ray,
+  // so test perpendicular distance and push perpendicular too
+  uniform vec3 mouseOrigin;
+  uniform vec3 mouseDir;
+  // distance from the camera to the centre of the cloud, where the cursor's
+  // radius is quoted before being scaled along the ray
+  uniform float mouseDepth;
+  // zero until the pointer has moved, ndc (0, 0) is the middle of the cloud
+  uniform float mouseActive;
   uniform int state;
   uniform float maxDist;
   uniform float time;
-  // How many 60Hz frames' worth of simulation to advance this frame: the frame
-  // delta relative to 60Hz, times SIM_SPEED. The integrators below use fixed
-  // timesteps, so without the delta term the whole simulation runs 2.4x faster
-  // on a 144Hz display than on a 60Hz one.
+  // how many 60Hz frames of sim to advance this frame. the integrators below
+  // use fixed timesteps
   uniform float dtScale;
-  // Which attractor the cloud is leaving and which it is arriving at, and how
-  // far through that transition it is. Idle sits at morph == 1.0, where the
-  // burst below is zero and attractorTo is simply the one that is running.
+  // which attractor the cloud is leaving and arriving at, and how far through.
+  // idle sits at morph 1.0
   uniform int attractorFrom;
   uniform int attractorTo;
   uniform float morph;
-  // Radius of whatever the cloud currently is, so the mouse repulsion can be
-  // expressed as a fraction of it rather than in absolute world units. Driven
-  // from rig.radius, which is already the thing the camera frames.
+  // radius of whatever the cloud currently is, so the mouse repulsion can be a
+  // fraction of it rather than absolute world units
   uniform float cloudRadius;
 
   varying vec2 vUv;
@@ -125,11 +134,6 @@ export const simfragFBO = /* glsl */`
     float len = length(delta);
     return len > MAX_STEP ? delta * (MAX_STEP / len) : delta;
   }
-
-  float random(vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) *
-        43758.5453123);
-}
 
 vec3 mod289(vec3 x) {
     return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -263,35 +267,38 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     float maxDistance = maxDist;
     // Read the supplied x, y, z vert positions
     vec3 pos = texture2D(posTex, vUv).xyz;
-    // Displacement applied this frame, kept so its length can be written out as
-    // the particle's speed.
+    // displacement this frame, its length is written out as speed
     vec3 velocity = vec3(0.0);
 
     
     // Read the original position without mouse
     vec3 originalShipPos = texture2D(shipPosTex, vUv).xyz;
     
-    vec3 mousePos3D = vec3(mouse.xy, 0.0);
-    // Sized against whatever the cloud currently is, not in absolute units. The
-    // old fixed 7.5 / 50.0 / 5.0 were tuned for the ship, whose radius is 38.6;
-    // an attractor's radius is 4, so on those numbers the cursor was a hole
-    // twice as wide as the entire cloud, shoving particles more than a radius
-    // per frame, and parking the pointer near the middle simply destroyed it.
-    // As fractions of cloudRadius they mean the same thing to both.
-    float ellipsoidRadiusXY = cloudRadius * 0.20;
-    float ellipsoidRadiusZ = cloudRadius * 1.30;
+    // sized against whatever the cloud currently is, not absolute units
+    float cursorRadius = cloudRadius * 0.20;
     float repelStrength = cloudRadius * 0.05;
 
-    // Calculate the distance from the particle position to the ellipsoid center
-    vec3 distVec = pos - mousePos3D;
-    float distToEllipsoid = length(vec3(distVec.x / ellipsoidRadiusXY, distVec.y / ellipsoidRadiusXY, distVec.z / ellipsoidRadiusZ));
+    // where the particle sits relative to the ray, how far along and how far off
+    vec3 fromCamera = pos - mouseOrigin;
+    float alongRay = dot(fromCamera, mouseDir);
 
-    if (distToEllipsoid < 1.0) {
+    // behind the camera there is no cursor
+    if (mouseActive > 0.5 && alongRay > 0.0) {
+      vec3 offRay = fromCamera - mouseDir * alongRay;
+      float distToRay = length(offRay);
+      // widen with distance so the cursor is a cone of constant screen size
+      float radius = cursorRadius * (alongRay / mouseDepth);
 
-      vec3 dirToEllipsoid = normalize(distVec / vec3(ellipsoidRadiusXY, ellipsoidRadiusXY, ellipsoidRadiusZ));
-      pos += dirToEllipsoid * repelStrength * smoothstep(1.0, 0.0, distToEllipsoid);
+      if (distToRay < radius) {
+        // dead on the ray there is no perpendicular to push along
+        vec3 push = distToRay > 1e-4
+          ? offRay / distToRay
+          : normalize(cross(mouseDir, vec3(random(vUv), random(vUv + 5.1), random(vUv + 9.3)) * 2.0 - 1.0));
+        pos += push * repelStrength * smoothstep(1.0, 0.0, distToRay / radius);
+      }
     }
-    
+
+
     if (state == 1) {
       // the field is swapped outright at the halfway point rather than the two
       // being blended. the burst peaks there, so there is no coherent shape
@@ -299,16 +306,15 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
       int running = morph < 0.5 ? attractorFrom : attractorTo;
       velocity = attractorStep(running, pos);
 
-      // Zero at both ends of the transition, so the cloud leaves one attractor
-      // and settles into the next under nothing but the attractor's own pull.
+      // zero at both ends, so the cloud leaves one attractor and settles into
+      // the next under nothing but the attractor's own pull
       float burst = sin(morph * PI);
       velocity += scatterDirection(pos, vUv) * (burst * BURST_SPEED);
 
       pos += velocity * dtScale;
 
-      // Gathers strays, and doubles as what pulls the scattered ship in: it
-      // starts at several times this radius, so the cloud is walked down to the
-      // attractor's scale rather than waiting on the field to do it.
+      // gathers strays, and doubles as what walks the scattered ship down to
+      // attractor scale
       float dist = length(pos);
       if (dist > CONTAIN_RADIUS) {
         pos = mix(pos, pos * (CONTAIN_RADIUS / dist), min(CONTAIN_PULL * dtScale, 1.0));
