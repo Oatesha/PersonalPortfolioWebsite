@@ -1,11 +1,8 @@
 export const fragmentShader = /* glsl */`
 
 
-uniform float u_time;
-uniform sampler2D uTexture;
 // 0 paints the ship's own sampled colours, 1 paints particle speed
 uniform float colourMix;
-varying vec2 vUv;
 varying float vShipColour;
 varying float vSpeed;
 
@@ -18,7 +15,8 @@ vec3 speedColour(float speed) {
     vec3 mid  = vec3(0.48, 0.11, 0.72);
     vec3 hot  = vec3(1.00, 0.93, 0.86);
 
-    // weighted towards the low end, because the distribution is
+    // the distribution is bunched near the bottom, so stretch that end out
+    // rather than painting most of the cloud one colour
     t = pow(t, 0.65);
 
     return t < 0.5 ? mix(cool, mid, t * 2.0) : mix(mid, hot, (t - 0.5) * 2.0);

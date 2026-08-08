@@ -150,70 +150,6 @@ a {
   }
 }
 
-.MenuContainer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 10vh;
-  width: 10vw;
-  z-index: 6;
-}
-
-.HamburgerMenu {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 33vw;
-  padding: 2rem;
-  z-index: 5;
-}
-
-.MenuElements {
-  visibility: hidden;
-  background: radial-gradient(circle, rgba(95,92,87,1) 0%, rgba(66,65,59,1) 64%, rgba(57,54,50,1) 100%);
-  position: absolute;
-  top: 1%;
-  right: 0;
-  width: 100%;
-  height: 100%;
-
-  padding-bottom: 5%;
-  box-sizing: border-box;
-  background-clip: content-box;
-  text-align: center;
-  border-radius: 25px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.HamburgerToggle{
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 6;
-}
-
-.HamburgerToggle img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.Menu-Element {
-  color: var(--text);
-  font-size: 3.998rem;
-  font-weight: bold;
-  display: block;
-  text-decoration: none;
-  padding: 3rem;
-  color: #fcfffc;
-  
-}
-
 .ProjectSection > project[status="inactive"] {
   transform: translateX(-100%);
 }
@@ -487,17 +423,6 @@ project > .project-nav-section #buttonSVGOne {
   height: 100%;
 }
 
-.menuBlur {
-  position: fixed;
-  visibility: hidden;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  backdrop-filter: blur(50px);
-  z-index: 4;
-}
-
 .Blur {
   position: fixed;
   top: 0;
@@ -510,23 +435,6 @@ project > .project-nav-section #buttonSVGOne {
   backdrop-filter: blur(64px);
   z-index: -1;
   overflow: auto;
-}
-
-.progressIndicator{
-  position: fixed;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  z-index: 999;
-}
-
-.ScrollIndicator {
-  position: absolute;
-  right: 50vw;
-  bottom: 0;
-  display: inline-block;
 }
 
 .scroll-container {
@@ -612,11 +520,6 @@ project > .project-nav-section #buttonSVGOne {
   position: relative;
   overflow-x: hidden;
   margin-bottom: 23vw;
-}
-
-.ProjectList {
-  display: flex;
-  flex-direction: column;
 }
 
 .attribution-section {

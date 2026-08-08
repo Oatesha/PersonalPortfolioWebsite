@@ -3,7 +3,6 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/all";
 import SplitType from 'split-type'
 import Lenis from "lenis";
-import { getSimMaterial } from "./main";
 import { rig, setRigTarget } from "./cameraRig.js";
 import { holdShipThenStart, startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
 
@@ -18,7 +17,6 @@ gsap.ticker.add((time) => lenis.raf(time * 1000));
 // lenis integrates its own delta, gsap's lag correction would fight it
 gsap.ticker.lagSmoothing(0);
 
-let simMaterial;
 let cameraBobbingAnim;
 let middlePageTl = null;
 let middlePageTrigger = null;
@@ -35,17 +33,15 @@ const BOB_AMPLITUDE = 2;
 // the ship coming apart and the cycle through the attractors both live in
 // attractors.js, this module only decides when and owns rig.fit throughout
 
-// sections
 const sectionsElements = document.querySelectorAll('[class*="Section"]');
 const circle1 = document.querySelector('#circleOne');
 const circle2 = document.querySelector('#circleTwo');
 const circle3 = document.querySelector('#circleThree');
 
-// split load text
+// the loader logo and the name are animated per character
 new SplitType(".LoadingText");
 new SplitType(".MyName")
 
-//intro
 const landingText = sectionsElements[1];
 const introTextFirstLine = landingText.querySelector('h4');
 const introTextThirdLine = landingText.querySelector('p');
@@ -60,7 +56,6 @@ if (document.readyState === "complete") {
 }
 
 function initLoadingAnim() {
-    // animate chars moving up
     loadingAnimationTimeline.to(".char", {
         y: 0,
         stagger: 0.1,
@@ -73,7 +68,7 @@ function initLoadingAnim() {
         autoAlpha: 1,
     }, "<")
     
-    // init svg anim
+    // the gradient blobs behind the blur, running for as long as the page is open
     const backgroundBlobTimeline = gsap.timeline({
         repeat: -1,
         yoyo: true,
@@ -83,8 +78,6 @@ function initLoadingAnim() {
 }
 
 export function initAnim() {
-    // Init animation timeline
-    simMaterial = getSimMaterial();
     // the middle page timeline is built from the landing timeline's onComplete.
     // both drive rig.fit, and a scrubbed trigger renders progress 0 every frame
     // it sits before its start, so only one of them can exist at a time
@@ -170,7 +163,7 @@ function InitBackgroundBlobAnimationTimeline(timeline) {
 }
 
 function InitLandingAnimationTimeline() {
-    var introTl = gsap.timeline({
+    const introTl = gsap.timeline({
         scrollTrigger: {
             trigger: ".LandingPageSection",
             start: "-50px center",
@@ -186,11 +179,9 @@ function InitLandingAnimationTimeline() {
         },
     });
 
-    // Animate the text elements
     introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
     // pull out from inside the model until it exactly fills its box
     introTl.fromTo(rig, { fit: INSIDE_MODEL_FIT }, { fit: 1.0, duration: 1.75 });
-    introTl.fromTo(simMaterial.uniforms.mixValue, {value: 0.0}, {value: 1.0, duration: 2.0}, "-=1.75");
     introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
 }
 

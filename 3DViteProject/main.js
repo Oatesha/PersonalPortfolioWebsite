@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-import {TextGeometry} from 'three/addons/geometries/TextGeometry.js' 
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { vertexShader } from './glsl/main.vertFBO.js';
 import { fragmentShader } from './glsl/main.fragFBO.js';
@@ -25,18 +23,18 @@ import './viewerControls.js';
 const root = document.documentElement;
 root.dataset.theme = 'dark';
 
-let canvasBoundingRect, sampler, projectImageSection, renderMaterial, simMaterial,
+let canvasBoundingRect, projectImageSection, renderMaterial, simMaterial,
  shipMesh, renderTargetA, renderTargetB, fbo, img
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
 
-// main simulation variables
+// the ship's cloud, drawn to a fixed fullscreen canvas
 const renderer = new THREE.WebGLRenderer({alpha: true});
 const simScene = new THREE.Scene();
 
 
-// image rendering variables
+// the project screenshot's cloud, drawn to a canvas that lives inside a panel
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 const imageScene = new THREE.Scene();
 // orthographic over a unit quad. the image is fitted to the box in the shader
@@ -45,7 +43,6 @@ const imageScene = new THREE.Scene();
 const imagecam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
 imagecam.position.z = 1;
 
-// mouse event variables
 const pointer = new THREE.Vector2();
 const imagePointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
@@ -62,7 +59,8 @@ let imageSectionVisible = true;
 const textureLoader = new THREE.TextureLoader();
 const loadedTextures = [];
 
-// list of textures in order of project pos-index 0 through to max length
+// screenshots by project pos-index. index 1 is the particle project, whose
+// image is the model itself, so it has none
 const textures = [
   "/Minecraftle.png",
   "None",
@@ -188,7 +186,7 @@ function setImageRendererSize() {
   var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
   var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
 
-  // Element width and height minus padding and border
+  // the content box, which is what the canvas has to fill
   var elementWidth = box.offsetWidth - paddingX - borderX;
   var elementHeight = box.offsetHeight - paddingY - borderY;
 
@@ -210,7 +208,7 @@ function onPointerMove( event ) {
   pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
   pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-  // divide by the canvas boudning box so that the pointer works for just the image
+  // the image shader wants the pointer in the canvas's own 0..1 space
   if (canvasBoundingRect) {
     imagePointer.x = (((event.clientX - canvasBoundingRect.left) / (canvasBoundingRect.width)));
     imagePointer.y = (1 - ((event.clientY - canvasBoundingRect.top) / (canvasBoundingRect.height)));
@@ -277,20 +275,6 @@ function onWindowResize(){
 }
   
 function loadModelGeometries() {
-  // const loader = new FontLoader();
-  // loader.load( '/Epilogue Medium_Regular.json', 
-  // function ( font ) {
-
-  //   var textGeometry = new TextGeometry('Harrison', {
-  //     size: 10,
-  //     height: 0,
-  //     font: font,
-  //     style: 'normal',
-  //     bevelSize: 0.25,
-  //     bevelThickness: 0.50,
-  //     bevelEnabled: true,
-  //   });  
-
     const modelLoader = new GLTFLoader();
     modelLoader.load( 'models/radiant_pillar_baked.glb', function ( gltf ) {
       gltf.scene.traverse((child) => {
@@ -384,12 +368,13 @@ function detectMob() {
   });
 }
 
-// Function to sample positions and return them as an array of Vector3
+// one point per particle, spread over the model's surface by area. the colour
+// is packed into w so a single RGBA texture carries both, leaving the sim's own
+// alpha channel free to carry speed
 function samplePositions(numSamples, Mesh) {
   let positions = [];
+  const sampler = new MeshSurfaceSampler(Mesh).build();
 
-  // Build a Mesh Surface Sampler to sample positions from the geometry
-  sampler = new MeshSurfaceSampler(Mesh).build();
   for (let i = 0; i < numSamples; i++) {
     let position = new THREE.Vector4();
     let normals = new THREE.Vector3();
@@ -397,8 +382,7 @@ function samplePositions(numSamples, Mesh) {
 
     sampler.sample(position, normals, colour);
 
-    // pack rgb values as three 8 bit integers 0-255 into the 4th float of the vector so that they can fit into the alpha channel of the data texture
-    // Likely I've messed something up here but looks the same in blender
+    // three 8 bit channels packed into one float, unpacked again in main.fragFBO
     let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
     let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255)); 
     let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
@@ -424,7 +408,8 @@ async function initFBO() {
   let h = w;
   defaultParticleCount = defaultCountForTier(gputier.tier);
 
-  // init positions in data texture used if i want a circle that eventually becomes the model
+  // where the particles start: scattered, so the ship assembles itself out of
+  // nothing on load rather than simply being there
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < w; j++) {
@@ -440,10 +425,9 @@ async function initFBO() {
     }
   }
 
-  // Number of initial positions to sample
+  // one sample per texel of the sim texture
   const numInitialPositions = w * h;
 
-  // Sample initial positions
   let initialShipPositions = samplePositions(numInitialPositions, shipMesh);
   let initialPositionsArray = new Float32Array(numInitialPositions * 4);
   initialShipPositions.forEach((position, index) => {
@@ -460,19 +444,17 @@ async function initFBO() {
   initialShipDataTex.magFilter = THREE.NearestFilter;
   initialShipDataTex.needsUpdate = true;
   
-  // init simulation mat with above created data texture
+  // state 0 pulls every particle to its own point on the hull, state 1 runs an
+  // attractor. see glsl/simfragFBO.js
   simMaterial = new THREE.ShaderMaterial({
     uniforms: {
       state: { value: 0 },
-      maxDist: { value: 1.0 },
-      time: {value: 0.0},
       dtScale: {value: 1.0},
       // idle sits at morph 1, fully arrived at attractorTo
       attractorFrom: {value: 0},
       attractorTo: {value: 0},
       morph: {value: 1.0},
       cloudRadius: {value: 1.0},
-      mixValue: {value: 1.0},
       posTex: { value: initialCircleDataTex },
       shipPosTex: { value: initialShipDataTex },
       // the cursor as the camera ray through the pointer, not a point on z = 0
@@ -498,10 +480,9 @@ async function initFBO() {
     }
   }
   
-  // scene to render simulation texture so that we can 'ping-pong' the renderer between different render targets to update positions 
+  // a single quad covering the sim texture, so one fragment runs per particle
   fbo = new FBO(w, simMaterial);
-  
-  // create sim render target
+
   renderTargetA = new THREE.WebGLRenderTarget(w, h, {
     wrapS: THREE.RepeatWrapping,
     wrapT: THREE.RepeatWrapping,
@@ -512,26 +493,26 @@ async function initFBO() {
     stencilBuffer: false,
   });
   
-  // a second render target lets us store prev input + current output states
+  // a target can't be read and written in the same pass, so state alternates
+  // between this pair every frame
   renderTargetB = renderTargetA.clone();
-  
-  renderer.setRenderTarget(renderTargetA),
-  renderer.clear(),
-  renderer.render(fbo.scene, fbo.camera),
-  renderer.setRenderTarget(renderTargetB),
-  renderer.clear(),
-  renderer.render(fbo.scene, fbo.camera),
-  renderer.setRenderTarget(null)
-    
+
+  // prime both, so the first frame reads real state rather than an empty target
+  renderer.setRenderTarget(renderTargetA);
+  renderer.clear();
+  renderer.render(fbo.scene, fbo.camera);
+  renderer.setRenderTarget(renderTargetB);
+  renderer.clear();
+  renderer.render(fbo.scene, fbo.camera);
+  renderer.setRenderTarget(null);
+
+
   renderMaterial = new THREE.ShaderMaterial({
     uniforms: { posTex: { value: null },
     // static, and the only place the ship's sampled colours are read from
     shipPosTex: { value: initialShipDataTex },
-    mouse: { value : new THREE.Vector2(10,10)},
-    // uTexture: {value: texture},
     pointSize: { value: 2.0 },
-    colourMix: { value: 0.0 },
-    u_time: {value: 1.0}},
+    colourMix: { value: 0.0 }},
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
   });
@@ -567,7 +548,6 @@ async function initFBO() {
   }
   
   const clock = new THREE.Clock();
-  let elapsed = 0;
 
   function render() {
     // a backgrounded tab still gets throttled frames on some browsers and
@@ -576,14 +556,10 @@ async function initFBO() {
       return;
     }
 
-    // getElapsedTime consumes the delta internally, so take it once and
-    // accumulate. frameScale is how many 60Hz frames this frame was worth,
-    // capped so a dropped frame can't blow up the attractor. the ship runs at
-    // SIM_SPEED times it, the screenshot's springs take it unscaled
-    const delta = clock.getDelta();
-    elapsed += delta;
-    const frameScale = Math.min(delta * 60, 2);
-    simMaterial.uniforms.time.value = elapsed;
+    // how many 60Hz frames this frame was worth, capped so a dropped frame
+    // can't blow up the attractor. the ship runs at SIM_SPEED times it, the
+    // screenshot's springs take it unscaled
+    const frameScale = Math.min(clock.getDelta() * 60, 2);
     simMaterial.uniforms.dtScale.value = frameScale * SIM_SPEED;
     // follows the ship to attractor tween so the mouse stays the same size
     // relative to the cloud the whole way through
@@ -599,7 +575,7 @@ async function initFBO() {
       imageRenderer.render(imageScene, imagecam);
     }
 
-    // Swap renderTargetA and renderTargetB
+    // ping-pong: read from A, write to B, then B is what the points draw from
     var temp = renderTargetA;
     renderTargetA = renderTargetB;
     renderTargetB = temp;
@@ -623,7 +599,8 @@ async function initFBO() {
   }
 
   main()
-// Export a function to get the simMaterial instance
+// the sim material is built behind the GLB load and the gpu tier probe, so
+// everything that drives it has to reach in through here rather than import it
 export function getSimMaterial() {
   return simMaterial;
 }

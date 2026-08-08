@@ -3,65 +3,16 @@ import { Observer } from "gsap/all";
 import { animateParticlesIn, animateParticlesOut } from "./animation";
 import { invalidateRigRect } from "./cameraRig.js";
 import { updateImageTexture } from "./main.js";
-import { Flip } from "gsap/all";
 
-gsap.registerPlugin(Observer, Flip);
+gsap.registerPlugin(Observer);
 
-
-// const hamburgermenu = document.queryselector(".hamburgertoggle");
-// const menu = document.queryselector(".menuelements");
-// const blurbackground = document.queryselector(".menublur");
-
+// which project the next press lands on, and which panel currently holds the
+// screenshot canvas. the two differ mid-slide, the canvas moves at the peak of
+// the scatter rather than at the start
 let nextProjectSection = 0;
 let currentCanvasPointer = 0;
 
-// fix the hamburgerMenu when i find a use for it
-// hamburgerMenu.addEventListener("click", toggleMenu);
-// hamburgerMenu.addEventListener("mouseenter", hoverHamburger);
-// hamburgerMenu.addEventListener("mouseleave", exitHoverHamburger);
-
-// buttonSVGOne.addEventListener("click", toggleMenu);
-// buttonSVGOne.addEventListener("mouseenter", hoverHamburger);
-// buttonSVGOne.addEventListener("mouseleave", exitHoverHamburger);
-
-// buttonSVGTwo.addEventListener("click", toggleMenu);
-// buttonSVGTwo.addEventListener("mouseenter", hoverHamburger);
-// buttonSVGTwo.addEventListener("mouseleave", exitHoverHamburger);
-
-// let menuVisible = false;
-// let targetAlpha, targetZ;
-
-
-// window.addEventListener('DOMContentLoaded', () => {
-//   initObservers();
-//   console.log("loaded");
-// });
-
 initObservers();
-
-// function toggleMenu() {
-//     menuVisible ? targetAlpha = 0.0 : targetAlpha = 1.0; 
-//     menuVisible ? targetZ = 0.0 : targetZ = 5.0; 
-//     menuVisible = !menuVisible;
-
-//     gsap.to(menu, {
-//         autoAlpha: targetAlpha,
-//         duration: 0.5,
-//     })
-//     gsap.to(blurBackground, {
-//         autoAlpha: targetAlpha,
-//     })
-// }
-
-// function hoverHamburger() {
-//     // console.log("hovered");
-// }
-
-// function exitHoverHamburger() {
-//     // console.log("left");
-// }
-
-
 
 function initObservers() {
   const svgButtons = document.querySelectorAll('.project-nav-section svg');
@@ -86,7 +37,6 @@ function initObservers() {
       onHover: () => githubButtonHover(true, element),
       onHoverEnd: () =>  githubButtonHover(false, element),
       onPress: () => {
-        // open link to github project
         if (link) {
           window.open(link);
         }},
@@ -139,7 +89,7 @@ const SLIDE_DURATION = 1.5;
 const CANVAS_HANDOVER = 0.5;
 const STATUS_SWITCH = 1.25;
 
-// Handles project section button presses takes in an int of which button we are using
+// a press on one of the two arrows. direction comes from which svg it was
 function projectButtonPress(button) {
 
   // prevents pressing next section before the current one has animated in
