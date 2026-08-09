@@ -1,25 +1,101 @@
 @import url('epilogue.css');
 
+/* one palette for the whole page. the cloud reads the same tokens through
+   theme.js, so the chrome and the particles stay in key */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface: #cbcac7;
+  --surface-sunk: #c2c1bd;
+  --ink: #1a1917;
+  --ink-muted: #52504b;
+  --ink-faint: #837f78;
+  --line: color-mix(in srgb, var(--ink) 14%, transparent);
+  --line-strong: color-mix(in srgb, var(--ink) 30%, transparent);
+  /* the one hue on the page. warm against a cool grey field, so it can carry
+     state with no filled box around it */
+  --signal: #b2470d;
+
+  /* the three gradient blobs behind the blur. the same neutral the field is,
+     with almost no chroma, so the wash reads as light moving over it */
+  --wash-one: #c1c0bb;
+  --wash-two: #b3b0aa;
+  --wash-three: #cdccc8;
+
+  /* the cloud's speed ramp, slowest to fastest, then the gain, the pull towards
+     grey and the hue that grey is carried in, all on the ship's baked colours */
+  --particle-low: #8f8c86;
+  --particle-mid: #c2551a;
+  --particle-high: #1a1917;
+  --particle-gain: 0.42;
+  --particle-desaturate: 0.92;
+  --particle-tint: #ffe2cd;
+}
+
+/* the default, on the bare :root as well as the attribute. theme.js stamps the
+   attribute from a module, so there is a paint before it runs */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface: #181715;
+  --surface-sunk: #131211;
+  --ink: #f0eeea;
+  --ink-muted: #a09b93;
+  --ink-faint: #6f6a63;
+  --line: color-mix(in srgb, var(--ink) 16%, transparent);
+  --line-strong: color-mix(in srgb, var(--ink) 34%, transparent);
+  --signal: #ff8f4a;
+
+  --wash-one: #241f1b;
+  --wash-two: #2c2622;
+  --wash-three: #1b1815;
+
+  /* an ember at rest and a hot core, so speed reads as heat */
+  --particle-low: #4a2311;
+  --particle-mid: #ff8a3c;
+  --particle-high: #f7f3ef;
+  --particle-gain: 0.95;
+  /* the ship's own colours are cool, and any of that hue left through reads as
+     cyan on a page with nothing else cool on it */
+  --particle-desaturate: 0.88;
+  --particle-tint: #ffcfae;
+}
+
 html {
   overflow-x: hidden;
 }
 
+/* the field colour belongs to body and nothing else. with no background on html
+   it propagates to the viewport and paints behind the canvas at z-index -1. put
+   one on html too and body's own background hides the cloud */
 body {
   font-family: 'Epilogue-Bold';
   margin: 0;
   position: relative;
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-  background-color: var(--background);
-  -ms-overflow-style: none; 
-  scrollbar-width: none;  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--surface);
+  color: var(--ink);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 ::-webkit-scrollbar {
   display: none;
 }
 
+/* a tint of the accent, so selected text keeps ink's contrast */
+::selection {
+  background: color-mix(in srgb, var(--signal) 28%, var(--surface));
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 1px solid var(--signal);
+  outline-offset: 3px;
+}
 
 #threeJSCanvas {
   position: fixed;
@@ -30,203 +106,259 @@ body {
   z-index: -1;
 }
 
-h1 {
-  color: #66fcf1;
-  text-align: left;
-  font-size: 7.993rem;
+/* one type scale, quiet by default. size and colour carry the hierarchy, the
+   family only ships two weights */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--ink);
   margin: 0;
-  padding: 0;
+  font-weight: normal;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+h1 {
+  font-size: clamp(4rem, 2rem + 9vw, 9rem);
 }
 
 h2 {
-  color: var(--text);
-  font-size: 5.653rem;
+  font-size: clamp(1.75rem, 1rem + 2.4vw, 3.25rem);
 }
 
 h3 {
-  color: var(--text);
-  font-size: 3.998rem;
+  font-size: clamp(1.5rem, 1rem + 1.6vw, 2.5rem);
 }
 
 h4 {
-  color: var(--text);
-  font-size: 2.827rem;
+  font-size: clamp(1.25rem, 0.9rem + 1.1vw, 1.875rem);
 }
 
 h5 {
-  color: var(--text);
-  font-size: 1.999rem;
+  font-size: clamp(1.05rem, 0.9rem + 0.5vw, 1.35rem);
 }
 
 h6 {
-  color: var(--text);
-  font-size: 1.414rem;
-  margin: 0;
-  padding: 0;
+  font-size: 0.95rem;
 }
 
 p {
-  color: var(--text);
-  font-size: 1rem;
-  padding: 0;
+  color: var(--ink-muted);
+  font-size: clamp(0.875rem, 0.8rem + 0.25vw, 1.0625rem);
+  line-height: 1.6;
+  margin: 0;
 }
 
 a {
-  color: var(--accent);
+  color: var(--ink);
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 0.25em;
+  transition: text-decoration-color 0.25s;
 }
 
-@media (max-width: 800px) {
-  h1 {
-    font-size: 2.027rem;
-  }
-
-  h2 {
-    font-size: 1.802rem;
-  }
-
-  h3 {
-    font-size: 1.602rem;
-  }
-
-  h4 {
-    font-size: 1.424rem;
-  }
-
-  h5 {
-    font-size: 1.266rem;
-  }
-
-  h6 {
-    font-size: 1.125rem;
-  }
-
-  p {
-    font-size: 0.889rem;
-  }
+a:hover {
+  text-decoration-color: var(--signal);
 }
 
-@media (width < 800px) {
-
-  .ProjectSection > project {
-    grid-template-rows: 2fr 1fr 1fr 1fr;
-    height: max(700px, 100%);
-    grid-template-columns: none;
-    padding: 0.5rem;
-    
-  }
-
-  project > .project-section {
-    border-left: 2px solid var(--accent);
-    border-right: 2px solid var(--accent);
-    padding: 1rem;
-  }
-
-
-  project > .project-image-section {
-    order: 1;
-    border-top: 2px solid var(--accent);
-    border-bottom: 2px solid var(--accent);
-    
-  }
-
-  project > .project-title-section {
-    order: 2;
-  }
-
-  project > .project-nav-section {
-    order: 4;
-    border-bottom: 2px solid var(--accent);
-    overflow: hidden;
-  }
-
-  project > .project-nav-section:nth-child(1) {
-    border-left: 2px solid var(--accent);
-  }
-
-  project > .project-description-section {
-    order: 3;
-    border-top: 2px solid var(--accent);
-    border-bottom: 2px solid var(--accent);
-  }
+/* small caps label, the one repeated typographic device: nav, controls, dates,
+   shape picker */
+.Label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
-.ProjectSection > project[status="inactive"] {
-  transform: translateX(-100%);
+/* sections are flex and grid containers, so the attribute alone loses to their
+   own display */
+[hidden] {
+  display: none !important;
 }
 
-project > .project-section {
-  height: 100%;
-  box-sizing: border-box;
-}
-
-project {  
-  display: grid;
-  height: 100%;
-  box-sizing: border-box;
-  position: absolute;
-  left: 0px;
-  top: 0px;
-}
-
-@media (width >= 800px) {
-
-  project {
-    padding: 1rem;
-    grid-template-columns: 2fr 1fr;
-    grid-template-rows: 2fr 1fr;
-  }
-
-  project > .project-section {
-    height: 100%;
-    box-sizing: border-box;
-    padding: 2rem;
-  }
-
-  project > .project-description-section, project > .project-nav-section {
-    border-left: 2px solid var(--accent);
-    border-right: 2px solid var(--accent);
-  }
-
-  project > .project-image-section, project > .project-title-section {
-    border-left: 2px solid var(--accent);
-  }
-
-  project > .project-description-section, project > .project-image-section {
-    border-top: 2px solid var(--accent);
-  }
-
-  project > .project-title-section, project > .project-nav-section {
-    border-top: 2px solid var(--accent);
-    border-bottom: 2px solid var(--accent);
-  }
-
-  project > .project-description-section p {
-    padding: 1.5rem;
-    font-size: clamp(1rem, 0.5rem + 1vw, 4.5rem);
-  }
-
+.scroll-container {
+  min-height: 100vh;
+  width: 100vw;
+  perspective: 1px;
 }
 
 /*
-top two sections of grid
+  navigation. the links sit in the bar on anything wide enough, and collapse
+  behind the hamburger on a phone
 */
-project > .project-image-section {
-  overflow: hidden;
+.NavRoot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.75rem 5vw;
+  /* the bar spans the viewport, only its controls are meant to be hit */
+  pointer-events: none;
 }
 
-/* particle size and count, fixed at the top of the viewport, under the
-   hamburger's z-index so it can't cover the menu */
+.NavRoot > * {
+  pointer-events: auto;
+}
+
+.NavMark {
+  font-family: 'Epilogue-Black';
+  font-size: 1.125rem;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.NavRight {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.NavPanel {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.NavLink {
+  position: relative;
+  color: var(--ink-faint);
+  text-decoration: none;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.25rem 0;
+  transition: color 0.25s;
+}
+
+.NavLink:hover,
+.NavLink:focus-visible {
+  color: var(--ink);
+}
+
+.NavLink[aria-current="page"] {
+  color: var(--ink);
+}
+
+/* the current route is marked with a rule under the word, nothing on the bar
+   has an edge */
+.NavLink::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s;
+}
+
+.NavLink[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+/* half filled disc, so the control needs no word on it */
+.ThemeToggle {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--ink-faint);
+  transition: color 0.25s;
+}
+
+.ThemeToggle:hover,
+.ThemeToggle:focus-visible {
+  color: var(--ink);
+}
+
+.ThemeDisc {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: linear-gradient(to right, currentColor 50%, transparent 50%);
+}
+
+.NavToggle {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0.5rem 0;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 1.5rem;
+  cursor: pointer;
+}
+
+.NavBar {
+  display: block;
+  height: 1px;
+  width: 100%;
+  background: var(--ink);
+  transition: transform 0.25s, opacity 0.25s;
+}
+
+.NavToggle[aria-expanded="true"] .NavBar:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.NavToggle[aria-expanded="true"] .NavBar:nth-child(2) {
+  opacity: 0;
+}
+
+.NavToggle[aria-expanded="true"] .NavBar:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+@media (width < 800px) {
+  .NavRoot {
+    padding: 1.25rem 5vw;
+    align-items: flex-start;
+  }
+
+  .NavRight {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .NavToggle {
+    display: flex;
+  }
+
+  /* only on a phone does the panel open, elsewhere it is the row of links */
+  .NavPanel {
+    display: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+    padding: 0.5rem 0 0.25rem;
+  }
+
+  .NavPanel.is-open {
+    display: flex;
+  }
+}
+
+/*
+  particle size and count. an instrument row under the cloud it drives, quiet
+  until it is pointed at
+*/
 .ViewerControls {
-  position: fixed;
-  top: 1.25rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 0.4rem 2.25rem;
-  opacity: 0.3;
+  opacity: 0.55;
   transition: opacity 0.3s;
 }
 
@@ -238,16 +370,16 @@ project > .project-image-section {
 .viewer-control {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  color: var(--text);
-  font-size: clamp(0.6rem, 0.45rem + 0.2vw, 0.75rem);
-  letter-spacing: 0.14em;
+  gap: 0.75rem;
+  color: var(--ink-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .viewer-control-name {
-  opacity: 0.6;
+  color: var(--ink-faint);
 }
 
 .viewer-control output {
@@ -255,7 +387,8 @@ project > .project-image-section {
      row holds still while you drag */
   font-variant-numeric: tabular-nums;
   text-align: right;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  color: var(--ink);
 }
 
 .viewer-control input[type="range"] {
@@ -270,14 +403,12 @@ project > .project-image-section {
    drawn */
 .viewer-control input[type="range"]::-webkit-slider-runnable-track {
   height: 10px;
-  background: linear-gradient(color-mix(in srgb, var(--text) 30%, transparent) 0 0)
-    no-repeat center / 100% 1px;
+  background: linear-gradient(var(--line-strong) 0 0) no-repeat center / 100% 1px;
 }
 
 .viewer-control input[type="range"]::-moz-range-track {
   height: 10px;
-  background: linear-gradient(color-mix(in srgb, var(--text) 30%, transparent) 0 0)
-    no-repeat center / 100% 1px;
+  background: linear-gradient(var(--line-strong) 0 0) no-repeat center / 100% 1px;
 }
 
 .viewer-control input[type="range"]::-webkit-slider-thumb {
@@ -289,7 +420,7 @@ project > .project-image-section {
   margin-top: 1px;
   border-radius: 50%;
   border: 0;
-  background: var(--accent);
+  background: var(--signal);
   cursor: pointer;
 }
 
@@ -298,49 +429,287 @@ project > .project-image-section {
   height: 8px;
   border-radius: 50%;
   border: 0;
-  background: var(--accent);
+  background: var(--signal);
   cursor: pointer;
 }
 
-@media (width < 800px) {
+@media (width < 900px) {
   .ViewerControls {
-    left: 0.75rem;
-    right: 0.75rem;
-    transform: none;
     gap: 0.4rem 1.25rem;
   }
 }
 
-/* shape picker, under the landing tagline and over the cloud itself */
+/*
+  landing. one big type block in a bottom corner and nothing else, the middle of
+  the viewport belongs to the cloud
+*/
+.LoaderLogoSection {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface);
+}
+
+.LoadingText {
+  visibility: hidden;
+  font-family: "Epilogue-Black";
+  font-size: clamp(4rem, 2rem + 9vw, 9rem);
+  letter-spacing: -0.04em;
+  position: absolute;
+  left: 50%;
+  margin: 0;
+  transform: translate(-50%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+  color: var(--ink);
+  z-index: 1;
+}
+
+.LoadingText .char {
+  transform: translateY(126px);
+  transition: transform;
+}
+
+/* two columns, and the cloud only ever gets the right one. the split is in the
+   grid, not in a percentage inset */
+.LandingPageSection {
+  min-height: 100vh;
+  position: relative;
+  padding: 7rem 5vw 5rem;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 4vw;
+  align-items: center;
+}
+
+/* the type block, held to the middle of its own column. in flow, so it paints
+   over anything the cloud spills at z-index -1 */
+.LandingPageContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+  text-wrap: wrap;
+  min-width: 0;
+}
+
+.MyName {
+  font-family: 'Epilogue-Black';
+  font-size: clamp(2.5rem, 1rem + 5vw, 5.5rem);
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+
+.LandingRole {
+  max-width: 30ch;
+}
+
+/* the cloud and the controls that drive it, stacked so the instruments belong
+   to the sim */
+.LandingViewer {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* the box the particle model is framed into. no painted content of its own, the
+   fullscreen canvas draws into its rect */
+.LandingStage {
+  position: relative;
+  flex: 1;
+  min-height: 45vh;
+}
+
+.LandingInstruments {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+/* shape picker, in the instrument stack under the cloud it reshapes */
 .attractor-switch {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1.25rem;
+  gap: 0.35rem 1.5rem;
 }
 
 .attractor-option {
   appearance: none;
   background: none;
   border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 0.15rem 0;
+  padding: 0.2rem 0;
   font: inherit;
-  font-size: clamp(0.75rem, 0.4rem + 0.5vw, 1.25rem);
-  letter-spacing: 0.04em;
-  color: var(--text);
-  opacity: 0.55;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
   cursor: pointer;
-  transition: opacity 0.25s, border-color 0.25s;
+  position: relative;
+  transition: color 0.25s;
 }
 
 .attractor-option:hover,
 .attractor-option:focus-visible {
-  opacity: 1;
+  color: var(--ink);
+}
+
+.attractor-option::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s;
 }
 
 .attractor-option[aria-pressed="true"] {
-  opacity: 1;
-  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.attractor-option[aria-pressed="true"]::after {
+  transform: scaleX(1);
+}
+
+/* one column, name first and the stage under it, so nothing lands on the type */
+@media (width < 900px) {
+  .LandingPageSection {
+    grid-template-columns: none;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 2.5rem;
+    padding: 6rem 5vw 4rem;
+  }
+
+  .LandingViewer {
+    gap: 1.25rem;
+  }
+
+  .LandingStage {
+    min-height: 34vh;
+  }
+}
+
+/*
+  projects. the panel is a frame of hairlines, the screenshot's cloud is the
+  only thing in it with any weight
+*/
+.ProjectSection {
+  height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.ProjectSection > project[status="inactive"] {
+  transform: translateX(-100%);
+}
+
+project {
+  display: grid;
+  height: 100%;
+  box-sizing: border-box;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+}
+
+project > .project-section {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+@media (width >= 800px) {
+  project {
+    padding: 6rem 5vw 5rem;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 2fr 1fr;
+  }
+
+  project > .project-section {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 2rem;
+  }
+
+  project > .project-description-section,
+  project > .project-nav-section {
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+
+  project > .project-image-section,
+  project > .project-title-section {
+    border-left: 1px solid var(--line);
+  }
+
+  project > .project-description-section,
+  project > .project-image-section {
+    border-top: 1px solid var(--line);
+  }
+
+  project > .project-title-section,
+  project > .project-nav-section {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  project > .project-description-section p {
+    padding: 0;
+  }
+}
+
+@media (width < 800px) {
+  .ProjectSection > project {
+    grid-template-rows: 2fr 1fr 1fr 1fr;
+    height: max(700px, 100%);
+    grid-template-columns: none;
+    padding: 5rem 1rem 4rem;
+  }
+
+  project > .project-section {
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    padding: 1rem;
+  }
+
+  project > .project-image-section {
+    order: 1;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  project > .project-title-section {
+    order: 2;
+  }
+
+  project > .project-nav-section {
+    order: 4;
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  project > .project-description-section {
+    order: 3;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+/*
+top two sections of grid
+*/
+project > .project-image-section {
+  overflow: hidden;
 }
 
 project > .project-image-section img {
@@ -355,30 +724,36 @@ project > .project-description-section {
 }
 
 project > .project-description-section p {
-  text-align: justify;
+  max-width: 44ch;
 }
-
 
 /*
 bottom two sections of grid
 */
 project > .project-title-section {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
-}
-
-project > .project-title-section svg {
-  flex-grow: 1;
-  min-height: 100px;
-  min-width: 100px;
-  aspect-ratio: 1/1;
+  gap: 1.5rem;
 }
 
 project > .project-title-section h2 {
-  flex-grow: 3;
+  min-width: 0;
 }
 
+/* the repo link, an icon at reading weight */
+project > .project-title-section svg {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 0.25s;
+}
+
+project > .project-title-section svg:hover {
+  color: var(--ink);
+}
 
 project > .project-nav-section {
   display: flex;
@@ -391,12 +766,265 @@ project > .project-nav-section svg {
   flex-grow: 1;
   width: 100%;
   height: 100%;
+  max-height: 3.5rem;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 0.25s;
 }
 
-project > .project-nav-section #buttonSVGOne {
-  border-right: 2px solid var(--accent);
+project > .project-nav-section svg:hover {
+  color: var(--ink);
 }
 
+project > .project-nav-section [data-nav="prev"] {
+  border-right: 1px solid var(--line);
+}
+
+/*
+  work. the list on one side, the box the mark is framed into on the other. the
+  stage only says where in the fullscreen canvas to draw
+*/
+.WorkSection {
+  min-height: 100vh;
+  position: relative;
+  padding: 7rem 5vw 6rem;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 5vw;
+  align-items: center;
+}
+
+.WorkStage {
+  position: relative;
+  height: 100%;
+  min-height: 60vh;
+}
+
+.WorkContent {
+  position: relative;
+  min-width: 0;
+}
+
+.WorkHeading {
+  margin: 0 0 2.5rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.JobList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.Job {
+  border-top: 1px solid var(--line);
+  transition: border-color 0.25s;
+}
+
+/* the open job is marked on its own rule, the same device as the nav */
+.Job.is-open {
+  border-top-color: var(--signal);
+}
+
+.Job:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.JobToggle {
+  appearance: none;
+  background: none;
+  border: 0;
+  width: 100%;
+  padding: 1.5rem 0;
+  font: inherit;
+  color: var(--ink-faint);
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 1rem;
+  text-align: left;
+  transition: color 0.25s;
+}
+
+.JobToggle:hover,
+.JobToggle:focus-visible,
+.Job.is-open .JobToggle {
+  color: var(--ink);
+}
+
+.JobCompany {
+  font-size: clamp(1.125rem, 0.8rem + 0.9vw, 1.75rem);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.JobRole,
+.JobDates {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.JobDates {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.JobDetail {
+  padding: 0 0 1.75rem;
+  max-width: 52ch;
+}
+
+@media (width < 800px) {
+  .WorkSection {
+    grid-template-columns: none;
+    grid-template-rows: auto 40vh;
+    gap: 2rem;
+    padding: 6rem 5vw 5rem;
+  }
+
+  .WorkStage {
+    min-height: 0;
+  }
+
+  .JobToggle {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}
+
+/*
+  colophon. the same two column figure as the work section, a list of what the
+  site borrows beside the box the cloud is framed into
+*/
+.ColophonSection {
+  min-height: 100vh;
+  position: relative;
+  padding: 7rem 5vw 6rem;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 5vw;
+  align-items: center;
+}
+
+.ColophonContent {
+  position: relative;
+  min-width: 0;
+}
+
+.ColophonHeading {
+  margin: 0 0 2.5rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.CreditList {
+  margin: 0;
+}
+
+/* each credit is a labelled row on a hairline, the same figure as the job list */
+.Credit {
+  display: grid;
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+  gap: 0.75rem 2rem;
+  align-items: baseline;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.Credit:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.Credit dt {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.Credit dd {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--ink-muted);
+  font-size: clamp(0.875rem, 0.8rem + 0.25vw, 1.0625rem);
+  line-height: 1.6;
+}
+
+.ColophonStage {
+  position: relative;
+  height: 100%;
+  min-height: 55vh;
+}
+
+@media (width < 900px) {
+  .ColophonSection {
+    grid-template-columns: none;
+    grid-template-rows: auto 32vh;
+    gap: 2rem;
+    padding: 6rem 5vw 4rem;
+  }
+
+  .ColophonStage {
+    min-height: 0;
+  }
+
+  .Credit {
+    grid-template-columns: none;
+    gap: 0.4rem;
+  }
+}
+
+/*
+  footer. one hairline, the name and the way through to the colophon
+*/
+.SiteFooter {
+  padding: 2rem 5vw 4.5rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+}
+
+.SiteFooter p,
+.SiteFooter a {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.SiteFooterLink {
+  color: var(--ink-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 0.2rem;
+  transition: color 0.25s, border-color 0.25s;
+}
+
+.SiteFooterLink:hover,
+.SiteFooterLink:focus-visible,
+.SiteFooterLink[aria-current="page"] {
+  color: var(--ink);
+  border-bottom-color: var(--signal);
+}
+
+/*
+  the wash behind the blur. three blobs of one hue family, so what comes through
+  reads as light moving over the field
+*/
 .BackgroundAnimation {
   transform: translate(-50%, -50%);
   height: 50vh;
@@ -406,7 +1034,7 @@ project > .project-nav-section #buttonSVGOne {
   z-index: -9;
   border-radius: 100%;
   position: absolute;
-  overflow: hidden; 
+  overflow: hidden;
 }
 
 .SvgContainer {
@@ -429,167 +1057,30 @@ project > .project-nav-section #buttonSVGOne {
   left: 0;
   width: 100vw;
   height: 100vh;
-  /* a full viewport backdrop-filter is recomposited over the live canvas every
-     frame and the cost scales with the radius. lower than this resolves the
-     gradient blobs into distinct circles and changes the design */
+  /* a full viewport backdrop-filter recomposites over the live canvas every
+     frame, at a cost that scales with the radius. lower than this and the blobs
+     resolve into circles */
   backdrop-filter: blur(64px);
   z-index: -1;
   overflow: auto;
 }
 
-.scroll-container {
-  height: 100vh;
-  width: 100vw;
-  perspective: 1px;
-  padding-bottom: 60px;
-}
-
-.LoadingText {
-  visibility: hidden;
-  font-family: "Epilogue-Black";
-  font-size: 7.993rem;
-  position: absolute;
-  left: 50%;
-  margin: 0;
-  transform: translate(-50%);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
-  color: var(--text);
-  z-index: 1;
-}
-
-.LoadingText .char {
-  transform: translateY(126px);
-  transition: transform;
-}
-
-.LoaderLogoSection {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  background-color: var(--background);
-}
-
-.LandingPageSection {
-  height: 100vh;
-  margin-bottom: 46vw;
-  position: relative;
-  padding: 5vh 5vw;
-  box-sizing: border-box;
-}
-
-/* layered over the stage. the canvas is at z-index -1 and this is in flow, so
-   the text paints over the ship without either needing a stacking order */
-.LandingPageContent {
-  position: relative;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  text-wrap: wrap;
-  min-width: 0;
-}
-
-.LandingPageContent p, h4 {
-  margin: 0;
-}
-
-/* tagline and shape picker travel together at the bottom of the column, so the
-   space-between above only has two things to separate */
-.LandingPageFooter {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-/* the box the particle model is framed into, the whole landing viewport
-   ignoring the section padding. no painted content of its own, the fullscreen
-   canvas draws into its rect */
-.LandingStage {
-  position: absolute;
-  inset: 0;
-}
-
-@media (width < 800px) {
-  .LandingPageSection {
-    padding: 10vh 5vw;
-  }
-}
-
-.ProjectSection {
-  height: 100vh;
-  position: relative;
-  overflow-x: hidden;
-  margin-bottom: 23vw;
-}
-
-.attribution-section {
-  width: 100%;
-  height: 30%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--background);
-  border-top: 2px solid var(--accent);
-  padding: 1rem;
-}
-
-.attribution-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.attribution-header {
-  color: var(--text);
-  margin-bottom: 1rem;
-  text-align: center;
-  font-weight: bold;
-}
-
-.attribution-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.attribution {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--accent);
-}
-
 #circleOne {
-  --color-stop-1: #e76f51;
-  --color-stop-2: #f4a261;
-  --color-stop-3: #e9c46a;
+  --color-stop-1: var(--wash-one);
+  --color-stop-2: var(--wash-two);
+  --color-stop-3: var(--wash-three);
 }
 
 #circleTwo {
-  --color-stop-1: #9d4edd;
-  --color-stop-2: #c77dff;
-  --color-stop-3: #e0aaff;
+  --color-stop-1: var(--wash-two);
+  --color-stop-2: var(--wash-three);
+  --color-stop-3: var(--wash-one);
 }
 
 #circleThree {
-  --color-stop-1: #00c3ff;
-  --color-stop-2: #77e190;
-  --color-stop-3: #ffff1c;
-}
-
-:root[data-theme="light"] {
-  --text: #393632;
-  --background: #f5f5f4;
-  --primary: #38382e;
-  --secondary: #3b7713;
-  --accent: #1d9f19;
-}
-:root[data-theme="dark"] {
-  --text: #FFFFFF;
-  --background: #393632;
-  --primary: #495B59;
-  --secondary: #FB8500;
-  --accent: #00FFEE;
+  --color-stop-1: var(--wash-three);
+  --color-stop-2: var(--wash-one);
+  --color-stop-3: var(--wash-two);
 }
 
 html.lenis, html.lenis body {

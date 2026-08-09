@@ -1,17 +1,14 @@
 import { gsap } from "gsap";
-import { getSimMaterial, getRenderMaterial, shipFraming } from "./main.js";
+import { getSimMaterial, getRenderMaterial, shipFraming, setCloudTarget, getShipTarget } from "./main.js";
 import { rig } from "./cameraRig.js";
 
 // what the cloud is: the ship or one of five attractors, and the transitions
-// between them. the shader normalises every attractor to one centre and radius
-// so switching between them never moves the camera, but the ship is thirty
-// eight units across against an attractor's four, so moving to or from it
-// tweens the framing too
+// between them. the shader normalises every attractor to one centre and radius,
+// the ship is thirty eight units across, so moving to or from it tweens the
+// framing too
 
-// order and indices must match the constants in the shader. adding one isn't
-// just dropping in its equations, particles land on it from well outside so it
-// has to pull them in rather than drop them in a fixed point or fling them off
-// to infinity. see the note above attractorCentre in glsl/simfragFBO.js
+// order and indices must match the constants in the shader. see the note above
+// attractorCentre in glsl/simfragFBO.js before adding one
 export const ATTRACTORS = [
   { name: "Thomas" },
   { name: "Lorenz" },
@@ -20,32 +17,30 @@ export const ATTRACTORS = [
   { name: "Dadras" },
 ];
 
-// the ship isn't an attractor, in the shader it is state 0 rather than an
-// entry in the table
+// not an attractor, state 0 in the shader
 const SHIP = -1;
 
-// the personal project panel always shows this one so its screenshot is the
-// same image every time
+// state 0 too, pulling to a target sampled from an svg. no button owns it
+const MARK = -2;
+
+// the personal project panel always shows this one
 const PROJECT_ATTRACTOR = 4;
 
-// how long the ship holds before it comes apart, measured from the end of the
-// landing intro so it doesn't depend on how long the GLB took to load
+// how long the ship holds, measured from the end of the landing intro
 const SHIP_HOLD = 10;
 
 // how long each attractor is held before the cycle moves on
 const CYCLE_INTERVAL = 10;
 
-// long enough to read as a transformation rather than a cut. the burst is a
-// half sine over this so the cloud is most scattered halfway through
+// the burst is a half sine over this, so the cloud is most scattered halfway
 const MORPH_DURATION = 2.4;
 
-// framing radius once the cloud is an attractor, measured off the settled
-// cloud. the ship's own framing comes from the GLB via shipFraming
+// framing radius once the cloud is an attractor. the ship's own comes from the
+// GLB via shipFraming
 const ATTRACTOR_RADIUS = 4;
 
 let current = SHIP;
-// set by the first press of a shape button. the cycle is for someone who leaves
-// the page alone, once you've driven it yourself it stops taking the wheel back
+// set by the first press of a shape button, and the cycle never takes over again
 let manual = false;
 let cycling = false;
 let morphTween = null;
@@ -63,7 +58,6 @@ export function currentShape() {
 }
 
 // starts the clock that ends the ship, called when the landing intro finishes
-// so the ship is fully assembled before the countdown starts
 export function holdShipThenStart() {
   if (manual || current !== SHIP) {
     return;
@@ -100,6 +94,54 @@ export function lockAttractor(index = PROJECT_ATTRACTOR) {
   applyShape(index);
 }
 
+// hands the cloud to a company mark and stops the clock
+export function showMark(texture, framing) {
+  const sim = getSimMaterial();
+  const rend = getRenderMaterial();
+
+  if (!sim || !rend) {
+    return;
+  }
+
+  cycling = false;
+  holdCall?.kill();
+  cycleCall?.kill();
+  cycleCall = null;
+  morphTween?.kill();
+
+  current = MARK;
+  syncButtons();
+
+  sim.uniforms.state.value = 0;
+  // a mark's colours are the company's, so they are left as sampled
+  setCloudTarget(texture, { graded: 0 });
+  tweenFraming(rend, framing.radius, framing.extent, 0);
+}
+
+// back to the ship
+export function clearMark() {
+  if (current !== MARK) {
+    return;
+  }
+
+  current = SHIP;
+  applyShapeToShip();
+}
+
+function applyShapeToShip() {
+  const sim = getSimMaterial();
+  const rend = getRenderMaterial();
+
+  if (!sim || !rend) {
+    return;
+  }
+
+  syncButtons();
+  sim.uniforms.state.value = 0;
+  setCloudTarget(getShipTarget());
+  tweenFraming(rend, shipFraming.radius, shipFraming.extent, 0);
+}
+
 export function resumeCycle() {
   // someone who picked a shape by hand keeps it
   if (manual || current === SHIP) {
@@ -119,8 +161,7 @@ function applyShape(index) {
   const sim = getSimMaterial();
   const rend = getRenderMaterial();
 
-  // the buttons exist from first paint but the sim is built behind the GLB and
-  // the gpu tier probe, so a press can land before there's anything to drive
+  // the buttons exist from first paint, the sim does not
   if (!sim || !rend || index === current) {
     return;
   }
@@ -130,17 +171,17 @@ function applyShape(index) {
   syncButtons();
 
   if (index === SHIP) {
-    // no burst on the way back, state 0 pulls each particle towards its own
-    // point on the hull and that reassembles the ship by itself
+    // no burst on the way back, state 0 reassembles the hull by itself
     sim.uniforms.state.value = 0;
+    // the target may still be a mark, coming back from the work section
+    setCloudTarget(getShipTarget());
     tweenFraming(rend, shipFraming.radius, shipFraming.extent, 0);
     scheduleNext();
     return;
   }
 
-  // coming from the ship there's no previous field, so both ends are the same
-  // attractor and the burst does the work. otherwise start from whichever field
-  // is driving the cloud right now, the same test the shader makes
+  // from the ship there's no previous field, so both ends are the same attractor
+  // and the burst does the work. otherwise start from whatever is driving now
   sim.uniforms.attractorFrom.value = fromShip
     ? index
     : (sim.uniforms.morph.value < 0.5
@@ -161,13 +202,12 @@ function applyShape(index) {
   scheduleNext();
 }
 
-// overwrite auto throughout so a press part way through a previous transition
-// takes these over instead of fighting the tween already on them
+// overwrite auto throughout, so a press part way through a transition takes
+// these over rather than fighting the tween on them
 function tweenFraming(rend, radius, extent, colourMix) {
   gsap.to(rig, { radius, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
   gsap.to(rig.extent, { ...extent, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
-  // the ship's colours mean nothing on a shape that isn't a ship, and speed
-  // means nothing on a static hull, so the two crossfade with the shape
+  // baked colours on the hull, speed on an attractor, crossfaded with the shape
   gsap.to(rend.uniforms.colourMix, { value: colourMix, duration: MORPH_DURATION, ease: "none", overwrite: "auto" });
 }
 

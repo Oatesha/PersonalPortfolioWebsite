@@ -5,14 +5,17 @@ export const simfragFBO = /* glsl */`
   ${glslRandom}
 
   uniform sampler2D posTex;
-  uniform sampler2D shipPosTex;
+  // where state 0 is pulling every particle: the ship, or a company mark. two
+  // slots so a switch can crossfade
+  uniform sampler2D targetTexA;
+  uniform sampler2D targetTexB;
+  uniform float targetMix;
   // the cursor as the camera ray through the pointer, origin and unit direction
-  // in world space. a particle is under the cursor when it is close to the ray,
-  // so test perpendicular distance and push perpendicular too
+  // in world space. a particle is under it when its perpendicular distance is small
   uniform vec3 mouseOrigin;
   uniform vec3 mouseDir;
   // distance from the camera to the centre of the cloud, where the cursor's
-  // radius is quoted before being scaled along the ray
+  // radius is quoted
   uniform float mouseDepth;
   // zero until the pointer has moved, ndc (0, 0) is the middle of the cloud
   uniform float mouseActive;
@@ -26,7 +29,7 @@ export const simfragFBO = /* glsl */`
   uniform int attractorTo;
   uniform float morph;
   // radius of whatever the cloud currently is, so the mouse repulsion can be a
-  // fraction of it rather than absolute world units
+  // fraction of it
   uniform float cloudRadius;
 
   varying vec2 vUv;
@@ -52,7 +55,7 @@ export const simfragFBO = /* glsl */`
   const float CONTAIN_PULL = 0.03;
 
   // peak outward speed at the midpoint of a switch, tuned so the cloud roughly
-  // doubles in radius and no more
+  // doubles in radius
   const float BURST_SPEED = 0.022;
 
   const float PI = 3.14159265;
@@ -141,10 +144,10 @@ vec3 scatterDirection(vec3 pos, vec2 uv) {
     return normalize(jitter + outward * 0.6);
 }
 
-// unit step back towards the particle's own point on the hull, and nothing
+// unit step back towards the particle's own point on the target, and nothing
 // once it is close enough that stepping again would jitter it
-vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
-    vec3 toHome = originalPos - currentPos;
+vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
+    vec3 toHome = targetPos - currentPos;
 
     if (length(toHome) < 0.05) {
       return vec3(0.0);
@@ -158,10 +161,14 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     // displacement this frame, its length is written out as speed
     vec3 velocity = vec3(0.0);
 
-    // this particle's point on the ship's hull, fixed for the life of the page
-    vec3 originalShipPos = texture2D(shipPosTex, vUv).xyz;
+    // this particle's own point on whatever the target currently is
+    vec3 targetPos = mix(
+      texture2D(targetTexA, vUv).xyz,
+      texture2D(targetTexB, vUv).xyz,
+      targetMix
+    );
     
-    // sized against whatever the cloud currently is, not absolute units
+    // sized against whatever the cloud currently is
     float cursorRadius = cloudRadius * 0.20;
     float repelStrength = cloudRadius * 0.05;
 
@@ -187,14 +194,12 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
 
 
     if (state == 1) {
-      // the field is swapped outright at the halfway point rather than the two
-      // being blended. the burst peaks there, so there is no coherent shape
-      // left for the swap to be discontinuous in
+      // swapped outright at the halfway point, where the burst peaks and there
+      // is no coherent shape left to be discontinuous in
       int running = morph < 0.5 ? attractorFrom : attractorTo;
       velocity = attractorStep(running, pos);
 
-      // zero at both ends, so the cloud leaves one attractor and settles into
-      // the next under nothing but the attractor's own pull
+      // zero at both ends, so each attractor is left and entered under its own pull
       float burst = sin(morph * PI);
       velocity += scatterDirection(pos, vUv) * (burst * BURST_SPEED);
 
@@ -209,12 +214,11 @@ vec3 forceToOriginalPos(vec3 currentPos, vec3 originalPos) {
     }
     
     else {
-      velocity = forceToOriginalPos(pos, originalShipPos) * 0.05;
+      velocity = forceToTarget(pos, targetPos) * 0.05;
       pos += velocity * dtScale;
     }
 
-    // alpha carries speed rather than colour, so the attractors are shaded by
-    // how hard the field is whipping a particle around
+    // alpha carries speed, not colour
     gl_FragColor = vec4(pos, length(velocity) / NOMINAL_STEP);
   }
 `;

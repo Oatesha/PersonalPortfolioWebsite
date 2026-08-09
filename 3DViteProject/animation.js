@@ -1,39 +1,34 @@
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import { ScrollToPlugin } from "gsap/all";
 import SplitType from 'split-type'
 import Lenis from "lenis";
 import { rig, setRigTarget } from "./cameraRig.js";
 import { holdShipThenStart, startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
+import { MODEL_PROJECT } from "./content/projects.js";
+import { leaveWork } from "./work.js";
 
-gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
-
-// driven from gsap's ticker rather than its own raf so scrolling, tweening and
-// rendering all advance on one clock
+// on gsap's ticker so scroll, tweens and render share one clock
 export const lenis = new Lenis({ autoRaf: false });
 
-lenis.on("scroll", ScrollTrigger.update);
 gsap.ticker.add((time) => lenis.raf(time * 1000));
-// lenis integrates its own delta, gsap's lag correction would fight it
+// lenis integrates its own delta
 gsap.ticker.lagSmoothing(0);
 
 let cameraBobbingAnim;
-let middlePageTl = null;
-let middlePageTrigger = null;
 // true while the project whose screenshot is the particle model is on screen
 let particleProjectActive = false;
 
-// fractions of the distance at which the model exactly fills its target box, so
-// they read the same at every resolution. 1.0 fills the box, small negative
-// values sit inside the cloud
+// a route can land before the sim exists
+let simReady = false;
+let pendingRoute = null;
+let landingIntroPlayed = false;
+
+// fractions of the distance at which the model fills its box. 1.0 fills it,
+// negatives sit inside the cloud
 const INSIDE_MODEL_FIT = -0.07;
 const THROUGH_MODEL_FIT = -0.15;
 const BOB_AMPLITUDE = 2;
+const ROUTE_FIT_DURATION = 1.0;
 
-// the ship coming apart and the cycle through the attractors both live in
-// attractors.js, this module only decides when and owns rig.fit throughout
-
-const sectionsElements = document.querySelectorAll('[class*="Section"]');
 const circle1 = document.querySelector('#circleOne');
 const circle2 = document.querySelector('#circleTwo');
 const circle3 = document.querySelector('#circleThree');
@@ -42,13 +37,12 @@ const circle3 = document.querySelector('#circleThree');
 new SplitType(".LoadingText");
 new SplitType(".MyName")
 
-const landingText = sectionsElements[1];
+const landingText = document.querySelector('.LandingPageSection');
 const introTextFirstLine = landingText.querySelector('h4');
 const introTextThirdLine = landingText.querySelector('p');
 const loadingAnimationTimeline = gsap.timeline();
 
-// this module sits behind an async import chain so load has sometimes already
-// fired by the time it runs, and a window.onload assignment was dropped
+// behind an async import chain, so load may already have fired
 if (document.readyState === "complete") {
     initLoadingAnim();
 } else {
@@ -67,8 +61,8 @@ function initLoadingAnim() {
     loadingAnimationTimeline.to(".LoadingText", {
         autoAlpha: 1,
     }, "<")
-    
-    // the gradient blobs behind the blur, running for as long as the page is open
+
+    // the gradient blobs behind the blur
     const backgroundBlobTimeline = gsap.timeline({
         repeat: -1,
         yoyo: true,
@@ -78,29 +72,109 @@ function initLoadingAnim() {
 }
 
 export function initAnim() {
-    // the middle page timeline is built from the landing timeline's onComplete.
-    // both drive rig.fit, and a scrubbed trigger renders progress 0 every frame
-    // it sits before its start, so only one of them can exist at a time
-    InitLandingAnimationTimeline();
+    simReady = true;
     InitCameraBobbing();
-    // these are built after the GLB and the tier probe resolve, long after load,
-    // so ScrollTrigger has already done its own refresh pass without them
-    ScrollTrigger.refresh();
+    applyRoute(pendingRoute || 'home');
+}
+
+// called on every landing. before the sim exists this only records the route
+export function enterRoute(route) {
+    pendingRoute = route;
+
+    if (!simReady) {
+        return;
+    }
+
+    applyRoute(route);
+}
+
+// the loader belongs to the home route only until the intro has run
+function retireLoader() {
+    const loader = document.querySelector('.LoaderLogoSection');
+
+    if (!loader) {
+        return;
+    }
+
+    loader.hidden = true;
+    delete loader.dataset.route;
+}
+
+function applyRoute(route) {
+    if (landingIntroPlayed) {
+        retireLoader();
+    }
+
+    // a mark holds state 0, which would stop the attractors starting elsewhere
+    if (route !== 'work') {
+        leaveWork();
+    }
+
+    if (route === 'projects') {
+        settleBobbing();
+        // only runs once, whichever of this and the ship hold comes first
+        startAttractorMode();
+        if (particleProjectActive) {
+            frameParticleProject();
+        } else {
+            setRigTarget(document.querySelector('.ProjectSection'));
+            gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
+        }
+        return;
+    }
+
+    if (route === 'work') {
+        settleBobbing();
+        setRigTarget(document.querySelector('.WorkStage'));
+        gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
+        return;
+    }
+
+    if (route === 'colophon') {
+        settleBobbing();
+        setRigTarget(document.querySelector('.ColophonStage'));
+        gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
+        return;
+    }
+
+    cameraBobbingAnim?.resume();
+    setRigTarget(document.querySelector('.LandingStage'));
+
+    if (landingIntroPlayed) {
+        gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
+        return;
+    }
+
+    landingIntroPlayed = true;
+    playLandingIntro();
+}
+
+// pulls the camera out from inside the model until it fills its box
+function playLandingIntro() {
+    const introTl = gsap.timeline({ onComplete: holdShipThenStart });
+
+    introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
+    introTl.fromTo(rig, { fit: INSIDE_MODEL_FIT }, { fit: 1.0, duration: 1.75 });
+    introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
 }
 
 function scrollDownSmoothly() {
+    // the loader only sits above the landing on the home route
+    if (pendingRoute && pendingRoute !== 'home') {
+        return;
+    }
+
     // first input wins
     const userInput = ["wheel", "touchstart", "keydown", "pointerdown"];
     const release = () => userInput.forEach((type) => window.removeEventListener(type, stop));
     const stop = () => {
-        // cancel the pending start and halt the run in progress where it is
+        // cancel the pending start and halt any run in progress
         delayed.kill();
         lenis.scrollTo(lenis.animatedScroll, { immediate: true });
         release();
     };
 
-    // through lenis rather than ScrollToPlugin so only one thing writes the
-    // scroll position, and to the section rather than window.innerHeight
+    // through lenis so only one thing writes the scroll position
     const delayed = gsap.delayedCall(0.25, () => {
         lenis.scrollTo(".LandingPageSection", { duration: 2.5, onComplete: release });
     });
@@ -135,13 +209,13 @@ function InitBackgroundBlobAnimationTimeline(timeline) {
         ease: "none",
     });
 
-    timeline.to(circle1, { 
+    timeline.to(circle1, {
         duration: 4,
         y: "+= 5vh",
         ease: "none",
     }, "<");
 
-    timeline.to(circle2, { 
+    timeline.to(circle2, {
         duration: 4,
         y: "-=5vh",
         x: "+= 2.5vw",
@@ -162,106 +236,25 @@ function InitBackgroundBlobAnimationTimeline(timeline) {
     }, "<")
 }
 
-function InitLandingAnimationTimeline() {
-    const introTl = gsap.timeline({
-        scrollTrigger: {
-            trigger: ".LandingPageSection",
-            start: "-50px center",
-        },
-        // hand rig.fit to the scrubbed timeline only once the fly-out is done,
-        // so the two never own it at the same time
-        onComplete: () => {
-            InitMiddlePageAnimationTimeline();
-            ScrollTrigger.refresh();
-            // countdown starts here rather than at load so the ship is fully
-            // assembled for the whole hold
-            holdShipThenStart();
-        },
-    });
-
-    introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
-    // pull out from inside the model until it exactly fills its box
-    introTl.fromTo(rig, { fit: INSIDE_MODEL_FIT }, { fit: 1.0, duration: 1.75 });
-    introTl.fromTo(introTextThirdLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power3"});
-}
-
-// distance from this timeline's start to where the project section takes the
-// camera off it, so the two points coincide at any aspect ratio
-function middlePageScrubLength() {
-    const landing = sectionsElements[1];
-    const project = document.querySelector(".ProjectSection");
-    // mirrors the two trigger positions, this one starts at the landing's 55%
-    // mark and the project one at its own top, both against the viewport centre
-    return project.offsetTop - landing.offsetTop - landing.offsetHeight * 0.55;
-}
-
-function InitMiddlePageAnimationTimeline() {
-    middlePageTl = gsap.timeline({
-        scrollTrigger: {
-            trigger: ".LandingPageSection",
-            start: "55% center",
-            end: () => `+=${middlePageScrubLength()}`,
-            // a number, not true. scrub true locks the timeline to the scroll
-            // position exactly so every stutter shows up in the camera
-            scrub: 0.6,
-            onEnter: () => {
-                cameraBobbingAnim.pause();
-                // whichever of this and the ship hold comes first wins,
-                // startAttractorMode only runs once
-                startAttractorMode();
-            },
-            onLeaveBack: () => cameraBobbingAnim.resume(),
-        },
-    });
-    // owns rig.fit and nothing else. the radius, extents, state flip and
-    // colours belong to attractors.js, which can be driven by a timer and so
-    // can't be scrubbed against scroll position
-    middlePageTl.to(rig, { fit: THROUGH_MODEL_FIT, duration: 1.0 });
-
-    middlePageTrigger = middlePageTl.scrollTrigger;
-    InitProjectContextTrigger();
-}
-
-// past its end a scrubbed timeline reasserts its final value on every update,
-// so ownership of the camera is handed over explicitly
-function InitProjectContextTrigger() {
-    ScrollTrigger.create({
-        trigger: ".ProjectSection",
-        start: "top center",
-        onEnter: () => {
-            // land on the end values before freezing, the scrub lags the scroll
-            // so the timeline is still short of its end here. finish the scrub
-            // tween and not the timeline, writing progress on the timeline
-            // desyncs ScrollTrigger and it stops driving it back on the way up
-            middlePageTrigger.getTween()?.progress(1);
-            middlePageTrigger.disable(false);
-            if (particleProjectActive) {
-                frameParticleProject();
-            }
-        },
-        onLeaveBack: () => {
-            setRigTarget(document.querySelector('.LandingStage'));
-            middlePageTrigger.enable();
-        },
-    });
+// seek to the bob's zero, a plain pause leaves the camera up to BOB_AMPLITUDE
+// off centre
+function settleBobbing() {
+    cameraBobbingAnim?.pause(0);
 }
 
 function frameParticleProject() {
-    setRigTarget(document.querySelector('project[pos-index="1"] .project-image-section'));
+    setRigTarget(document.querySelector(`project[pos-index="${MODEL_PROJECT}"] .project-image-section`));
     gsap.to(rig, { fit: 1.0, duration: 1.0, overwrite: "auto" });
 }
 
 function InitCameraBobbing() {
     cameraBobbingAnim = gsap.timeline({ paused: true, repeat: -1, yoyo: true });
-    // absolute, not relative. a "+=2" tween captures its start value once so it
-    // snapped whenever anything else wrote to the camera's y
+    // absolute, not relative: a "+=" tween captures its start value once
     cameraBobbingAnim.to(rig, { bobY: BOB_AMPLITUDE, duration: 3, ease: "sine.inOut" });
     cameraBobbingAnim.play();
 }
 
-// the particle project has no screenshot, the model itself is the image. frame
-// it into that project's image box and pin the attractor, so the panel is the
-// same image every time
+// the particle project has no screenshot, the model itself is the image
 export function animateParticlesIn() {
     particleProjectActive = true;
     frameParticleProject();
@@ -270,6 +263,8 @@ export function animateParticlesIn() {
 
 export function animateParticlesOut() {
     particleProjectActive = false;
+    // back to the section, the panel's image box is about to slide off screen
+    setRigTarget(document.querySelector('.ProjectSection'));
     gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: 0.5, overwrite: "auto" });
     resumeCycle();
 }
