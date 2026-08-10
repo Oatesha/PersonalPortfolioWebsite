@@ -6,7 +6,7 @@ import { holdShipThenStart, startAttractorMode, lockAttractor, resumeCycle } fro
 import { MODEL_PROJECT } from "./content/projects.js";
 import { leaveWork } from "./work.js";
 
-// on gsap's ticker so scroll, tweens and render share one clock
+// on gsap's ticker so everything shares one clock
 export const lenis = new Lenis({ autoRaf: false });
 
 gsap.ticker.add((time) => lenis.raf(time * 1000));
@@ -22,8 +22,8 @@ let simReady = false;
 let pendingRoute = null;
 let landingIntroPlayed = false;
 
-// fractions of the distance at which the model fills its box. 1.0 fills it,
-// negatives sit inside the cloud
+// fractions of the distance at which the model fills its box. negatives sit
+// inside the cloud
 const INSIDE_MODEL_FIT = -0.07;
 const THROUGH_MODEL_FIT = -0.15;
 const BOB_AMPLITUDE = 2;
@@ -42,7 +42,7 @@ const introTextFirstLine = landingText.querySelector('h4');
 const introTextThirdLine = landingText.querySelector('p');
 const loadingAnimationTimeline = gsap.timeline();
 
-// behind an async import chain, so load may already have fired
+// behind an async import chain so load may already have fired
 if (document.readyState === "complete") {
     initLoadingAnim();
 } else {
@@ -77,7 +77,7 @@ export function initAnim() {
     applyRoute(pendingRoute || 'home');
 }
 
-// called on every landing. before the sim exists this only records the route
+// called on every landing. only records the route before the sim exists
 export function enterRoute(route) {
     pendingRoute = route;
 
@@ -105,14 +105,14 @@ function applyRoute(route) {
         retireLoader();
     }
 
-    // a mark holds state 0, which would stop the attractors starting elsewhere
+    // a mark holds state 0 and would stop the attractors starting
     if (route !== 'work') {
         leaveWork();
     }
 
     if (route === 'projects') {
         settleBobbing();
-        // only runs once, whichever of this and the ship hold comes first
+        // only runs once. this or the ship hold whichever comes first
         startAttractorMode();
         if (particleProjectActive) {
             frameParticleProject();
@@ -126,13 +126,6 @@ function applyRoute(route) {
     if (route === 'work') {
         settleBobbing();
         setRigTarget(document.querySelector('.WorkStage'));
-        gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
-        return;
-    }
-
-    if (route === 'colophon') {
-        settleBobbing();
-        setRigTarget(document.querySelector('.ColophonStage'));
         gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
         return;
     }
@@ -168,7 +161,7 @@ function scrollDownSmoothly() {
     const userInput = ["wheel", "touchstart", "keydown", "pointerdown"];
     const release = () => userInput.forEach((type) => window.removeEventListener(type, stop));
     const stop = () => {
-        // cancel the pending start and halt any run in progress
+        // cancel the pending start and halt a run in progress
         delayed.kill();
         lenis.scrollTo(lenis.animatedScroll, { immediate: true });
         release();
@@ -236,8 +229,7 @@ function InitBackgroundBlobAnimationTimeline(timeline) {
     }, "<")
 }
 
-// seek to the bob's zero, a plain pause leaves the camera up to BOB_AMPLITUDE
-// off centre
+// seek to the bob's zero. a plain pause leaves the camera off centre
 function settleBobbing() {
     cameraBobbingAnim?.pause(0);
 }
@@ -249,12 +241,12 @@ function frameParticleProject() {
 
 function InitCameraBobbing() {
     cameraBobbingAnim = gsap.timeline({ paused: true, repeat: -1, yoyo: true });
-    // absolute, not relative: a "+=" tween captures its start value once
+    // absolute not relative. a "+=" tween captures its start value once
     cameraBobbingAnim.to(rig, { bobY: BOB_AMPLITUDE, duration: 3, ease: "sine.inOut" });
     cameraBobbingAnim.play();
 }
 
-// the particle project has no screenshot, the model itself is the image
+// the particle project has no screenshot. the model itself is the image
 export function animateParticlesIn() {
     particleProjectActive = true;
     frameParticleProject();
@@ -263,7 +255,7 @@ export function animateParticlesIn() {
 
 export function animateParticlesOut() {
     particleProjectActive = false;
-    // back to the section, the panel's image box is about to slide off screen
+    // back to the section. the panel's image box is about to slide off screen
     setRigTarget(document.querySelector('.ProjectSection'));
     gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: 0.5, overwrite: "auto" });
     resumeCycle();

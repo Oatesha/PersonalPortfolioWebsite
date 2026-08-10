@@ -11,8 +11,6 @@
   </head>
   <body>
 
-    <!-- wordmark, route links and the theme switch, filled in by nav.js from
-         router.js -->
     <div class="NavRoot"></div>
 
     <div class="scroll-container">
@@ -22,8 +20,6 @@
         </h1>
       </section>
 
-      <!-- two columns: who this is on the left, the cloud and its controls on
-           the right -->
       <section class="LandingPageSection" data-route="home">
         <div class="LandingPageContent">
           <h4 class="MyName">Harrison Oates</h4>
@@ -31,27 +27,20 @@
         </div>
 
         <div class="LandingViewer">
-          <!-- empty layout box, the model is framed into this rect -->
           <div class="LandingStage" aria-hidden="true"></div>
 
-          <!-- everything that drives the cloud, in one stack under it -->
           <div class="LandingInstruments">
-            <!-- buttons are filled in by attractors.js -->
             <div class="attractor-switch"></div>
             <div class="ViewerControls">
+              <!-- autocomplete off because chrome restores the old value on reload -->
               <label class="viewer-control" for="particleSizeInput">
                 <span class="viewer-control-name">Size</span>
-                <!-- range and stops are filled in by viewerControls.js -->
-                <!-- autocomplete off, chrome restores the old value on reload after
-                     viewerControls.js has set the real one -->
                 <input type="range" id="particleSizeInput" min="0" max="1" step="1" value="0" list="particleSizeTicks" autocomplete="off">
                 <datalist id="particleSizeTicks"></datalist>
                 <output for="particleSizeInput">2.0</output>
               </label>
               <label class="viewer-control" for="particleCountInput">
                 <span class="viewer-control-name">Particles</span>
-                <!-- its stops depend on the sim texture size, not known until the
-                     gpu tier probe has resolved -->
                 <input type="range" id="particleCountInput" min="0" max="1" step="1" value="0" list="particleCountTicks" autocomplete="off">
                 <datalist id="particleCountTicks"></datalist>
                 <output for="particleCountInput">&hellip;</output>
@@ -61,53 +50,17 @@
         </div>
       </section>
 
-      <!-- panels are filled in by projects.js from content/projects.js -->
       <section class="ProjectSection" data-route="projects"></section>
 
-      <!-- jobs are filled in by work.js from content/jobs.js -->
       <section class="WorkSection" data-route="work"></section>
-
-      <!-- everything the site borrows, reached from the footer -->
-      <section class="ColophonSection" data-route="colophon">
-        <div class="ColophonContent">
-          <h4 class="ColophonHeading">Colophon</h4>
-          <dl class="CreditList">
-            <div class="Credit">
-              <dt>Model</dt>
-              <dd>
-                &ldquo;Radiant Pillar BC1&rdquo; by 44bit,
-                <a href="https://skfb.ly/onXry">Sketchfab</a>,
-                <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
-              </dd>
-            </div>
-            <div class="Credit">
-              <dt>Type</dt>
-              <dd>
-                Epilogue by Tyler Finck, Etcetera Type Company,
-                <a href="https://openfontlicense.org">SIL Open Font License 1.1</a>
-              </dd>
-            </div>
-            <div class="Credit">
-              <dt>Built with</dt>
-              <dd>
-                <a href="https://threejs.org">three.js</a>,
-                <a href="https://gsap.com">GSAP</a>,
-                <a href="https://lenis.darkroom.engineering">Lenis</a>,
-                <a href="https://vite.dev">Vite</a>
-              </dd>
-            </div>
-            <div class="Credit">
-              <dt>Source</dt>
-              <dd><a href="https://github.com/Oatesha/PersonalPortfolioWebsite">github.com/Oatesha</a></dd>
-            </div>
-          </dl>
-        </div>
-        <div class="ColophonStage" aria-hidden="true"></div>
-      </section>
 
       <footer class="SiteFooter">
         <p>Harrison Oates</p>
-        <a class="SiteFooterLink" href="/colophon" data-nav-route="colophon">Colophon</a>
+        <p class="SiteFooterCredit">
+          Model &ldquo;Radiant Pillar BC1&rdquo; by 44bit,
+          <a href="https://skfb.ly/onXry">Sketchfab</a>,
+          <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+        </p>
       </footer>
 
 

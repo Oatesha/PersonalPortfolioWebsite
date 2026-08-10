@@ -29,22 +29,21 @@ import './viewerControls.js';
 let canvasBoundingRect, projectImageSection, renderMaterial, simMaterial,
  shipMesh, renderTargetA, renderTargetB, fbo, img
 
-// before first paint, so the page is never painted in the wrong palette
 initTheme();
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
 
-// the ship's cloud, drawn to a fixed fullscreen canvas
+// the ship's cloud drawn to a fixed fullscreen canvas
 const renderer = new THREE.WebGLRenderer({alpha: true});
 const simScene = new THREE.Scene();
 
 
-// the project screenshot's cloud, drawn to a canvas that lives inside a panel
+// the project screenshot's cloud drawn to a canvas inside a panel
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 const imageScene = new THREE.Scene();
-// orthographic over a unit quad. the image is fitted to the box in the shader
-// from the two aspects, so the camera needs no aspect of its own
+// orthographic over a unit quad. the shader fits the image to the box so the
+// camera needs no aspect of its own
 const imagecam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
 imagecam.position.z = 1;
 
@@ -52,10 +51,9 @@ const pointer = new THREE.Vector2();
 const imagePointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
-// outside the screenshot panel the image's particles are left alone
 let imagePointerInside = false;
 
-// no cursor until the pointer has moved, ndc (0, 0) is the middle of the cloud
+// no cursor until the pointer moves. ndc 0 0 is the middle of the cloud
 let pointerActive = false;
 
 let imageSectionVisible = true;
@@ -63,7 +61,7 @@ let imageSectionVisible = true;
 const textureLoader = new THREE.TextureLoader();
 const loadedTextures = [];
 
-// screenshots by project pos-index, null where the model is the image
+// null where the model itself is the image
 const textures = PROJECTS.map((project) => project.shot);
 const mobileTextures = PROJECTS.map((project) => project.shotMobile);
 
@@ -74,21 +72,20 @@ function main () {
   initImageScene();
   preloadTextures();
   initEvents()
-  // after the project panels and the job list exist, the router toggles them
+  // the router toggles panels that have to exist first
   renderWork();
   renderNav();
   initRouter();
   loadModelGeometries();
 }
 
-// a 3x display costs 9x the fragment work for no visible gain on a particle field
+// a 3x display costs 9x the fragment work for no visible gain
 const MAX_PIXEL_RATIO = 2;
 
-// the ship's own framing, kept aside since rig.radius and rig.extent get tweened
-// away to the attractor's
+// kept aside because rig.radius and rig.extent tween away to the attractor's
 export const shipFraming = { radius: 1, extent: { x: 1, y: 1, z: 1 } };
 
-// sim rate in 60Hz frames per real frame, 2.4 == 144/60
+// sim rate in 60Hz frames per real frame. 2.4 is 144 over 60
 const SIM_SPEED = 2.4;
 
 function currentPixelRatio() {
@@ -119,12 +116,12 @@ function initImageScene() {
     initImageParticles(imageRenderer, imageScene);
     setImageRendererSize();
 
-    // the grid reflows for reasons a resize listener never sees, so observe the
-    // boxes. all four, menu.js moves the canvas between them
+    // the grid reflows where a resize listener never fires. all four boxes
+    // because menu.js moves the canvas between them
     const boxes = new ResizeObserver(setImageRendererSize);
     document.querySelectorAll(".project-image-section").forEach((box) => boxes.observe(box));
 
-    // the canvas, not a panel: it gets reparented and the observer follows it
+    // the canvas not a panel so the observer follows the reparenting
     new IntersectionObserver((entries) => {
       imageSectionVisible = entries[entries.length - 1].isIntersecting;
     }).observe(imageRenderer.domElement);
@@ -137,13 +134,13 @@ function preloadTextures() {
       textureLoader.load(
         textureUrl,
         (texture) => {
-          // load bearing, the point shader reads at an explicit mip level
+          // load bearing. the point shader reads an explicit mip level
           texture.generateMipmaps = true;
           texture.minFilter = THREE.LinearMipmapLinearFilter;
           texture.magFilter = THREE.LinearFilter;
           texture.needsUpdate = true;
           loadedTextures[index] = texture;
-          // the first project's screenshot is the one on screen, hand it over
+          // the first project is already on screen
           if (index === 0) {
             updateImageTexture(0);
           }
@@ -175,7 +172,7 @@ function setImageRendererSize() {
   var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
   var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
 
-  // the content box, which is what the canvas has to fill
+  // the content box is what the canvas fills
   var elementWidth = box.offsetWidth - paddingX - borderX;
   var elementHeight = box.offsetHeight - paddingY - borderY;
 
@@ -218,7 +215,7 @@ function initEvents() {
   window.addEventListener('scroll', handleScroll);
 }
 
-// onWindowResize reads layout, so coalesce bursts into one handler per frame
+// onWindowResize reads layout so coalesce bursts into one per frame
 let resizePending = false;
 
 function requestResize() {
@@ -252,8 +249,8 @@ function refreshCanvasBoundingRect() {
   
 function onWindowResize(){
 
-  // devicePixelRatio changes with the display and the zoom level. the camera's
-  // aspect belongs to the rig, which rebuilds it every frame
+  // devicePixelRatio changes with the display and the zoom level. the rig
+  // rebuilds the camera aspect every frame
   renderer.setPixelRatio(currentPixelRatio());
   renderer.setSize( window.innerWidth, window.innerHeight );
   setImageRendererSize();
@@ -270,14 +267,14 @@ function loadModelGeometries() {
           shipMesh.geometry.center()
           shipMesh.geometry.scale(0.085, 0.085, 0.085);
 
-          // the sphere sets the scale the animations tween, the box gives the
+          // the sphere sets the scale the animations tween. the box gives the
           // silhouette the rig frames against
           shipMesh.geometry.computeBoundingSphere();
           shipMesh.geometry.computeBoundingBox();
           const { radius } = shipMesh.geometry.boundingSphere;
           const halfExtent = shipMesh.geometry.boundingBox.getSize(new THREE.Vector3()).multiplyScalar(0.5);
           rig.radius = radius;
-          // mutated, not replaced, there are tweens writing to this object
+          // mutated not replaced. tweens write to this object
           rig.extent.x = halfExtent.x / radius;
           rig.extent.y = halfExtent.y / radius;
           rig.extent.z = halfExtent.z / radius;
@@ -294,15 +291,15 @@ function loadModelGeometries() {
     });
 }
   
-// side of the sim texture, so the ceiling on particle count. every texel is
-// stepped every frame whether or not it is drawn
+// side of the sim texture so the ceiling on particle count. every texel steps
+// every frame whether or not it is drawn
 const DESKTOP_TEXTURE_SIDE = 1024;
 const MOBILE_TEXTURE_SIDE = 256;
 
-// the counts the slider stops on, no need to be square numbers
+// the counts the slider stops on. no need to be square numbers
 const PARTICLE_STEPS = [25000, 50000, 100000, 250000, 500000, 750000, 1000000];
 
-// where the slider starts, by gpu tier. every step stays reachable
+// where the slider starts by gpu tier. every step stays reachable
 function defaultCountForTier(tier) {
   if (tier >= 3) return 1000000;
   if (tier === 2) return 500000;
@@ -315,14 +312,14 @@ let particleGeometry = null;
 let particleTotal = 0;
 let defaultParticleCount = 250000;
 
-// the ship's own target, kept so a mark can be swapped back off
+// kept so a mark can be swapped back off
 let shipTargetTexture = null;
-// which of the two target slots the cloud is reading. the other is free to write
+// which slot the cloud reads. the other is free to write
 let activeTargetSlot = 0;
 let activeTargetTexture = null;
 let targetTween = null;
 
-// the crossfade of where the particles are heading, not how fast they get there
+// crossfade of where the particles head not how fast they get there
 const TARGET_CROSSFADE = 1.2;
 
 let scrollLeft = 0, scrollTop = 0;
@@ -359,7 +356,7 @@ function detectMob() {
   });
 }
 
-// one point per particle, spread over the model's surface by area. the colour is
+// one point per particle spread over the model's surface by area. the colour is
 // packed into w so one RGBA texture carries both
 function samplePositions(numSamples, Mesh) {
   let positions = [];
@@ -372,7 +369,7 @@ function samplePositions(numSamples, Mesh) {
 
     sampler.sample(position, normals, colour);
 
-    // three 8 bit channels packed into one float, unpacked again in main.fragFBO
+    // three 8 bit channels packed into one float. unpacked in main.fragFBO
     let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
     let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255)); 
     let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
@@ -392,12 +389,11 @@ async function initFBO() {
   }
 
   let gputier = await getGPUTier();
-  // one texel per particle, so the side is the hard ceiling on count
   let w = mobile ? MOBILE_TEXTURE_SIDE : DESKTOP_TEXTURE_SIDE;
   let h = w;
   defaultParticleCount = defaultCountForTier(gputier.tier);
 
-  // scattered, so the ship assembles itself out of nothing on load
+  // scattered so the ship assembles itself on load
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < w; j++) {
@@ -432,23 +428,23 @@ async function initFBO() {
   initialShipDataTex.magFilter = THREE.NearestFilter;
   initialShipDataTex.needsUpdate = true;
   
-  // state 0 pulls every particle to its own point on the hull, state 1 runs an
+  // state 0 pulls every particle to its point on the hull. state 1 runs an
   // attractor. see glsl/simfragFBO.js
   simMaterial = new THREE.ShaderMaterial({
     uniforms: {
       state: { value: 0 },
       dtScale: {value: 1.0},
-      // idle sits at morph 1, fully arrived at attractorTo
+      // idle sits at morph 1 fully arrived at attractorTo
       attractorFrom: {value: 0},
       attractorTo: {value: 0},
       morph: {value: 1.0},
       cloudRadius: {value: 1.0},
       posTex: { value: initialCircleDataTex },
-      // both slots start on the ship, before any mark has been built
+      // both slots start on the ship
       targetTexA: { value: initialShipDataTex },
       targetTexB: { value: initialShipDataTex },
       targetMix: { value: 0 },
-      // the cursor as the camera ray through the pointer, not a point on z = 0
+      // the cursor as the camera ray through the pointer
       mouseOrigin: { value: new THREE.Vector3() },
       mouseDir: { value: new THREE.Vector3(0, 0, -1) },
       // distance from the camera to the centre of the cloud
@@ -470,10 +466,10 @@ async function initFBO() {
     }
   }
   
-  // a single quad covering the sim texture, so one fragment runs per particle
+  // a single quad over the sim texture so one fragment runs per particle
   fbo = new FBO(w, simMaterial);
 
-  // marks are sampled into targets of the same side, one texel per particle
+  // marks sample into targets of the same side
   initMarkTargets(renderer, w);
 
   renderTargetA = new THREE.WebGLRenderTarget(w, h, {
@@ -486,11 +482,11 @@ async function initFBO() {
     stencilBuffer: false,
   });
   
-  // a target can't be read and written in the same pass, so state alternates
+  // a target cannot be read and written in one pass so state alternates
   // between this pair every frame
   renderTargetB = renderTargetA.clone();
 
-  // prime both, so the first frame reads real state rather than an empty target
+  // prime both so the first frame reads real state
   renderer.setRenderTarget(renderTargetA);
   renderer.clear();
   renderer.render(fbo.scene, fbo.camera);
@@ -505,20 +501,20 @@ async function initFBO() {
 
   renderMaterial = new THREE.ShaderMaterial({
     uniforms: { posTex: { value: null },
-    // the same two slots the sim marches towards, read here for their colours
+    // the slots the sim marches towards read here for their colours
     targetTexA: { value: initialShipDataTex },
     targetTexB: { value: initialShipDataTex },
     targetMix: { value: 0 },
     pointSize: { value: 2.0 },
     colourMix: { value: 0.0 },
-    // filled in by applyCloudPalette, these only have to be the right type
+    // filled in by applyCloudPalette. only the type matters here
     rampLow: { value: new THREE.Vector3() },
     rampMid: { value: new THREE.Vector3() },
     rampHigh: { value: new THREE.Vector3() },
     baseGain: { value: new THREE.Vector3(1, 1, 1) },
     baseDesaturate: { value: 0 },
     baseTint: { value: new THREE.Vector3(1, 1, 1) },
-    // both slots start on the ship, whose colours are the model's own
+    // both slots start on the ship whose colours are the model's own
     gradeA: { value: 1 },
     gradeB: { value: 1 }},
     vertexShader: vertexShader,
@@ -530,8 +526,8 @@ async function initFBO() {
   particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
-  // position holds the sim texel this particle reads. texel centres, so
-  // NearestFilter can't land on a boundary
+  // position holds the sim texel this particle reads. texel centres so
+  // NearestFilter cannot land on a boundary
   for (let j = 0; j < w; j++) {
     for (let i = 0; i < w; i++) {
 
@@ -551,7 +547,7 @@ async function initFBO() {
     simScene.add(points);
     renderMaterial.uniforms.posTex.value = initialShipDataTex;
 
-    // on gsap's ticker so scroll, tweens and render share one clock
+    // on gsap's ticker so everything shares one clock
     gsap.ticker.add(render);
     initAnim();
   }
@@ -564,8 +560,8 @@ async function initFBO() {
       return;
     }
 
-    // how many 60Hz frames this frame was worth, capped so a dropped frame can't
-    // blow up the attractor
+    // 60Hz frames this frame was worth. capped so a dropped frame cannot blow
+    // up the attractor
     const frameScale = Math.min(clock.getDelta() * 60, 2);
     simMaterial.uniforms.dtScale.value = frameScale * SIM_SPEED;
     // follows the framing tween so the cursor keeps its size against the cloud
@@ -573,14 +569,13 @@ async function initFBO() {
 
     updateCameraFraming(camera);
 
-    // the screenshot is a million particles of its own on top of the ship's
     if (imageSectionVisible && !mobile) {
       setImageParticleMouse(imagePointer.x, imagePointer.y, imagePointerInside);
       stepImageParticles(frameScale);
       imageRenderer.render(imageScene, imagecam);
     }
 
-    // ping-pong: read from A, write to B, then B is what the points draw from
+    // ping pong. read A write B then draw from B
     var temp = renderTargetA;
     renderTargetA = renderTargetB;
     renderTargetB = temp;
@@ -592,7 +587,7 @@ async function initFBO() {
     
     renderer.render(simScene, camera);
     
-    // after the render, so the rig's view offset is already in the projection
+    // after the render so the view offset is already in the projection
     raycaster.setFromCamera(pointer, camera);
     simMaterial.uniforms.mouseOrigin.value.copy(raycaster.ray.origin);
     simMaterial.uniforms.mouseDir.value.copy(raycaster.ray.direction);
@@ -607,15 +602,15 @@ export function getSimMaterial() {
   return simMaterial;
 }
 
-// how many particles the sim texture holds, 1,048,576 on desktop
+// how many particles the sim texture holds
 export function getParticleTotal() {
   return particleTotal;
 }
 
-// the slider's stops, clamped to what this device's texture can supply
+// the slider's stops clamped to what this device's texture can supply
 export function getParticleSteps() {
   const steps = PARTICLE_STEPS.filter((count) => count <= particleTotal);
-  // if the round steps stop short of the texture, add the real total
+  // add the real total when the round steps stop short
   if (!steps.length || steps[steps.length - 1] < particleTotal * 0.9) {
     steps.push(particleTotal);
   }
@@ -626,8 +621,8 @@ export function getDefaultParticleCount() {
   return defaultParticleCount;
 }
 
-// draws a prefix of the particle buffer, a fair sample since samplePositions
-// walks the mesh in random order. the sim still steps every particle
+// draws a prefix of the particle buffer. samplePositions walks the mesh in
+// random order so a prefix is a fair sample
 export function setParticleCount(count) {
   if (!particleGeometry) {
     return 0;
@@ -645,9 +640,8 @@ export function getShipTarget() {
   return shipTargetTexture;
 }
 
-// writes a target into whichever slot the cloud is not reading, then crossfades
-// onto it. graded is 1 where the colours are the model's own and want taking to
-// the page's palette
+// writes a target into the slot the cloud is not reading then crossfades onto
+// it. graded 1 where the colours are the model's own and want the page palette
 export function setCloudTarget(texture, { duration = TARGET_CROSSFADE, graded = 1 } = {}) {
   if (!simMaterial || !renderMaterial || !texture || texture === activeTargetTexture) {
     return;
@@ -682,7 +676,7 @@ export function updateImageTexture(index) {
   }
 
   const texture = loadedTextures[index];
-  // the screenshots aren't all the same shape
+  // the screenshots are not all the same shape
   setImageParticleTexture(texture, texture.image.width / texture.image.height);
 }
     

@@ -1,5 +1,5 @@
-// the project panels, in the order they cycle. shot null means the model itself
-// is the image, so that panel gets the fullscreen canvas framed into it
+// the project panels in the order they cycle. shot null means the model itself
+// is the image so that panel gets the fullscreen canvas framed into it
 export const PROJECTS = [
   {
     title: "Minecraftle",

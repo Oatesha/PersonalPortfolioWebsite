@@ -5,30 +5,30 @@ export const simfragFBO = /* glsl */`
   ${glslRandom}
 
   uniform sampler2D posTex;
-  // where state 0 is pulling every particle: the ship, or a company mark. two
+  // where state 0 is pulling every particle. the ship or a company mark. two
   // slots so a switch can crossfade
   uniform sampler2D targetTexA;
   uniform sampler2D targetTexB;
   uniform float targetMix;
-  // the cursor as the camera ray through the pointer, origin and unit direction
-  // in world space. a particle is under it when its perpendicular distance is small
+  // the cursor as the camera ray through the pointer. origin and unit direction
+  // in world space
   uniform vec3 mouseOrigin;
   uniform vec3 mouseDir;
-  // distance from the camera to the centre of the cloud, where the cursor's
+  // distance from the camera to the centre of the cloud where the cursor's
   // radius is quoted
   uniform float mouseDepth;
-  // zero until the pointer has moved, ndc (0, 0) is the middle of the cloud
+  // zero until the pointer moves. ndc 0 0 is the middle of the cloud
   uniform float mouseActive;
   uniform int state;
   // how many 60Hz frames of sim to advance this frame. the integrators below
   // use fixed timesteps
   uniform float dtScale;
-  // which attractor the cloud is leaving and arriving at, and how far through.
+  // which attractor the cloud is leaving and arriving at and how far through.
   // idle sits at morph 1.0
   uniform int attractorFrom;
   uniform int attractorTo;
   uniform float morph;
-  // radius of whatever the cloud currently is, so the mouse repulsion can be a
+  // radius of whatever the cloud currently is so the mouse repulsion can be a
   // fraction of it
   uniform float cloudRadius;
 
@@ -41,30 +41,29 @@ export const simfragFBO = /* glsl */`
   const int DADRAS = 4;
 
   // every attractor is normalised into a sphere of this radius about the
-  // origin. each was integrated offline and its centre, radius and timestep
-  // measured
+  // origin. each was integrated offline and measured
   const float WORLD_RADIUS = 4.0;
 
-  // forward euler on these fields overshoots badly far from the attractor, and
+  // forward euler on these fields overshoots badly far from the attractor and
   // particles arrive from the ship at several times its scale
   const float MAX_STEP = 0.35;
 
-  // nothing in these fields brings back a particle that lands well outside.
-  // set above the largest real excursion of the five, dadras reaches about 7.7
+  // nothing in these fields brings back a particle that lands well outside. set
+  // above the largest real excursion of the five which is dadras at about 7.7
   const float CONTAIN_RADIUS = WORLD_RADIUS * 2.2;
   const float CONTAIN_PULL = 0.03;
 
-  // peak outward speed at the midpoint of a switch, tuned so the cloud roughly
+  // peak outward speed at the midpoint of a switch. tuned so the cloud roughly
   // doubles in radius
   const float BURST_SPEED = 0.022;
 
   const float PI = 3.14159265;
 
-  // the step every attractor takes on average once normalised, by construction
-  // of attractorDt. speed is divided through by it before being written out
+  // the step every attractor takes on average once normalised. speed is divided
+  // through by it before being written out
   const float NOMINAL_STEP = 0.0035 * WORLD_RADIUS;
 
-  // particles arrive from well outside, so an attractor is only usable if one
+  // particles arrive from well outside so an attractor is only usable if one
   // dropped out there still finds the chaotic set. aizawa and arneodo do not.
   // check any new one at 2x and 3x its radius
 
@@ -85,8 +84,8 @@ export const simfragFBO = /* glsl */`
     return 5.12;
   }
 
-  // picked per attractor so after normalisation they all move a particle the
-  // same distance per frame
+  // picked so after normalisation they all move a particle the same distance
+  // per frame
   float attractorDt(int which) {
     if (which == LORENZ) return 0.001007;
     if (which == ROSSLER) return 0.006938;
@@ -125,8 +124,8 @@ export const simfragFBO = /* glsl */`
     return vec3(-b * x + sin(y), -b * y + sin(z), -b * z + sin(x));
   }
 
-  // one step of the given attractor in the normalised space positions are
-  // stored in. the field itself is evaluated in the attractor's own coordinates
+  // one step in the normalised space positions are stored in. the field itself
+  // is evaluated in the attractor's own coordinates
   vec3 attractorStep(int which, vec3 pos) {
     float k = attractorRadius(which) / WORLD_RADIUS;
     vec3 native = attractorCentre(which) + pos * k;
@@ -136,16 +135,16 @@ export const simfragFBO = /* glsl */`
     return len > MAX_STEP ? delta * (MAX_STEP / len) : delta;
   }
 
-// direction a particle flies in during a switch, mostly its own fixed random
-// one, biased outwards so it clears the middle
+// direction a particle flies in during a switch. mostly its own fixed random
+// one biased outwards so it clears the middle
 vec3 scatterDirection(vec3 pos, vec2 uv) {
     vec3 jitter = vec3(random(uv), random(uv + 11.3), random(uv + 27.7)) * 2.0 - 1.0;
     vec3 outward = pos / max(length(pos), 0.001);
     return normalize(jitter + outward * 0.6);
 }
 
-// unit step back towards the particle's own point on the target, and nothing
-// once it is close enough that stepping again would jitter it
+// unit step back towards the particle's own point on the target. nothing once
+// it is close enough that stepping again would jitter it
 vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
     vec3 toHome = targetPos - currentPos;
 
@@ -158,7 +157,7 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
 
   void main() {
     vec3 pos = texture2D(posTex, vUv).xyz;
-    // displacement this frame, its length is written out as speed
+    // displacement this frame. its length is written out as speed
     vec3 velocity = vec3(0.0);
 
     // this particle's own point on whatever the target currently is
@@ -172,7 +171,7 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
     float cursorRadius = cloudRadius * 0.20;
     float repelStrength = cloudRadius * 0.05;
 
-    // where the particle sits relative to the ray, how far along and how far off
+    // where the particle sits relative to the ray. along it and off it
     vec3 fromCamera = pos - mouseOrigin;
     float alongRay = dot(fromCamera, mouseDir);
 
@@ -194,18 +193,18 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
 
 
     if (state == 1) {
-      // swapped outright at the halfway point, where the burst peaks and there
+      // swapped outright at the halfway point where the burst peaks and there
       // is no coherent shape left to be discontinuous in
       int running = morph < 0.5 ? attractorFrom : attractorTo;
       velocity = attractorStep(running, pos);
 
-      // zero at both ends, so each attractor is left and entered under its own pull
+      // zero at both ends so each attractor is left and entered under its pull
       float burst = sin(morph * PI);
       velocity += scatterDirection(pos, vUv) * (burst * BURST_SPEED);
 
       pos += velocity * dtScale;
 
-      // gathers strays, and doubles as what walks the scattered ship down to
+      // gathers strays and doubles as what walks the scattered ship down to
       // attractor scale
       float dist = length(pos);
       if (dist > CONTAIN_RADIUS) {
@@ -218,7 +217,7 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
       pos += velocity * dtScale;
     }
 
-    // alpha carries speed, not colour
+    // alpha carries speed not colour
     gl_FragColor = vec4(pos, length(velocity) / NOMINAL_STEP);
   }
 `;

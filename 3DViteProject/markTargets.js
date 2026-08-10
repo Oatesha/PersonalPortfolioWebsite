@@ -2,18 +2,15 @@ import * as THREE from 'three';
 import { simvertFBO } from './glsl/simvertFBO.js';
 import { markSampleFrag } from './glsl/markSample.js';
 
-// turns a company mark into a particle target. the svg is rasterised once to a
-// small alpha mask, then one gpu pass rejection samples that mask into a
-// position texture the sim can march towards
+// turns a company logo into a particle target. the svg rasterises once to a
+// small alpha mask and one gpu pass rejection samples that mask into a position
+// texture the sim can march towards
 
 // side of the rasterised mask
 const MASK_SIDE = 512;
 
-// the framing radius a mark is fitted to, matching the attractors
+// the framing radius a mark is fitted to. same as the attractors
 const MARK_RADIUS = 4;
-
-// half the plate's thickness as a fraction of the radius, enough that the mark
-// reads as a cloud
 const MARK_DEPTH = 0.04;
 
 let renderer = null;
@@ -23,7 +20,7 @@ let camera = null;
 let targets = [];
 let nextTarget = 0;
 
-// masks are small and a mark can be picked more than once, so they are kept
+// masks are small and a mark can be picked more than once
 const masks = new Map();
 
 export function initMarkTargets(sharedRenderer, side) {
@@ -47,7 +44,7 @@ export function initMarkTargets(sharedRenderer, side) {
   camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
   scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
 
-  // one per slot in the sim's pair, so writing the next mark never touches the
+  // one per slot in the sim's pair so writing the next mark never touches the
   // one being crossfaded out of
   targets = [createTarget(side), createTarget(side)];
 }
@@ -72,8 +69,6 @@ function loadImage(url) {
   });
 }
 
-// scans the mask for the two things the sampler cannot work out for itself:
-// where the shape is, and one point known to be inside it
 function measure(pixels, side) {
   let minX = side;
   let minY = side;
@@ -106,7 +101,7 @@ function measure(pixels, side) {
   }
 
   return {
-    // half a texel in from the edges, so a nearest sample can't fall outside
+    // half a texel in so a nearest sample cannot fall outside
     min: new THREE.Vector2((minX + 0.5) / side, (minY + 0.5) / side),
     max: new THREE.Vector2((maxX + 0.5) / side, (maxY + 0.5) / side),
     fallback: new THREE.Vector2((fallbackX + 0.5) / side, (fallbackY + 0.5) / side),
@@ -130,7 +125,7 @@ async function rasterise(url) {
 
   const context = canvas.getContext('2d', { willReadFrequently: true });
 
-  // contained, so an svg that isn't square keeps its shape
+  // contained so an svg that is not square keeps its shape
   const scale = Math.min(MASK_SIDE / image.width, MASK_SIDE / image.height);
   const drawWidth = image.width * scale;
   const drawHeight = image.height * scale;
@@ -170,7 +165,7 @@ export async function buildMark(url, accent = '#ffffff') {
 
   const mask = await rasterise(url);
 
-  // the longer side fills the framing radius, the shorter is scaled off it
+  // the longer side fills the framing radius and the shorter scales off it
   const longest = Math.max(mask.width, mask.height);
   const halfWidth = MARK_RADIUS * (mask.width / longest);
   const halfHeight = MARK_RADIUS * (mask.height / longest);
@@ -181,8 +176,6 @@ export async function buildMark(url, accent = '#ffffff') {
   material.uniforms.fallback.value.copy(mask.fallback);
   material.uniforms.extent.value.set(halfWidth, halfHeight);
   material.uniforms.depth.value = MARK_RADIUS * MARK_DEPTH;
-  // no colour space conversion, the point shader writes the packed colour out
-  // as it is
   material.uniforms.tint.value.setStyle(accent, THREE.NoColorSpace);
 
   const target = targets[nextTarget];

@@ -4,23 +4,21 @@ import { simvertFBO } from './glsl/simvertFBO.js';
 import { imageSimFBO } from './glsl/imageSimFBO.js';
 import { imagePointVert, imagePointFrag } from './glsl/imagePointFBO.js';
 
-// the project screenshots, drawn as particles rather than a flat quad. same
-// ping-pong as the ship's sim, on its own renderer and pair of render targets.
-// a separate system rather than more particles in the existing one because the
-// two live in different spaces and share no uniforms
+// the project screenshots drawn as particles rather than a flat quad. same
+// ping pong as the ship's sim on its own renderer and pair of targets. a
+// separate system because the two live in different spaces and share no
+// uniforms
 
-// side of the sim texture, so 1,048,576 particles. this is what sets how much
-// of a screenshot survives, a particle carries one colour so the grid is the
-// resolution and shrinking the points only opens gaps between them
+// side of the sim texture. a particle carries one colour so the grid is the
+// resolution the screenshot survives at
 const SIDE = 1024;
 
-// read the mip a little sharper than the particle spacing calls for, exactly at
-// it is correct and slightly soft
+// a little sharper than the particle spacing calls for. exact is correct and
+// slightly soft
 const LOD_BIAS = -0.35;
 
-// how long the image takes to come apart and gather back on a switch. the
-// colour handover is slower than the burst so it lands while the particles are
-// still scattered
+// how long the image comes apart and gathers back on a switch. the colour
+// handover is slower so it lands while the particles are still scattered
 const BURST_DURATION = 0.9;
 const FADE_DURATION = 1.2;
 
@@ -42,8 +40,8 @@ let planeAspect = 1;
 
 const bufferSize = new THREE.Vector2();
 
-// a blank stand-in until the first screenshot arrives, so the previous-image
-// slot is never null
+// stands in until the first screenshot arrives so the previous slot is never
+// null
 function blankTexture() {
   const texture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, THREE.RGBAFormat);
   texture.needsUpdate = true;
@@ -61,8 +59,7 @@ function createTarget() {
   });
 }
 
-// particles start scattered with no velocity, so the first screenshot assembles
-// itself out of noise rather than simply being there
+// scattered with no velocity so the first screenshot assembles itself
 function seedState() {
   const state = new Float32Array(SIDE * SIDE * 4);
 
@@ -80,8 +77,8 @@ function seedState() {
   return texture;
 }
 
-// the grid coordinate each particle reads its state from, the same convention
-// main.vertFBO uses. texel centres, so NearestFilter can't land on a boundary
+// the grid coordinate each particle reads its state from. texel centres so
+// NearestFilter cannot land on a boundary
 function gridGeometry() {
   const geometry = new THREE.BufferGeometry();
   const coords = new Float32Array(SIDE * SIDE * 3);
@@ -120,8 +117,7 @@ export function initImageParticles(imageRenderer, imageScene) {
     fragmentShader: imageSimFBO,
   });
 
-  // unit quad under an orthographic camera, one fragment per texel of the state
-  // texture
+  // unit quad under an orthographic camera. one fragment per state texel
   simScene = new THREE.Scene();
   simCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
   simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMaterial));
@@ -129,7 +125,7 @@ export function initImageParticles(imageRenderer, imageScene) {
   targetA = createTarget();
   targetB = createTarget();
 
-  // prime both targets from the seed, so the first frame reads real state
+  // prime both from the seed so the first frame reads real state
   renderer.setRenderTarget(targetA);
   renderer.render(simScene, simCamera);
   renderer.setRenderTarget(targetB);
@@ -141,12 +137,12 @@ export function initImageParticles(imageRenderer, imageScene) {
       posTex: { value: targetB.texture },
       nextTex: { value: blank },
       prevTex: { value: blank },
-      // the blank has no mip chain, so it is only ever read at level zero
+      // the blank has no mip chain so it is only read at level zero
       nextLod: { value: 0 },
       prevLod: { value: 0 },
       fade: { value: 1 },
-      // device pixels between neighbouring particles. scalar, the grid is
-      // proportioned to the image so both axes are sampled at one pitch
+      // device pixels between neighbouring particles. one number because the
+      // grid is proportioned to the image
       baseSpacing: { value: 1 },
       gridSize: { value: SIDE },
       gridDims: { value: new THREE.Vector2(SIDE, SIDE) },
@@ -162,17 +158,16 @@ export function initImageParticles(imageRenderer, imageScene) {
   });
 
   points = new THREE.Points(gridGeometry(), pointMaterial);
-  // the grid is a fixed unit square but the particles are drawn wherever the
-  // sim puts them, so three can't cull this by its own bounds
+  // particles are drawn wherever the sim puts them so three cannot cull by the
+  // geometry's own bounds
   points.frustumCulled = false;
   imageScene.add(points);
 }
 
-// the shape of the grid the particles are laid out on, and how far apart it
-// puts them on screen. columns over rows is the screenshot's own aspect, so the
-// fitted rect is sampled at the same pitch across as down. the pitch itself has
-// to come from here, the panel's pixel dimensions aren't in the plane space the
-// particles live in
+// the shape of the grid and how far apart it puts particles on screen. columns
+// over rows is the screenshot's own aspect so the fitted rect is sampled at one
+// pitch. the pitch has to come from here because the panel's pixel size is not
+// in the plane space the particles live in
 function updateGrid() {
   if (!renderer || !pointMaterial || !simMaterial) {
     return;
@@ -182,7 +177,7 @@ function updateGrid() {
 
   const total = SIDE * SIDE;
   const columns = Math.max(1, Math.round(Math.sqrt(total * texAspect)));
-  // floored so the grid always fits, the point shader discards the remainder
+  // floored so the grid always fits. the point shader discards the remainder
   const rows = Math.max(1, Math.floor(total / columns));
 
   const fitX = texAspect > planeAspect ? 1 : texAspect / planeAspect;
@@ -190,7 +185,7 @@ function updateGrid() {
 
   simMaterial.uniforms.gridDims.value.set(columns, rows);
   pointMaterial.uniforms.gridDims.value.set(columns, rows);
-  // the two are equal to within the rounding above, take the larger
+  // equal to within the rounding above so take the larger
   pointMaterial.uniforms.baseSpacing.value = Math.max(
     (bufferSize.x * fitX) / columns,
     (bufferSize.y * fitY) / rows,
@@ -207,8 +202,7 @@ export function setImageParticleAspect(aspect) {
   updateGrid();
 }
 
-// x and y in the panel's own 0..1 space, anything outside that is the pointer
-// being somewhere else on the page
+// x and y in the panel's own 0..1 space
 export function setImageParticleMouse(x, y, active) {
   if (!simMaterial) {
     return;
@@ -234,8 +228,7 @@ export function setImageParticleTexture(texture, aspect) {
     return;
   }
 
-  // the outgoing image is sampled until the fade finishes, so it moves to the
-  // previous slot rather than being dropped
+  // the outgoing image is sampled until the fade finishes
   pointMaterial.uniforms.prevTex.value = pointMaterial.uniforms.nextTex.value;
   pointMaterial.uniforms.prevLod.value = pointMaterial.uniforms.nextLod.value;
   pointMaterial.uniforms.nextTex.value = texture;
@@ -245,8 +238,8 @@ export function setImageParticleTexture(texture, aspect) {
   simMaterial.uniforms.texAspect.value = aspect;
   updateGrid();
 
-  // killed first, pressing through the projects faster than a switch takes
-  // would leave two tweens writing the same numbers
+  // killed first. pressing faster than a switch takes leaves two tweens on the
+  // same numbers
   gsap.killTweensOf(transition);
   transition.fade = 0;
   transition.burst = 1;
@@ -254,8 +247,8 @@ export function setImageParticleTexture(texture, aspect) {
   gsap.to(transition, { burst: 0, duration: BURST_DURATION, ease: 'power2.out' });
 }
 
-// advances the sim one step and leaves the result bound as the position texture
-// the points read. call before rendering the image scene
+// steps the sim and binds the result as the position texture the points read.
+// call before rendering the image scene
 export function stepImageParticles(dtScale) {
   if (!simMaterial) {
     return;

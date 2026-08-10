@@ -12,8 +12,8 @@
  *
  */
 
-/* only the two weights the page sets. the family ships eighteen more, and an
-   unused @font-face still costs a request the moment a rule matches it */
+/* only the two weights the page sets. an unused @font-face still costs a
+   request the moment a rule matches it */
 
 @font-face {
   font-family: 'Epilogue-Bold';

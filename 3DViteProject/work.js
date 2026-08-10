@@ -5,9 +5,9 @@ import { showMark, clearMark } from './attractors.js';
 // the work history list. picking a job expands it and reforms the cloud into
 // that company's mark
 
-// which job is open, or null
+// which job is open or null
 let selected = null;
-// building a mark is async, so only the newest pick reaches the cloud
+// building a mark is async so only the newest pick reaches the cloud
 let pickToken = 0;
 
 function escapeHtml(text) {
@@ -66,7 +66,7 @@ async function pick(index) {
   showMark(mark.texture, mark.framing);
 }
 
-// drops the selection and puts the ship back, without going through pick
+// drops the selection and puts the ship back without going through pick
 export function leaveWork() {
   if (selected === null) {
     return;

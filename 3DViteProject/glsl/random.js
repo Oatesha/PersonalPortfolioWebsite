@@ -1,6 +1,5 @@
-// the one hash the shaders use, interpolated wherever it is needed. same
-// constants everywhere, so a particle gets the same jitter from the layout as
-// it does from the simulation
+// the one hash the shaders use. same constants everywhere so a particle gets
+// the same jitter from the layout as from the simulation
 export const glslRandom = /* glsl */`
 
   float random(vec2 st) {

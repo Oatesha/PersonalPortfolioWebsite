@@ -1,7 +1,7 @@
 @import url('epilogue.css');
 
 /* one palette for the whole page. the cloud reads the same tokens through
-   theme.js, so the chrome and the particles stay in key */
+   theme.js so the chrome and the particles stay in key */
 :root[data-theme="light"] {
   color-scheme: light;
 
@@ -12,18 +12,18 @@
   --ink-faint: #837f78;
   --line: color-mix(in srgb, var(--ink) 14%, transparent);
   --line-strong: color-mix(in srgb, var(--ink) 30%, transparent);
-  /* the one hue on the page. warm against a cool grey field, so it can carry
+  /* the one hue on the page. warm against a cool grey field so it can carry
      state with no filled box around it */
   --signal: #b2470d;
 
-  /* the three gradient blobs behind the blur. the same neutral the field is,
-     with almost no chroma, so the wash reads as light moving over it */
+  /* the three gradient blobs behind the blur. the same neutral as the field
+     with almost no chroma so the wash reads as light moving over it */
   --wash-one: #c1c0bb;
   --wash-two: #b3b0aa;
   --wash-three: #cdccc8;
 
-  /* the cloud's speed ramp, slowest to fastest, then the gain, the pull towards
-     grey and the hue that grey is carried in, all on the ship's baked colours */
+  /* the cloud's speed ramp slowest to fastest. then the gain and the pull
+     towards grey and the hue that grey is carried in */
   --particle-low: #8f8c86;
   --particle-mid: #c2551a;
   --particle-high: #1a1917;
@@ -32,8 +32,8 @@
   --particle-tint: #ffe2cd;
 }
 
-/* the default, on the bare :root as well as the attribute. theme.js stamps the
-   attribute from a module, so there is a paint before it runs */
+/* the default. on the bare :root as well as the attribute because theme.js
+   stamps the attribute from a module and there is a paint before it runs */
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -51,13 +51,13 @@
   --wash-two: #2c2622;
   --wash-three: #1b1815;
 
-  /* an ember at rest and a hot core, so speed reads as heat */
+  /* an ember at rest and a hot core so speed reads as heat */
   --particle-low: #4a2311;
   --particle-mid: #ff8a3c;
   --particle-high: #f7f3ef;
   --particle-gain: 0.95;
-  /* the ship's own colours are cool, and any of that hue left through reads as
-     cyan on a page with nothing else cool on it */
+  /* the ship's own colours are cool and any left through reads as cyan on a
+     page with nothing else cool on it */
   --particle-desaturate: 0.88;
   --particle-tint: #ffcfae;
 }
@@ -86,7 +86,7 @@ body {
   display: none;
 }
 
-/* a tint of the accent, so selected text keeps ink's contrast */
+/* a tint of the accent so selected text keeps ink's contrast */
 ::selection {
   background: color-mix(in srgb, var(--signal) 28%, var(--surface));
   color: var(--ink);
@@ -106,8 +106,8 @@ body {
   z-index: -1;
 }
 
-/* one type scale, quiet by default. size and colour carry the hierarchy, the
-   family only ships two weights */
+/* one type scale. size and colour carry the hierarchy because the family only
+   ships two weights */
 h1, h2, h3, h4, h5, h6 {
   color: var(--ink);
   margin: 0;
@@ -158,8 +158,7 @@ a:hover {
   text-decoration-color: var(--signal);
 }
 
-/* small caps label, the one repeated typographic device: nav, controls, dates,
-   shape picker */
+/* small caps label. the one repeated typographic device on the page */
 .Label {
   font-size: 0.6875rem;
   letter-spacing: 0.16em;
@@ -167,7 +166,7 @@ a:hover {
   color: var(--ink-faint);
 }
 
-/* sections are flex and grid containers, so the attribute alone loses to their
+/* sections are flex and grid containers so the attribute alone loses to their
    own display */
 [hidden] {
   display: none !important;
@@ -180,8 +179,7 @@ a:hover {
 }
 
 /*
-  navigation. the links sit in the bar on anything wide enough, and collapse
-  behind the hamburger on a phone
+  navigation. the links only collapse behind the hamburger on a phone
 */
 .NavRoot {
   position: fixed;
@@ -194,7 +192,7 @@ a:hover {
   justify-content: space-between;
   gap: 1rem;
   padding: 1.75rem 5vw;
-  /* the bar spans the viewport, only its controls are meant to be hit */
+  /* the bar spans the viewport but only its controls are meant to be hit */
   pointer-events: none;
 }
 
@@ -242,7 +240,7 @@ a:hover {
   color: var(--ink);
 }
 
-/* the current route is marked with a rule under the word, nothing on the bar
+/* the current route is marked with a rule under the word. nothing on the bar
    has an edge */
 .NavLink::after {
   content: "";
@@ -261,7 +259,7 @@ a:hover {
   transform: scaleX(1);
 }
 
-/* half filled disc, so the control needs no word on it */
+/* half filled disc so the control needs no word on it */
 .ThemeToggle {
   appearance: none;
   background: none;
@@ -336,7 +334,7 @@ a:hover {
     display: flex;
   }
 
-  /* only on a phone does the panel open, elsewhere it is the row of links */
+  /* only on a phone does the panel open. elsewhere it is the row of links */
   .NavPanel {
     display: none;
     flex-direction: column;
@@ -351,7 +349,7 @@ a:hover {
 }
 
 /*
-  particle size and count. an instrument row under the cloud it drives, quiet
+  particle size and count. an instrument row under the cloud it drives. quiet
   until it is pointed at
 */
 .ViewerControls {
@@ -383,8 +381,8 @@ a:hover {
 }
 
 .viewer-control output {
-  /* tabular figures, plus a min-width reserved by viewerControls.js, so the
-     row holds still while you drag */
+  /* tabular figures and a min-width reserved by viewerControls.js so the row
+     holds still while you drag */
   font-variant-numeric: tabular-nums;
   text-align: right;
   letter-spacing: 0.08em;
@@ -399,8 +397,7 @@ a:hover {
   cursor: pointer;
 }
 
-/* a hairline rule with a dot on it, the stops are stepped over rather than
-   drawn */
+/* a hairline rule with a dot on it. the stops are stepped over not drawn */
 .viewer-control input[type="range"]::-webkit-slider-runnable-track {
   height: 10px;
   background: linear-gradient(var(--line-strong) 0 0) no-repeat center / 100% 1px;
@@ -415,7 +412,7 @@ a:hover {
   appearance: none;
   width: 8px;
   height: 8px;
-  /* centres the dot on a 1px rule inside a 10px track box, chrome positions the
+  /* centres the dot on a 1px rule inside a 10px track box. chrome positions the
      thumb from the top of that box */
   margin-top: 1px;
   border-radius: 50%;
@@ -440,8 +437,8 @@ a:hover {
 }
 
 /*
-  landing. one big type block in a bottom corner and nothing else, the middle of
-  the viewport belongs to the cloud
+  landing. one big type block and nothing else. the middle of the viewport
+  belongs to the cloud
 */
 .LoaderLogoSection {
   height: 100vh;
@@ -470,8 +467,8 @@ a:hover {
   transition: transform;
 }
 
-/* two columns, and the cloud only ever gets the right one. the split is in the
-   grid, not in a percentage inset */
+/* two columns and the cloud only ever gets the right one. the split is in the
+   grid not in a percentage inset */
 .LandingPageSection {
   min-height: 100vh;
   position: relative;
@@ -483,7 +480,7 @@ a:hover {
   align-items: center;
 }
 
-/* the type block, held to the middle of its own column. in flow, so it paints
+/* the type block held to the middle of its own column. in flow so it paints
    over anything the cloud spills at z-index -1 */
 .LandingPageContent {
   position: relative;
@@ -506,7 +503,7 @@ a:hover {
   max-width: 30ch;
 }
 
-/* the cloud and the controls that drive it, stacked so the instruments belong
+/* the cloud and the controls that drive it stacked so the instruments belong
    to the sim */
 .LandingViewer {
   position: relative;
@@ -517,8 +514,8 @@ a:hover {
   gap: 1.75rem;
 }
 
-/* the box the particle model is framed into. no painted content of its own, the
-   fullscreen canvas draws into its rect */
+/* the box the particle model is framed into. no painted content of its own
+   because the fullscreen canvas draws into its rect */
 .LandingStage {
   position: relative;
   flex: 1;
@@ -532,7 +529,7 @@ a:hover {
   gap: 1rem;
 }
 
-/* shape picker, in the instrument stack under the cloud it reshapes */
+/* shape picker. in the instrument stack under the cloud it reshapes */
 .attractor-switch {
   display: flex;
   flex-wrap: wrap;
@@ -580,7 +577,7 @@ a:hover {
   transform: scaleX(1);
 }
 
-/* one column, name first and the stage under it, so nothing lands on the type */
+/* one column with the stage under the name so nothing lands on the type */
 @media (width < 900px) {
   .LandingPageSection {
     grid-template-columns: none;
@@ -600,7 +597,7 @@ a:hover {
 }
 
 /*
-  projects. the panel is a frame of hairlines, the screenshot's cloud is the
+  projects. the panel is a frame of hairlines and the screenshot's cloud is the
   only thing in it with any weight
 */
 .ProjectSection {
@@ -741,7 +738,7 @@ project > .project-title-section h2 {
   min-width: 0;
 }
 
-/* the repo link, an icon at reading weight */
+/* the repo link at reading weight */
 project > .project-title-section svg {
   flex: none;
   width: 1.75rem;
@@ -781,8 +778,8 @@ project > .project-nav-section [data-nav="prev"] {
 }
 
 /*
-  work. the list on one side, the box the mark is framed into on the other. the
-  stage only says where in the fullscreen canvas to draw
+  work. the list on one side and the box the mark is framed into on the other.
+  the stage only says where in the fullscreen canvas to draw
 */
 .WorkSection {
   min-height: 100vh;
@@ -827,7 +824,7 @@ project > .project-nav-section [data-nav="prev"] {
   transition: border-color 0.25s;
 }
 
-/* the open job is marked on its own rule, the same device as the nav */
+/* the open job is marked on its own rule. same device as the nav */
 .Job.is-open {
   border-top-color: var(--signal);
 }
@@ -901,92 +898,7 @@ project > .project-nav-section [data-nav="prev"] {
 }
 
 /*
-  colophon. the same two column figure as the work section, a list of what the
-  site borrows beside the box the cloud is framed into
-*/
-.ColophonSection {
-  min-height: 100vh;
-  position: relative;
-  padding: 7rem 5vw 6rem;
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  gap: 5vw;
-  align-items: center;
-}
-
-.ColophonContent {
-  position: relative;
-  min-width: 0;
-}
-
-.ColophonHeading {
-  margin: 0 0 2.5rem;
-  font-size: 0.6875rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.CreditList {
-  margin: 0;
-}
-
-/* each credit is a labelled row on a hairline, the same figure as the job list */
-.Credit {
-  display: grid;
-  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
-  gap: 0.75rem 2rem;
-  align-items: baseline;
-  padding: 1.25rem 0;
-  border-top: 1px solid var(--line);
-}
-
-.Credit:last-child {
-  border-bottom: 1px solid var(--line);
-}
-
-.Credit dt {
-  font-size: 0.6875rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.Credit dd {
-  margin: 0;
-  max-width: 46ch;
-  color: var(--ink-muted);
-  font-size: clamp(0.875rem, 0.8rem + 0.25vw, 1.0625rem);
-  line-height: 1.6;
-}
-
-.ColophonStage {
-  position: relative;
-  height: 100%;
-  min-height: 55vh;
-}
-
-@media (width < 900px) {
-  .ColophonSection {
-    grid-template-columns: none;
-    grid-template-rows: auto 32vh;
-    gap: 2rem;
-    padding: 6rem 5vw 4rem;
-  }
-
-  .ColophonStage {
-    min-height: 0;
-  }
-
-  .Credit {
-    grid-template-columns: none;
-    gap: 0.4rem;
-  }
-}
-
-/*
-  footer. one hairline, the name and the way through to the colophon
+  footer. one hairline with the name and the model's attribution
 */
 .SiteFooter {
   padding: 2rem 5vw 4.5rem;
@@ -1006,23 +918,19 @@ project > .project-nav-section [data-nav="prev"] {
   color: var(--ink-faint);
 }
 
-.SiteFooterLink {
-  color: var(--ink-muted);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  padding-bottom: 0.2rem;
-  transition: color 0.25s, border-color 0.25s;
+/* the licence line sits under the name rather than beside it in weight */
+.SiteFooterCredit {
+  max-width: 46ch;
+  text-align: right;
 }
 
-.SiteFooterLink:hover,
-.SiteFooterLink:focus-visible,
-.SiteFooterLink[aria-current="page"] {
-  color: var(--ink);
-  border-bottom-color: var(--signal);
+.SiteFooterCredit a {
+  color: var(--ink-muted);
+  text-decoration-color: var(--line-strong);
 }
 
 /*
-  the wash behind the blur. three blobs of one hue family, so what comes through
+  the wash behind the blur. three blobs of one hue family so what comes through
   reads as light moving over the field
 */
 .BackgroundAnimation {
@@ -1058,7 +966,7 @@ project > .project-nav-section [data-nav="prev"] {
   width: 100vw;
   height: 100vh;
   /* a full viewport backdrop-filter recomposites over the live canvas every
-     frame, at a cost that scales with the radius. lower than this and the blobs
+     frame at a cost that scales with the radius. lower than this and the blobs
      resolve into circles */
   backdrop-filter: blur(64px);
   z-index: -1;

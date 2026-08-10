@@ -17,7 +17,7 @@ function escapeHtml(text) {
   })[character]);
 }
 
-// the two arrows differ only by which way the chevron points
+// the two arrows differ only in which way the chevron points
 function navArrow(direction, rotation) {
   return `
     <svg data-nav="${direction}" width="200" height="150" viewBox="-12.5 -12.5 50 50" xmlns="http://www.w3.org/2000/svg">

@@ -1,17 +1,16 @@
 import { invalidateRigRect } from './cameraRig.js';
 import { enterRoute, lenis } from './animation.js';
 
-// routes over one document. the canvas, the webgl context and the sim are never
-// torn down, a route only picks which sections are in flow and which box the rig
-// frames the model into
+// routes over one document. the canvas and the webgl context and the sim are
+// never torn down. a route only picks which sections are in flow and which box
+// the rig frames the model into
 
-// nav false is still a route with a url, it just isn't an entry in the bar.
-// work is out until it has real marks and copy, the section stays hidden
+// nav false is a route with a url but no entry in the bar. work is out until it
+// has real marks and copy
 export const ROUTES = [
   { name: 'home', path: '/', label: 'Home' },
   { name: 'projects', path: '/projects', label: 'Projects' },
   // { name: 'work', path: '/work', label: 'Work' },
-  { name: 'colophon', path: '/colophon', label: 'Colophon', nav: false },
 ];
 
 const DEFAULT = ROUTES[0];
@@ -49,7 +48,7 @@ export function navigate(name, { push = true } = {}) {
     history.pushState({ route: route.name }, '', route.path);
   }
 
-  // sections only, the route is also stamped on the html element for css
+  // sections only. the route is also stamped on the html element for css
   document.querySelectorAll('section[data-route]').forEach((section) => {
     section.hidden = section.dataset.route !== route.name;
   });

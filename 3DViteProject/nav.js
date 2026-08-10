@@ -1,14 +1,13 @@
 import { ROUTES, navigate, onRoute } from './router.js';
 import { toggleTheme, onTheme } from './theme.js';
 
-// the bar across the top. the links sit in the bar itself and only collapse
-// behind the hamburger on a phone
+// the bar across the top. the links only collapse behind the hamburger on a
+// phone
 
 let toggle = null;
 let panel = null;
 
-// any anchor carrying a route name is routed. the href stays real so a middle
-// click still opens the url
+// the href stays real so a middle click still opens the url
 function bindRouteLinks(scope, onNavigate) {
   scope.querySelectorAll('[data-nav-route]').forEach((link) => {
     link.addEventListener('click', (event) => {
@@ -67,13 +66,6 @@ export function renderNav() {
   // the wordmark routes home too
   bindRouteLinks(root, () => setOpen(false));
 
-  // the footer's colophon link is outside the bar
-  const footer = document.querySelector('.SiteFooter');
-
-  if (footer) {
-    bindRouteLinks(footer);
-  }
-
   const theme = root.querySelector('.ThemeToggle');
   theme.addEventListener('click', () => toggleTheme());
 
@@ -89,7 +81,7 @@ export function renderNav() {
     }
   });
 
-  // a press anywhere else closes it, but not the press that opened it
+  // a press anywhere else closes it but not the press that opened it
   document.addEventListener('pointerdown', (event) => {
     if (isOpen() && !root.contains(event.target)) {
       setOpen(false);
@@ -97,7 +89,7 @@ export function renderNav() {
   });
 
   onRoute((route) => {
-    document.querySelectorAll('.NavLink, .SiteFooterLink').forEach((link) => {
+    document.querySelectorAll('.NavLink').forEach((link) => {
       if (link.dataset.navRoute === route.name) {
         link.setAttribute('aria-current', 'page');
       } else {

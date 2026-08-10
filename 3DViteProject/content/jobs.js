@@ -1,4 +1,4 @@
-// work history, newest first. mark is rasterised into a particle target, so it
+// work history newest first. mark is rasterised into a particle target so it
 // wants bold solid shapes and no hairlines. accent paints those particles when
 // the mark is a flat silhouette
 export const JOBS = [

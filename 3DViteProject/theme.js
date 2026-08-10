@@ -1,14 +1,14 @@
 import { getRenderMaterial } from './main.js';
 
-// the palette lives in style.css. the page reads it as custom properties and the
-// cloud reads the same tokens through here, so a theme is one token swap
+// the palette lives in style.css. the page reads it as custom properties and
+// the cloud reads the same tokens through here so a theme is one token swap
 
 const THEMES = ['light', 'dark'];
-// namespaced, every project on localhost shares one origin
+// namespaced because every project on localhost shares one origin
 const STORAGE_KEY = 'ho-theme';
 
-// the bare :root in style.css carries this same palette, so the first paint
-// doesn't flash the other one
+// the bare :root in style.css carries this same palette so the first paint does
+// not flash the other one
 const DEFAULT = 'dark';
 
 const listeners = [];
@@ -42,7 +42,8 @@ function readColour(styles, token) {
   ];
 }
 
-// a theme can land before there is a material to paint, main.js calls this again
+// a theme can land before there is a material to paint. main.js calls this
+// again
 export function applyCloudPalette() {
   const material = getRenderMaterial();
 
@@ -86,7 +87,7 @@ export function setTheme(name) {
   try {
     localStorage.setItem(STORAGE_KEY, active);
   } catch {
-    // private browsing, the theme doesn't survive the tab
+    // private browsing. the theme does not survive the tab
   }
 
   applyCloudPalette();
