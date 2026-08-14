@@ -2,13 +2,7 @@ import { gsap } from "gsap";
 import { getSimMaterial, getRenderMaterial, shipFraming, setCloudTarget, getShipTarget } from "./main.js";
 import { rig } from "./cameraRig.js";
 
-// what the cloud is. the ship or one of five attractors and the transitions
-// between them. the shader normalises every attractor to one centre and radius
-// but the ship is thirty eight units across so moving to or from it tweens the
-// framing too
-
-// order and indices must match the constants in the shader. see the note above
-// attractorCentre in glsl/simfragFBO.js before adding one
+// order and indices must match the constants in glsl/cloudSim.js
 export const ATTRACTORS = [
   { name: "Thomas" },
   { name: "Lorenz" },
@@ -17,26 +11,18 @@ export const ATTRACTORS = [
   { name: "Dadras" },
 ];
 
-// not an attractor. state 0 in the shader
+// not attractors. both are state 0, pulling to a target texture
 const SHIP = -1;
-
-// state 0 too but pulling to a target sampled from an svg. no button owns it
 const MARK = -2;
 
-// the personal project panel always shows this one
 const PROJECT_ATTRACTOR = 4;
 
-// how long the ship holds from the end of the landing intro
 const SHIP_HOLD = 10;
-
-// how long each attractor is held before the cycle moves on
 const CYCLE_INTERVAL = 10;
-
-// the burst is a half sine over this so the cloud is most scattered halfway
+// the burst is a half sine over this, so the cloud is most scattered halfway
 const MORPH_DURATION = 2.4;
 
-// framing radius once the cloud is an attractor. the ship's own comes from the
-// GLB via shipFraming
+// the ship's own framing comes from the GLB via shipFraming
 const ATTRACTOR_RADIUS = 4;
 
 let current = SHIP;
@@ -48,7 +34,6 @@ let cycleCall = null;
 let holdCall = null;
 const buttons = [];
 
-// ship first then the attractors
 const SHAPES = [{ name: "Ship", index: SHIP }].concat(
   ATTRACTORS.map((attractor, index) => ({ name: attractor.name, index })),
 );
@@ -57,7 +42,7 @@ export function currentShape() {
   return current;
 }
 
-// starts the clock that ends the ship. called when the landing intro finishes
+// called when the landing intro finishes
 export function holdShipThenStart() {
   if (manual || current !== SHIP) {
     return;
@@ -75,7 +60,6 @@ export function startAttractorMode() {
   advance();
 }
 
-// a press on one of the shape buttons
 export function selectShape(index) {
   manual = true;
   cycling = false;
@@ -113,12 +97,11 @@ export function showMark(texture, framing) {
   syncButtons();
 
   sim.uniforms.state.value = 0;
-  // a mark's colours are the company's so they are left as sampled
+  // a mark's colours are the company's, so they are left as sampled
   setCloudTarget(texture, { graded: 0 });
   tweenFraming(rend, framing.radius, framing.extent, 0);
 }
 
-// back to the ship
 export function clearMark() {
   if (current !== MARK) {
     return;
@@ -171,16 +154,15 @@ function applyShape(index) {
   syncButtons();
 
   if (index === SHIP) {
-    // no burst on the way back. state 0 reassembles the hull by itself
     sim.uniforms.state.value = 0;
-    // the target may still be a mark coming back from the work section
+    // the target may still be a mark, coming back from the work section
     setCloudTarget(getShipTarget());
     tweenFraming(rend, shipFraming.radius, shipFraming.extent, 0);
     scheduleNext();
     return;
   }
 
-  // from the ship there is no previous field so both ends are the same
+  // from the ship there is no previous field, so both ends are the same
   // attractor and the burst does the work
   sim.uniforms.attractorFrom.value = fromShip
     ? index
@@ -202,12 +184,12 @@ function applyShape(index) {
   scheduleNext();
 }
 
-// overwrite auto throughout so a press part way through a transition takes
-// these over rather than fighting the tween on them
+// overwrite auto throughout so a press part way through a transition takes these
+// over rather than fighting the tween on them
 function tweenFraming(rend, radius, extent, colourMix) {
   gsap.to(rig, { radius, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
   gsap.to(rig.extent, { ...extent, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
-  // baked colours on the hull and speed on an attractor
+  // baked colours on the hull, speed on an attractor
   gsap.to(rend.uniforms.colourMix, { value: colourMix, duration: MORPH_DURATION, ease: "none", overwrite: "auto" });
 }
 
@@ -226,7 +208,7 @@ function syncButtons() {
   });
 }
 
-function initShapeSwitch() {
+export function initShapeSwitch() {
   const list = document.querySelector(".attractor-switch");
   if (!list) {
     return;
@@ -245,5 +227,3 @@ function initShapeSwitch() {
 
   list.setAttribute("aria-label", "Shape");
 }
-
-initShapeSwitch();

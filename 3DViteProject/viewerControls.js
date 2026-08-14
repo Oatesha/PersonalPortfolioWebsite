@@ -7,9 +7,8 @@ import {
   setParticleCount,
 } from "./main.js";
 
-// particle size and count controls at the top of the page. both sliders run
-// over indices into a list of stops so every position is a value you can land
-// on
+// both sliders run over indices into a list of stops, so every position is a
+// value you can land on
 
 const SIZE_INPUT = "#particleSizeInput";
 const COUNT_INPUT = "#particleCountInput";
@@ -18,8 +17,6 @@ const COUNT_INPUT = "#particleCountInput";
 // difference between a haze and a solid
 const SIZE_STEPS = [0.5, 1, 1.5, 2, 3, 4, 6, 8];
 
-// the sim texture is sized in initFBO behind the gpu tier probe so the total is
-// not known when the panel first paints
 const READY_POLL = 0.25;
 
 let sizeInput = null;
@@ -28,7 +25,6 @@ let sizeOutput = null;
 let countOutput = null;
 let countSteps = [];
 
-// counts read as 65k and 1M rather than the full number
 function abbreviate(count) {
   if (count >= 1000000) {
     const millions = count / 1000000;
@@ -101,15 +97,15 @@ function nearestIndex(stops, wanted) {
   return nearest;
 }
 
-// polled off gsap's ticker rather than setTimeout so it stops with the tab
+// the count's stops depend on a texture sized behind the gpu tier probe, so this
+// slider cannot be built until the sim is up. polled off gsap's ticker rather
+// than setTimeout so it stops with the tab
 function waitForSimulation() {
   if (!getRenderMaterial() || !getParticleTotal()) {
     gsap.delayedCall(READY_POLL, waitForSimulation);
     return;
   }
 
-  // the count's stops depend on the texture size so this slider is built here
-  // rather than in the markup
   countSteps = getParticleSteps();
   reserveWidth(
     countOutput,
@@ -126,7 +122,7 @@ function waitForSimulation() {
   applyCount();
 }
 
-function initViewerControls() {
+export function initViewerControls() {
   sizeInput = document.querySelector(SIZE_INPUT);
   countInput = document.querySelector(COUNT_INPUT);
 
@@ -137,8 +133,7 @@ function initViewerControls() {
   sizeOutput = document.querySelector(`output[for="${sizeInput.id}"]`);
   countOutput = document.querySelector(`output[for="${countInput.id}"]`);
 
-  // size depends on nothing the sim has to resolve so it is live from first
-  // paint
+  // size depends on nothing the sim has to resolve, so it is live from first paint
   reserveWidth(
     sizeOutput,
     buildSlider(
@@ -153,10 +148,5 @@ function initViewerControls() {
   sizeInput.addEventListener("input", applySize);
   countInput.addEventListener("input", applyCount);
 
-  // deferred by a tick. main.js imports this module while still evaluating its
-  // own top level so reaching back in synchronously hits renderMaterial in the
-  // temporal dead zone
-  gsap.delayedCall(0, waitForSimulation);
+  waitForSimulation();
 }
-
-initViewerControls();

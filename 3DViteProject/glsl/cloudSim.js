@@ -1,35 +1,22 @@
-import { glslRandom } from './random.js';
+import { glslRandom } from './common.js';
 
-export const simfragFBO = /* glsl */`
+export const cloudSimFrag = /* glsl */`
 
   ${glslRandom}
 
   uniform sampler2D posTex;
-  // where state 0 is pulling every particle. the ship or a company mark. two
-  // slots so a switch can crossfade
   uniform sampler2D targetTexA;
   uniform sampler2D targetTexB;
   uniform float targetMix;
-  // the cursor as the camera ray through the pointer. origin and unit direction
-  // in world space
   uniform vec3 mouseOrigin;
   uniform vec3 mouseDir;
-  // distance from the camera to the centre of the cloud where the cursor's
-  // radius is quoted
   uniform float mouseDepth;
-  // zero until the pointer moves. ndc 0 0 is the middle of the cloud
   uniform float mouseActive;
   uniform int state;
-  // how many 60Hz frames of sim to advance this frame. the integrators below
-  // use fixed timesteps
   uniform float dtScale;
-  // which attractor the cloud is leaving and arriving at and how far through.
-  // idle sits at morph 1.0
   uniform int attractorFrom;
   uniform int attractorTo;
   uniform float morph;
-  // radius of whatever the cloud currently is so the mouse repulsion can be a
-  // fraction of it
   uniform float cloudRadius;
 
   varying vec2 vUv;
@@ -40,8 +27,6 @@ export const simfragFBO = /* glsl */`
   const int HALVORSEN = 3;
   const int DADRAS = 4;
 
-  // every attractor is normalised into a sphere of this radius about the
-  // origin. each was integrated offline and measured
   const float WORLD_RADIUS = 4.0;
 
   // forward euler on these fields overshoots badly far from the attractor and
@@ -49,12 +34,10 @@ export const simfragFBO = /* glsl */`
   const float MAX_STEP = 0.35;
 
   // nothing in these fields brings back a particle that lands well outside. set
-  // above the largest real excursion of the five which is dadras at about 7.7
+  // above the largest real excursion of the five, dadras at about 7.7
   const float CONTAIN_RADIUS = WORLD_RADIUS * 2.2;
   const float CONTAIN_PULL = 0.03;
 
-  // peak outward speed at the midpoint of a switch. tuned so the cloud roughly
-  // doubles in radius
   const float BURST_SPEED = 0.022;
 
   const float PI = 3.14159265;
@@ -63,10 +46,11 @@ export const simfragFBO = /* glsl */`
   // through by it before being written out
   const float NOMINAL_STEP = 0.0035 * WORLD_RADIUS;
 
-  // particles arrive from well outside so an attractor is only usable if one
-  // dropped out there still finds the chaotic set. aizawa and arneodo do not.
-  // check any new one at 2x and 3x its radius
-
+  // the three tables below were measured by integrating each system offline.
+  // they normalise all five to one centre, radius and step so switching moves
+  // no camera. particles arrive from well outside, so a new attractor is only
+  // usable if one dropped at 2x and 3x its radius still finds the chaotic set.
+  // aizawa and arneodo do not
   vec3 attractorCentre(int which) {
     if (which == LORENZ) return vec3(0.0, 0.0, 23.52);
     if (which == ROSSLER) return vec3(0.18, -0.89, 0.89);
@@ -84,8 +68,6 @@ export const simfragFBO = /* glsl */`
     return 5.12;
   }
 
-  // picked so after normalisation they all move a particle the same distance
-  // per frame
   float attractorDt(int which) {
     if (which == LORENZ) return 0.001007;
     if (which == ROSSLER) return 0.006938;
@@ -135,19 +117,16 @@ export const simfragFBO = /* glsl */`
     return len > MAX_STEP ? delta * (MAX_STEP / len) : delta;
   }
 
-// direction a particle flies in during a switch. mostly its own fixed random
-// one biased outwards so it clears the middle
 vec3 scatterDirection(vec3 pos, vec2 uv) {
     vec3 jitter = vec3(random(uv), random(uv + 11.3), random(uv + 27.7)) * 2.0 - 1.0;
     vec3 outward = pos / max(length(pos), 0.001);
     return normalize(jitter + outward * 0.6);
 }
 
-// unit step back towards the particle's own point on the target. nothing once
-// it is close enough that stepping again would jitter it
 vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
     vec3 toHome = targetPos - currentPos;
 
+    // stepping again this close only jitters it
     if (length(toHome) < 0.05) {
       return vec3(0.0);
     }
@@ -157,25 +136,22 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
 
   void main() {
     vec3 pos = texture2D(posTex, vUv).xyz;
-    // displacement this frame. its length is written out as speed
     vec3 velocity = vec3(0.0);
 
-    // this particle's own point on whatever the target currently is
     vec3 targetPos = mix(
       texture2D(targetTexA, vUv).xyz,
       texture2D(targetTexB, vUv).xyz,
       targetMix
     );
-    
-    // sized against whatever the cloud currently is
+
     float cursorRadius = cloudRadius * 0.20;
     float repelStrength = cloudRadius * 0.05;
 
-    // where the particle sits relative to the ray. along it and off it
+    // the cursor is the camera ray through the pointer. split the particle into
+    // distance along it and distance off it
     vec3 fromCamera = pos - mouseOrigin;
     float alongRay = dot(fromCamera, mouseDir);
 
-    // behind the camera there is no cursor
     if (mouseActive > 0.5 && alongRay > 0.0) {
       vec3 offRay = fromCamera - mouseDir * alongRay;
       float distToRay = length(offRay);
@@ -183,7 +159,6 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
       float radius = cursorRadius * (alongRay / mouseDepth);
 
       if (distToRay < radius) {
-        // dead on the ray there is no perpendicular to push along
         vec3 push = distToRay > 1e-4
           ? offRay / distToRay
           : normalize(cross(mouseDir, vec3(random(vUv), random(vUv + 5.1), random(vUv + 9.3)) * 2.0 - 1.0));
@@ -204,20 +179,18 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
 
       pos += velocity * dtScale;
 
-      // gathers strays and doubles as what walks the scattered ship down to
-      // attractor scale
       float dist = length(pos);
       if (dist > CONTAIN_RADIUS) {
         pos = mix(pos, pos * (CONTAIN_RADIUS / dist), min(CONTAIN_PULL * dtScale, 1.0));
       }
     }
-    
+
     else {
       velocity = forceToTarget(pos, targetPos) * 0.05;
       pos += velocity * dtScale;
     }
 
-    // alpha carries speed not colour
+    // alpha carries speed, not colour
     gl_FragColor = vec4(pos, length(velocity) / NOMINAL_STEP);
   }
 `;

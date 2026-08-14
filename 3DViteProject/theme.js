@@ -1,7 +1,7 @@
 import { getRenderMaterial } from './main.js';
 
-// the palette lives in style.css. the page reads it as custom properties and
-// the cloud reads the same tokens through here so a theme is one token swap
+// the palette lives in style.css. the cloud reads the same custom properties
+// through here, so a theme is one token swap
 
 const THEMES = ['light', 'dark'];
 // namespaced because every project on localhost shares one origin
@@ -42,8 +42,7 @@ function readColour(styles, token) {
   ];
 }
 
-// a theme can land before there is a material to paint. main.js calls this
-// again
+// a theme can land before there is a material to paint. main.js calls this again
 export function applyCloudPalette() {
   const material = getRenderMaterial();
 
@@ -104,7 +103,7 @@ export function initTheme() {
   try {
     stored = localStorage.getItem(STORAGE_KEY);
   } catch {
-    // as above
+    stored = null;
   }
 
   setTheme(stored || DEFAULT);

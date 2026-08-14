@@ -3,7 +3,7 @@ import SplitType from 'split-type'
 import Lenis from "lenis";
 import { rig, setRigTarget } from "./cameraRig.js";
 import { holdShipThenStart, startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
-import { MODEL_PROJECT } from "./content/projects.js";
+import { MODEL_PROJECT } from "./content.js";
 import { leaveWork } from "./work.js";
 
 // on gsap's ticker so everything shares one clock
@@ -14,7 +14,6 @@ gsap.ticker.add((time) => lenis.raf(time * 1000));
 gsap.ticker.lagSmoothing(0);
 
 let cameraBobbingAnim;
-// true while the project whose screenshot is the particle model is on screen
 let particleProjectActive = false;
 
 // a route can land before the sim exists
@@ -33,7 +32,6 @@ const circle1 = document.querySelector('#circleOne');
 const circle2 = document.querySelector('#circleTwo');
 const circle3 = document.querySelector('#circleThree');
 
-// the loader logo and the name are animated per character
 new SplitType(".LoadingText");
 new SplitType(".MyName")
 
@@ -42,7 +40,7 @@ const introTextFirstLine = landingText.querySelector('h4');
 const introTextThirdLine = landingText.querySelector('p');
 const loadingAnimationTimeline = gsap.timeline();
 
-// behind an async import chain so load may already have fired
+// behind an async import chain, so load may already have fired
 if (document.readyState === "complete") {
     initLoadingAnim();
 } else {
@@ -62,7 +60,6 @@ function initLoadingAnim() {
         autoAlpha: 1,
     }, "<")
 
-    // the gradient blobs behind the blur
     const backgroundBlobTimeline = gsap.timeline({
         repeat: -1,
         yoyo: true,
@@ -77,7 +74,6 @@ export function initAnim() {
     applyRoute(pendingRoute || 'home');
 }
 
-// called on every landing. only records the route before the sim exists
 export function enterRoute(route) {
     pendingRoute = route;
 
@@ -112,7 +108,6 @@ function applyRoute(route) {
 
     if (route === 'projects') {
         settleBobbing();
-        // only runs once. this or the ship hold whichever comes first
         startAttractorMode();
         if (particleProjectActive) {
             frameParticleProject();
@@ -152,7 +147,6 @@ function playLandingIntro() {
 }
 
 function scrollDownSmoothly() {
-    // the loader only sits above the landing on the home route
     if (pendingRoute && pendingRoute !== 'home') {
         return;
     }
@@ -161,7 +155,6 @@ function scrollDownSmoothly() {
     const userInput = ["wheel", "touchstart", "keydown", "pointerdown"];
     const release = () => userInput.forEach((type) => window.removeEventListener(type, stop));
     const stop = () => {
-        // cancel the pending start and halt a run in progress
         delayed.kill();
         lenis.scrollTo(lenis.animatedScroll, { immediate: true });
         release();
@@ -255,7 +248,6 @@ export function animateParticlesIn() {
 
 export function animateParticlesOut() {
     particleProjectActive = false;
-    // back to the section. the panel's image box is about to slide off screen
     setRigTarget(document.querySelector('.ProjectSection'));
     gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: 0.5, overwrite: "auto" });
     resumeCycle();

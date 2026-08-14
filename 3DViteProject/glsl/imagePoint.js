@@ -1,13 +1,10 @@
 import { imageLayout } from './imageLayout.js';
 
-// draws the project screenshot's particles. position from the sim texture and
-// colour from the screenshot at the point this particle stands for
 export const imagePointVert = /* glsl */`
 
-  // an explicit mip level under whichever glsl version three compiles this as.
-  // it rewrites every ShaderMaterial to "#version 300 es" on webgl2 and patches
-  // the old names over the new ones but the LOD form only in the fragment
-  // prefix and only under its EXT name. texture2DLod is undeclared here
+  // three rewrites every ShaderMaterial to "#version 300 es" on webgl2 and
+  // patches the old names over the new ones, but the LOD form only in the
+  // fragment prefix. texture2DLod is undeclared here
   #if __VERSION__ >= 300
     #define sampleLod(image, uv, lod) textureLod(image, uv, lod)
   #else
@@ -17,28 +14,19 @@ export const imagePointVert = /* glsl */`
   ${imageLayout}
 
   uniform sampler2D posTex;
-  // the screenshot being shown and the one before it. crossfaded while the
-  // burst has the particles scattered
   uniform sampler2D nextTex;
   uniform sampler2D prevTex;
   uniform float fade;
-  // mip level to read each of them at for a particle of nominal size. a
-  // screenshot has far more pixels than particles to carry them so a plain
+  // a screenshot has far more pixels than particles to carry them, so a plain
   // fetch aliases rather than samples
   uniform float nextLod;
   uniform float prevLod;
-  // device pixels between neighbouring particles where the grid is evenly
-  // spread. one number because the virtual grid is proportioned to the image
   uniform float baseSpacing;
-  // how far the three channels are pulled apart per unit of particle speed
   uniform float aberration;
 
   varying vec3 vColour;
 
-  // points have to reach their neighbours or the image reads as a screen door.
-  // on a staggered grid the furthest a gap sits from the four points around it
-  // is a little over half the spacing and the soft edge below leaves a point
-  // opaque only well inside its nominal size
+  // points have to reach their neighbours or the image reads as a screen door
   const float POINT_OVERLAP = 1.35;
   const float MIN_POINT_SIZE = 1.0;
   const float MAX_POINT_SIZE = 12.0;
@@ -60,13 +48,11 @@ export const imagePointVert = /* glsl */`
   }
 
   void main() {
-    // the grid cell this particle reads its state from. not called uv because
-    // three declares an attribute of that name into every ShaderMaterial vertex
-    // shader
+    // not called uv. three declares an attribute of that name into every
+    // ShaderMaterial vertex shader
     vec3 cell = virtualCell(position.xy);
 
-    // the handful of texels the virtual grid does not reach. sent outside the
-    // clip volume so they cost a vertex and nothing else
+    // sent outside the clip volume so unreached texels cost a vertex and nothing else
     if (cell.z < 0.5) {
       gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
       gl_PointSize = 0.0;
@@ -77,17 +63,14 @@ export const imagePointVert = /* glsl */`
     vec2 pos = state.xy;
     float speed = length(state.zw);
 
-    // how much of the image this particle carries. its size and the mip it
-    // reads both follow from this. out at the sides the foveation has spread
-    // the grid thin so each particle stands for more of the screenshot
+    // out at the sides the foveation has spread the grid thin, so each particle
+    // stands for more of the screenshot
     vec2 spread = foveateSpread(cell.x);
     float size = baseSpacing * max(spread.x, spread.y) * POINT_OVERLAP;
     float lodOffset = log2(max(spread.x, spread.y));
 
     // chromatic split proportional to speed so it falls out of the motion
-    // rather than having to be driven
     float shift = min(speed * aberration, 0.02);
-    // not called uv for the same reason
     vec2 source = imagePoint(cell.xy);
 
     vColour = sampleImage(nextTex, source, shift, nextLod + lodOffset);
@@ -107,7 +90,7 @@ export const imagePointFrag = /* glsl */`
   varying vec3 vColour;
 
   void main() {
-    // round with a soft edge. square points at this density read as a mosaic
+    // square points at this density read as a mosaic
     float d = length(gl_PointCoord - 0.5);
     float alpha = smoothstep(0.5, 0.40, d);
 

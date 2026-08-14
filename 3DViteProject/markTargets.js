@@ -1,12 +1,11 @@
 import * as THREE from 'three';
-import { simvertFBO } from './glsl/simvertFBO.js';
+import { simVert } from './glsl/common.js';
 import { markSampleFrag } from './glsl/markSample.js';
 
 // turns a company logo into a particle target. the svg rasterises once to a
-// small alpha mask and one gpu pass rejection samples that mask into a position
-// texture the sim can march towards
+// small alpha mask, then one gpu pass rejection samples that mask into a
+// position texture the sim can march towards
 
-// side of the rasterised mask
 const MASK_SIDE = 512;
 
 // the framing radius a mark is fitted to. same as the attractors
@@ -20,7 +19,6 @@ let camera = null;
 let targets = [];
 let nextTarget = 0;
 
-// masks are small and a mark can be picked more than once
 const masks = new Map();
 
 export function initMarkTargets(sharedRenderer, side) {
@@ -36,7 +34,7 @@ export function initMarkTargets(sharedRenderer, side) {
       depth: { value: MARK_RADIUS * MARK_DEPTH },
       tint: { value: new THREE.Color(1, 1, 1) },
     },
-    vertexShader: simvertFBO,
+    vertexShader: simVert,
     fragmentShader: markSampleFrag,
   });
 
@@ -44,7 +42,7 @@ export function initMarkTargets(sharedRenderer, side) {
   camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
   scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
 
-  // one per slot in the sim's pair so writing the next mark never touches the
+  // one per slot in the sim's pair, so writing the next mark never touches the
   // one being crossfaded out of
   targets = [createTarget(side), createTarget(side)];
 }

@@ -1,13 +1,12 @@
-import { JOBS } from './content/jobs.js';
+import { JOBS } from './content.js';
 import { buildMark } from './markTargets.js';
 import { showMark, clearMark } from './attractors.js';
 
 // the work history list. picking a job expands it and reforms the cloud into
 // that company's mark
 
-// which job is open or null
 let selected = null;
-// building a mark is async so only the newest pick reaches the cloud
+// building a mark is async, so only the newest pick reaches the cloud
 let pickToken = 0;
 
 function escapeHtml(text) {
@@ -58,7 +57,6 @@ async function pick(index) {
   const job = JOBS[next];
   const mark = await buildMark(job.mark, job.accent);
 
-  // another job was picked while this one was rasterising
   if (!mark || token !== pickToken) {
     return;
   }

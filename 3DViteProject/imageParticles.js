@@ -1,24 +1,19 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { simvertFBO } from './glsl/simvertFBO.js';
-import { imageSimFBO } from './glsl/imageSimFBO.js';
-import { imagePointVert, imagePointFrag } from './glsl/imagePointFBO.js';
+import { simVert } from './glsl/common.js';
+import { imageSimFrag } from './glsl/imageSim.js';
+import { imagePointVert, imagePointFrag } from './glsl/imagePoint.js';
 
-// the project screenshots drawn as particles rather than a flat quad. same
-// ping pong as the ship's sim on its own renderer and pair of targets. a
-// separate system because the two live in different spaces and share no
-// uniforms
-
-// side of the sim texture. a particle carries one colour so the grid is the
-// resolution the screenshot survives at
+// a particle carries one colour, so the grid is the resolution the screenshot
+// survives at
 const SIDE = 1024;
 
 // a little sharper than the particle spacing calls for. exact is correct and
 // slightly soft
 const LOD_BIAS = -0.35;
 
-// how long the image comes apart and gathers back on a switch. the colour
-// handover is slower so it lands while the particles are still scattered
+// the colour handover is slower so it lands while the particles are still
+// scattered
 const BURST_DURATION = 0.9;
 const FADE_DURATION = 1.2;
 
@@ -31,17 +26,14 @@ let targetA = null;
 let targetB = null;
 let points = null;
 
-// tweened by setImageParticleTexture and read into uniforms once a frame
 const transition = { fade: 1, burst: 0 };
 
-// held so the point size can be recomputed whenever either changes
 let texAspect = 1;
 let planeAspect = 1;
 
 const bufferSize = new THREE.Vector2();
 
-// stands in until the first screenshot arrives so the previous slot is never
-// null
+// stands in until the first screenshot arrives, so the previous slot is never null
 function blankTexture() {
   const texture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, THREE.RGBAFormat);
   texture.needsUpdate = true;
@@ -77,8 +69,7 @@ function seedState() {
   return texture;
 }
 
-// the grid coordinate each particle reads its state from. texel centres so
-// NearestFilter cannot land on a boundary
+// texel centres so NearestFilter cannot land on a boundary
 function gridGeometry() {
   const geometry = new THREE.BufferGeometry();
   const coords = new Float32Array(SIDE * SIDE * 3);
@@ -113,11 +104,10 @@ export function initImageParticles(imageRenderer, imageScene) {
       gridSize: { value: SIDE },
       gridDims: { value: new THREE.Vector2(SIDE, SIDE) },
     },
-    vertexShader: simvertFBO,
-    fragmentShader: imageSimFBO,
+    vertexShader: simVert,
+    fragmentShader: imageSimFrag,
   });
 
-  // unit quad under an orthographic camera. one fragment per state texel
   simScene = new THREE.Scene();
   simCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
   simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMaterial));
@@ -141,12 +131,10 @@ export function initImageParticles(imageRenderer, imageScene) {
       nextLod: { value: 0 },
       prevLod: { value: 0 },
       fade: { value: 1 },
-      // device pixels between neighbouring particles. one number because the
-      // grid is proportioned to the image
+      // device pixels between neighbouring particles
       baseSpacing: { value: 1 },
       gridSize: { value: SIDE },
       gridDims: { value: new THREE.Vector2(SIDE, SIDE) },
-      // texture widths of channel split per unit of particle speed
       aberration: { value: 0.15 },
     },
     vertexShader: imagePointVert,
@@ -158,16 +146,15 @@ export function initImageParticles(imageRenderer, imageScene) {
   });
 
   points = new THREE.Points(gridGeometry(), pointMaterial);
-  // particles are drawn wherever the sim puts them so three cannot cull by the
+  // particles are drawn wherever the sim puts them, so three cannot cull by the
   // geometry's own bounds
   points.frustumCulled = false;
   imageScene.add(points);
 }
 
-// the shape of the grid and how far apart it puts particles on screen. columns
-// over rows is the screenshot's own aspect so the fitted rect is sampled at one
-// pitch. the pitch has to come from here because the panel's pixel size is not
-// in the plane space the particles live in
+// the shape of the grid and how far apart it puts particles on screen. the pitch
+// has to come from here because the panel's pixel size is not in the plane space
+// the particles live in
 function updateGrid() {
   if (!renderer || !pointMaterial || !simMaterial) {
     return;
@@ -185,7 +172,6 @@ function updateGrid() {
 
   simMaterial.uniforms.gridDims.value.set(columns, rows);
   pointMaterial.uniforms.gridDims.value.set(columns, rows);
-  // equal to within the rounding above so take the larger
   pointMaterial.uniforms.baseSpacing.value = Math.max(
     (bufferSize.x * fitX) / columns,
     (bufferSize.y * fitY) / rows,

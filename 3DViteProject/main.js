@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
-import { vertexShader } from './glsl/main.vertFBO.js';
-import { fragmentShader } from './glsl/main.fragFBO.js';
-import { simvertFBO } from './glsl/simvertFBO.js';
-import { simfragFBO } from './glsl/simfragFBO.js';
+import { GLTFLoader } from 'three/examples/jsm/Addons.js';
+import gsap from 'gsap';
+import { getGPUTier } from 'detect-gpu';
+import { cloudPointVert, cloudPointFrag } from './glsl/cloudPoint.js';
+import { simVert } from './glsl/common.js';
+import { cloudSimFrag } from './glsl/cloudSim.js';
 import {
   initImageParticles,
   setImageParticleAspect,
@@ -11,20 +13,16 @@ import {
   setImageParticleTexture,
   stepImageParticles,
 } from './imageParticles.js';
-import { GLTFLoader } from 'three/examples/jsm/Addons.js';
-import gsap from 'gsap';
 import { initAnim } from './animation.js';
-import { getGPUTier } from 'detect-gpu';
 import { rig, initRig, setRigTarget, updateCameraFraming } from './cameraRig.js';
-import { PROJECTS } from './content/projects.js';
-import { initRouter } from './router.js';
-import { renderNav } from './nav.js';
+import { PROJECTS } from './content.js';
+import { initRouter, renderNav } from './router.js';
 import { renderWork } from './work.js';
 import { initMarkTargets } from './markTargets.js';
 import { initTheme, applyCloudPalette } from './theme.js';
-import './menu.js';
-import './attractors.js';
-import './viewerControls.js';
+import { initProjects } from './projects.js';
+import { initShapeSwitch } from './attractors.js';
+import { initViewerControls } from './viewerControls.js';
 
 let canvasBoundingRect, projectImageSection, renderMaterial, simMaterial,
  shipMesh, renderTargetA, renderTargetB, fbo, img
@@ -34,16 +32,14 @@ initTheme();
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
 
-// the ship's cloud drawn to a fixed fullscreen canvas
+// the ship's cloud, drawn to a fixed fullscreen canvas
 const renderer = new THREE.WebGLRenderer({alpha: true});
 const simScene = new THREE.Scene();
 
 
-// the project screenshot's cloud drawn to a canvas inside a panel
+// the project screenshot's cloud, drawn to a canvas inside a panel
 const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
 const imageScene = new THREE.Scene();
-// orthographic over a unit quad. the shader fits the image to the box so the
-// camera needs no aspect of its own
 const imagecam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
 imagecam.position.z = 1;
 
@@ -52,29 +48,29 @@ const imagePointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
 let imagePointerInside = false;
-
-// no cursor until the pointer moves. ndc 0 0 is the middle of the cloud
 let pointerActive = false;
-
 let imageSectionVisible = true;
 
 const textureLoader = new THREE.TextureLoader();
 const loadedTextures = [];
 
-// null where the model itself is the image
 const textures = PROJECTS.map((project) => project.shot);
 const mobileTextures = PROJECTS.map((project) => project.shotMobile);
 
+// the panels and the work list have to exist before anything measures or routes
+// to them
 function main () {
   initScene();
   initRig();
+  initProjects();
+  renderWork();
+  renderNav();
+  initShapeSwitch();
+  initViewerControls();
   setRigTarget(document.querySelector('.LandingStage'));
   initImageScene();
   preloadTextures();
   initEvents()
-  // the router toggles panels that have to exist first
-  renderWork();
-  renderNav();
   initRouter();
   loadModelGeometries();
 }
@@ -85,7 +81,7 @@ const MAX_PIXEL_RATIO = 2;
 // kept aside because rig.radius and rig.extent tween away to the attractor's
 export const shipFraming = { radius: 1, extent: { x: 1, y: 1, z: 1 } };
 
-// sim rate in 60Hz frames per real frame. 2.4 is 144 over 60
+// 60Hz frames of sim per real frame
 const SIM_SPEED = 2.4;
 
 function currentPixelRatio() {
@@ -95,7 +91,7 @@ function currentPixelRatio() {
 function initScene() {
   renderer.setPixelRatio(currentPixelRatio());
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.domElement.id = 'threeJSCanvas'; 
+  renderer.domElement.id = 'threeJSCanvas';
   document.body.appendChild( renderer.domElement );
 
   renderer.setClearColor(0x000000, 0);
@@ -109,19 +105,18 @@ function initImageScene() {
     img = document.createElement("img");
     img.src = mobileTextures[0];
     projectImageSection.appendChild(img);
-  } 
+  }
   else {
     imageRenderer.setPixelRatio(currentPixelRatio());
     projectImageSection.appendChild(imageRenderer.domElement);
     initImageParticles(imageRenderer, imageScene);
     setImageRendererSize();
 
-    // the grid reflows where a resize listener never fires. all four boxes
-    // because menu.js moves the canvas between them
+    // all four boxes because projects.js moves the canvas between them
     const boxes = new ResizeObserver(setImageRendererSize);
     document.querySelectorAll(".project-image-section").forEach((box) => boxes.observe(box));
 
-    // the canvas not a panel so the observer follows the reparenting
+    // the canvas, not a panel, so the observer follows the reparenting
     new IntersectionObserver((entries) => {
       imageSectionVisible = entries[entries.length - 1].isIntersecting;
     }).observe(imageRenderer.domElement);
@@ -140,7 +135,6 @@ function preloadTextures() {
           texture.magFilter = THREE.LinearFilter;
           texture.needsUpdate = true;
           loadedTextures[index] = texture;
-          // the first project is already on screen
           if (index === 0) {
             updateImageTexture(0);
           }
@@ -161,10 +155,8 @@ function setImageRendererSize() {
     return;
   }
 
-  // size against whichever panel currently holds the canvas
   var box = imageRenderer.domElement.parentElement || projectImageSection;
 
-  // https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
   var cs = getComputedStyle(box);
   var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
@@ -172,7 +164,6 @@ function setImageRendererSize() {
   var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
   var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
 
-  // the content box is what the canvas fills
   var elementWidth = box.offsetWidth - paddingX - borderX;
   var elementHeight = box.offsetHeight - paddingY - borderY;
 
@@ -215,7 +206,7 @@ function initEvents() {
   window.addEventListener('scroll', handleScroll);
 }
 
-// onWindowResize reads layout so coalesce bursts into one per frame
+// onWindowResize reads layout, so coalesce bursts into one per frame
 let resizePending = false;
 
 function requestResize() {
@@ -231,11 +222,10 @@ function requestResize() {
 
 function handleScroll() {
   moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
-  
+
   refreshCanvasBoundingRect();
 }
 
-// the rect of whichever panel holds the canvas
 function refreshCanvasBoundingRect() {
   if (mobile) {
     return;
@@ -246,17 +236,15 @@ function refreshCanvasBoundingRect() {
     canvasBoundingRect = canvas.getBoundingClientRect();
   }
 }
-  
+
 function onWindowResize(){
 
-  // devicePixelRatio changes with the display and the zoom level. the rig
-  // rebuilds the camera aspect every frame
   renderer.setPixelRatio(currentPixelRatio());
   renderer.setSize( window.innerWidth, window.innerHeight );
   setImageRendererSize();
 
 }
-  
+
 function loadModelGeometries() {
     const modelLoader = new GLTFLoader();
     modelLoader.load( 'models/radiant_pillar_baked.glb', function ( gltf ) {
@@ -283,23 +271,21 @@ function loadModelGeometries() {
           shipFraming.extent = { x: rig.extent.x, y: rig.extent.y, z: rig.extent.z };
         }
       });
-  
+
       initFBO();
     }, undefined, function ( error ) {
 
     console.error( error );
     });
 }
-  
-// side of the sim texture so the ceiling on particle count. every texel steps
+
+// side of the sim texture, so the ceiling on particle count. every texel steps
 // every frame whether or not it is drawn
 const DESKTOP_TEXTURE_SIDE = 1024;
 const MOBILE_TEXTURE_SIDE = 256;
 
-// the counts the slider stops on. no need to be square numbers
 const PARTICLE_STEPS = [25000, 50000, 100000, 250000, 500000, 750000, 1000000];
 
-// where the slider starts by gpu tier. every step stays reachable
 function defaultCountForTier(tier) {
   if (tier >= 3) return 1000000;
   if (tier === 2) return 500000;
@@ -307,19 +293,16 @@ function defaultCountForTier(tier) {
   return 100000;
 }
 
-// module scope so the count control can reach them after initFBO
 let particleGeometry = null;
 let particleTotal = 0;
 let defaultParticleCount = 250000;
 
-// kept so a mark can be swapped back off
 let shipTargetTexture = null;
 // which slot the cloud reads. the other is free to write
 let activeTargetSlot = 0;
 let activeTargetTexture = null;
 let targetTween = null;
 
-// crossfade of where the particles head not how fast they get there
 const TARGET_CROSSFADE = 1.2;
 
 let scrollLeft = 0, scrollTop = 0;
@@ -332,11 +315,11 @@ tweenY = gsap.quickTo(backgroundAnim, "top", { duration: 0.4, ease: "power3" });
 function moveBackgroundAnim(x, y, scrolling) {
   if (scrolling) {
     scrollLeft = (window.scrollX !== undefined) ? window.scrollX : (document.documentElement || document.body.parentNode || document.body).scrollLeft;
-    scrollTop = (window.scrollY !== undefined) ? window.scrollY : (document.documentElement || document.body.parentNode || document.body).scrollTop;  
+    scrollTop = (window.scrollY !== undefined) ? window.scrollY : (document.documentElement || document.body.parentNode || document.body).scrollTop;
   }
   tweenX(x + scrollLeft);
   tweenY(y + scrollTop);
-  
+
 }
 
 // https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
@@ -350,14 +333,13 @@ function detectMob() {
       /BlackBerry/i,
       /Windows Phone/i
   ];
-  
+
   return toMatch.some((toMatchItem) => {
       return navigator.userAgent.match(toMatchItem);
   });
 }
 
-// one point per particle spread over the model's surface by area. the colour is
-// packed into w so one RGBA texture carries both
+// one point per particle spread over the model's surface by area
 function samplePositions(numSamples, Mesh) {
   let positions = [];
   const sampler = new MeshSurfaceSampler(Mesh).build();
@@ -369,9 +351,9 @@ function samplePositions(numSamples, Mesh) {
 
     sampler.sample(position, normals, colour);
 
-    // three 8 bit channels packed into one float. unpacked in main.fragFBO
+    // colour packed into w so one RGBA texture carries both
     let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
-    let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255)); 
+    let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255));
     let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
 
     let packedRGB = (r << 16) | (g << 8) | b;
@@ -383,7 +365,6 @@ function samplePositions(numSamples, Mesh) {
 
 
 async function initFBO() {
-  // verify browser can support float textures
   if (!renderer.capabilities.floatVertexTextures) {
     console.warn('Browser does not support float vertex textures, particles will not render properly');
   }
@@ -398,10 +379,10 @@ async function initFBO() {
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < w; j++) {
       let index = (i + j * w) * 4;
-      
+
       const distance = Math.sqrt((Math.random())) * 20.0;
-      const theta = THREE.MathUtils.randFloatSpread(360); 
-      const phi = THREE.MathUtils.randFloatSpread(360); 
+      const theta = THREE.MathUtils.randFloatSpread(360);
+      const phi = THREE.MathUtils.randFloatSpread(360);
       initPos[index] =  distance * Math.sin(theta) * Math.cos(phi)
       initPos[index + 1] =  distance * Math.sin(theta) * Math.sin(phi);
       initPos[index + 2] =  1.0 * Math.cos(theta);
@@ -409,7 +390,6 @@ async function initFBO() {
     }
   }
 
-  // one sample per texel of the sim texture
   const numInitialPositions = w * h;
 
   let initialShipPositions = samplePositions(numInitialPositions, shipMesh);
@@ -423,39 +403,36 @@ async function initFBO() {
 
   let initialCircleDataTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
   let initialShipDataTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
-  
+
   initialShipDataTex.minFilter = THREE.NearestFilter;
   initialShipDataTex.magFilter = THREE.NearestFilter;
   initialShipDataTex.needsUpdate = true;
-  
-  // state 0 pulls every particle to its point on the hull. state 1 runs an
-  // attractor. see glsl/simfragFBO.js
+
+  // state 0 pulls every particle to its point on the target. state 1 runs an
+  // attractor. see glsl/cloudSim.js
   simMaterial = new THREE.ShaderMaterial({
     uniforms: {
       state: { value: 0 },
       dtScale: {value: 1.0},
-      // idle sits at morph 1 fully arrived at attractorTo
+      // idle sits at morph 1, fully arrived at attractorTo
       attractorFrom: {value: 0},
       attractorTo: {value: 0},
       morph: {value: 1.0},
       cloudRadius: {value: 1.0},
       posTex: { value: initialCircleDataTex },
-      // both slots start on the ship
       targetTexA: { value: initialShipDataTex },
       targetTexB: { value: initialShipDataTex },
       targetMix: { value: 0 },
-      // the cursor as the camera ray through the pointer
       mouseOrigin: { value: new THREE.Vector3() },
       mouseDir: { value: new THREE.Vector3(0, 0, -1) },
-      // distance from the camera to the centre of the cloud
       mouseDepth: { value: 1.0 },
       mouseActive: { value: 0.0 },
     },
-    vertexShader: simvertFBO,
-    fragmentShader: simfragFBO,
+    vertexShader: simVert,
+    fragmentShader: cloudSimFrag,
   });
-  
-  
+
+
   class FBO {
     constructor(w, simMat) {
       this.scene = new THREE.Scene();
@@ -465,11 +442,9 @@ async function initFBO() {
       this.scene.add(planeMesh);
     }
   }
-  
-  // a single quad over the sim texture so one fragment runs per particle
+
   fbo = new FBO(w, simMaterial);
 
-  // marks sample into targets of the same side
   initMarkTargets(renderer, w);
 
   renderTargetA = new THREE.WebGLRenderTarget(w, h, {
@@ -481,12 +456,11 @@ async function initFBO() {
     type: THREE.FloatType,
     stencilBuffer: false,
   });
-  
-  // a target cannot be read and written in one pass so state alternates
-  // between this pair every frame
+
+  // a target cannot be read and written in one pass, so state alternates between
+  // this pair every frame
   renderTargetB = renderTargetA.clone();
 
-  // prime both so the first frame reads real state
   renderer.setRenderTarget(renderTargetA);
   renderer.clear();
   renderer.render(fbo.scene, fbo.camera);
@@ -501,7 +475,6 @@ async function initFBO() {
 
   renderMaterial = new THREE.ShaderMaterial({
     uniforms: { posTex: { value: null },
-    // the slots the sim marches towards read here for their colours
     targetTexA: { value: initialShipDataTex },
     targetTexB: { value: initialShipDataTex },
     targetMix: { value: 0 },
@@ -514,19 +487,18 @@ async function initFBO() {
     baseGain: { value: new THREE.Vector3(1, 1, 1) },
     baseDesaturate: { value: 0 },
     baseTint: { value: new THREE.Vector3(1, 1, 1) },
-    // both slots start on the ship whose colours are the model's own
     gradeA: { value: 1 },
     gradeB: { value: 1 }},
-    vertexShader: vertexShader,
-    fragmentShader: fragmentShader,
+    vertexShader: cloudPointVert,
+    fragmentShader: cloudPointFrag,
   });
 
   applyCloudPalette();
-  
+
   particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
-  // position holds the sim texel this particle reads. texel centres so
+  // a particle's "position" is the sim texel it reads. texel centres so
   // NearestFilter cannot land on a boundary
   for (let j = 0; j < w; j++) {
     for (let i = 0; i < w; i++) {
@@ -551,7 +523,7 @@ async function initFBO() {
     gsap.ticker.add(render);
     initAnim();
   }
-  
+
   const clock = new THREE.Clock();
 
   function render() {
@@ -560,11 +532,9 @@ async function initFBO() {
       return;
     }
 
-    // 60Hz frames this frame was worth. capped so a dropped frame cannot blow
-    // up the attractor
+    // capped so a dropped frame cannot blow up the attractor
     const frameScale = Math.min(clock.getDelta() * 60, 2);
     simMaterial.uniforms.dtScale.value = frameScale * SIM_SPEED;
-    // follows the framing tween so the cursor keeps its size against the cloud
     simMaterial.uniforms.cloudRadius.value = rig.radius;
 
     updateCameraFraming(camera);
@@ -575,7 +545,7 @@ async function initFBO() {
       imageRenderer.render(imageScene, imagecam);
     }
 
-    // ping pong. read A write B then draw from B
+    // ping pong. read A, write B, then draw from B
     var temp = renderTargetA;
     renderTargetA = renderTargetB;
     renderTargetB = temp;
@@ -584,14 +554,13 @@ async function initFBO() {
     renderer.render(fbo.scene, fbo.camera);
     renderer.setRenderTarget(null);
     renderMaterial.uniforms.posTex.value = renderTargetB.texture;
-    
+
     renderer.render(simScene, camera);
-    
+
     // after the render so the view offset is already in the projection
     raycaster.setFromCamera(pointer, camera);
     simMaterial.uniforms.mouseOrigin.value.copy(raycaster.ray.origin);
     simMaterial.uniforms.mouseDir.value.copy(raycaster.ray.direction);
-    // the cloud is centred on the origin
     simMaterial.uniforms.mouseDepth.value = Math.max(camera.position.length(), 0.001);
     simMaterial.uniforms.mouseActive.value = pointerActive ? 1.0 : 0.0;
   }
@@ -602,7 +571,6 @@ export function getSimMaterial() {
   return simMaterial;
 }
 
-// how many particles the sim texture holds
 export function getParticleTotal() {
   return particleTotal;
 }
@@ -610,7 +578,6 @@ export function getParticleTotal() {
 // the slider's stops clamped to what this device's texture can supply
 export function getParticleSteps() {
   const steps = PARTICLE_STEPS.filter((count) => count <= particleTotal);
-  // add the real total when the round steps stop short
   if (!steps.length || steps[steps.length - 1] < particleTotal * 0.9) {
     steps.push(particleTotal);
   }
@@ -640,7 +607,7 @@ export function getShipTarget() {
   return shipTargetTexture;
 }
 
-// writes a target into the slot the cloud is not reading then crossfades onto
+// writes a target into the slot the cloud is not reading, then crossfades onto
 // it. graded 1 where the colours are the model's own and want the page palette
 export function setCloudTarget(texture, { duration = TARGET_CROSSFADE, graded = 1 } = {}) {
   if (!simMaterial || !renderMaterial || !texture || texture === activeTargetTexture) {
@@ -676,8 +643,5 @@ export function updateImageTexture(index) {
   }
 
   const texture = loadedTextures[index];
-  // the screenshots are not all the same shape
   setImageParticleTexture(texture, texture.image.width / texture.image.height);
 }
-    
-  
