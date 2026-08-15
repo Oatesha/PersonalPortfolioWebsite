@@ -35,10 +35,7 @@ export const markSampleFrag = /* glsl */`
     // breaks on the first opaque tap so average cost is one over the coverage
     for (int i = 0; i < MAX_TAPS; i++) {
       float seed = float(i);
-      vec2 candidate = vec2(
-        random(vUv + vec2(seed * 7.13, 11.7)),
-        random(vUv + vec2(3.71, seed * 5.29 + 41.0))
-      );
+      vec2 candidate = random2(vUv + vec2(seed * 7.13, seed * 5.29 + 41.0));
 
       vec2 uv = mix(maskMin, maskMax, candidate);
       vec4 texel = texture2D(mask, uv);

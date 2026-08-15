@@ -118,7 +118,7 @@ export const cloudSimFrag = /* glsl */`
   }
 
 vec3 scatterDirection(vec3 pos, vec2 uv) {
-    vec3 jitter = vec3(random(uv), random(uv + 11.3), random(uv + 27.7)) * 2.0 - 1.0;
+    vec3 jitter = vec3(random2(uv), random(uv + 27.7)) * 2.0 - 1.0;
     vec3 outward = pos / max(length(pos), 0.001);
     return normalize(jitter + outward * 0.6);
 }
@@ -161,7 +161,7 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
       if (distToRay < radius) {
         vec3 push = distToRay > 1e-4
           ? offRay / distToRay
-          : normalize(cross(mouseDir, vec3(random(vUv), random(vUv + 5.1), random(vUv + 9.3)) * 2.0 - 1.0));
+          : normalize(cross(mouseDir, vec3(random2(vUv), random(vUv + 9.3)) * 2.0 - 1.0));
         pos += push * repelStrength * smoothstep(1.0, 0.0, distToRay / radius);
       }
     }
