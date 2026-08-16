@@ -10,7 +10,6 @@ export const cloudSimFrag = /* glsl */`
   uniform float targetMix;
   uniform vec3 mouseOrigin;
   uniform vec3 mouseDir;
-  uniform float mouseDepth;
   uniform float mouseActive;
   uniform int state;
   uniform float dtScale;
@@ -39,6 +38,16 @@ export const cloudSimFrag = /* glsl */`
   const float CONTAIN_PULL = 0.03;
 
   const float BURST_SPEED = 0.022;
+
+  // half angle of the cursor cone, so the dent is the same size on screen
+  // whatever distance the cloud is framed at
+  const float CURSOR_ANGLE = 0.146;
+
+  // the shove inside the cone, against its radius there. an attractor carries
+  // the dent away in a few frames, a still target would keep the hole, so a
+  // target has to be pushed less per frame than it is pulled back by
+  const float FIELD_PUSH = 0.25;
+  const float TARGET_PUSH = 0.08;
 
   const float PI = 3.14159265;
 
@@ -123,15 +132,17 @@ vec3 scatterDirection(vec3 pos, vec2 uv) {
     return normalize(jitter + outward * 0.6);
 }
 
-vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
+// capped rather than cut off short of the target, so a particle arrives on its
+// point instead of stopping a slop radius away with its edge left soft
+vec3 forceToTarget(vec3 currentPos, vec3 targetPos, float reach) {
     vec3 toHome = targetPos - currentPos;
+    float away = length(toHome);
 
-    // stepping again this close only jitters it
-    if (length(toHome) < 0.05) {
+    if (away < 1e-5) {
       return vec3(0.0);
     }
 
-    return normalize(toHome);
+    return toHome * (min(reach, away) / away);
 }
 
   void main() {
@@ -144,9 +155,6 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
       targetMix
     );
 
-    float cursorRadius = cloudRadius * 0.20;
-    float repelStrength = cloudRadius * 0.05;
-
     // the cursor is the camera ray through the pointer. split the particle into
     // distance along it and distance off it
     vec3 fromCamera = pos - mouseOrigin;
@@ -155,14 +163,14 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
     if (mouseActive > 0.5 && alongRay > 0.0) {
       vec3 offRay = fromCamera - mouseDir * alongRay;
       float distToRay = length(offRay);
-      // widen with distance so the cursor is a cone of constant screen size
-      float radius = cursorRadius * (alongRay / mouseDepth);
+      float radius = CURSOR_ANGLE * alongRay;
 
       if (distToRay < radius) {
+        float shove = radius * (state == 1 ? FIELD_PUSH : TARGET_PUSH);
         vec3 push = distToRay > 1e-4
           ? offRay / distToRay
           : normalize(cross(mouseDir, vec3(random2(vUv), random(vUv + 9.3)) * 2.0 - 1.0));
-        pos += push * repelStrength * smoothstep(1.0, 0.0, distToRay / radius);
+        pos += push * shove * smoothstep(1.0, 0.0, distToRay / radius);
       }
     }
 
@@ -186,8 +194,9 @@ vec3 forceToTarget(vec3 currentPos, vec3 targetPos) {
     }
 
     else {
-      velocity = forceToTarget(pos, targetPos) * 0.05;
-      pos += velocity * dtScale;
+      vec3 step = forceToTarget(pos, targetPos, 0.05 * dtScale);
+      pos += step;
+      velocity = step / max(dtScale, 1e-3);
     }
 
     // alpha carries speed, not colour

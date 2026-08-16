@@ -425,7 +425,6 @@ async function initFBO() {
       targetMix: { value: 0 },
       mouseOrigin: { value: new THREE.Vector3() },
       mouseDir: { value: new THREE.Vector3(0, 0, -1) },
-      mouseDepth: { value: 1.0 },
       mouseActive: { value: 0.0 },
     },
     vertexShader: simVert,
@@ -561,7 +560,6 @@ async function initFBO() {
     raycaster.setFromCamera(pointer, camera);
     simMaterial.uniforms.mouseOrigin.value.copy(raycaster.ray.origin);
     simMaterial.uniforms.mouseDir.value.copy(raycaster.ray.direction);
-    simMaterial.uniforms.mouseDepth.value = Math.max(camera.position.length(), 0.001);
     simMaterial.uniforms.mouseActive.value = pointerActive ? 1.0 : 0.0;
   }
 
