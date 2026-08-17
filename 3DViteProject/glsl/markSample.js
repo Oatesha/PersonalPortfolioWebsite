@@ -1,7 +1,7 @@
 import { glslRandom } from './common.js';
 
-// run once when a mark is picked. each particle rejection samples the mark's
-// alpha and the hit is the point state 0 marches it to
+// run once when a mark is picked. each particle takes its own cell of a grid
+// over the mark, and the hit is the point state 0 marches it to
 export const markSampleFrag = /* glsl */`
 
   ${glslRandom}
@@ -15,12 +15,15 @@ export const markSampleFrag = /* glsl */`
   uniform vec2 extent;
   uniform float depth;
   uniform vec3 tint;
+  // the grid over the mark, and the side of the sim texture the particle index
+  // is recovered from
+  uniform vec2 lattice;
+  uniform float simSide;
 
   varying vec2 vUv;
 
-  // at 64 taps a mark covering 15% of its bounding box leaves about three
-  // particles in a million on the fallback
-  const int MAX_TAPS = 64;
+  // the pass runs once per build, never per frame, so taps are cheap
+  const int MAX_TAPS = 256;
 
   // matches samplePositions on the cpu. unpacked again in cloudPoint
   float packColour(vec3 colour) {
@@ -32,8 +35,33 @@ export const markSampleFrag = /* glsl */`
     vec2 hit = fallback;
     vec3 rgb = vec3(1.0);
 
-    // breaks on the first opaque tap so average cost is one over the coverage
+    // random points clump, and over a picture that reads as fuzz however many
+    // particles are thrown at it. a cell each instead
+    vec2 cell = floor(vUv * simSide);
+    float index = cell.x + cell.y * simSide;
+    float column = mod(index, lattice.x);
+    float row = floor(index / lattice.x);
+
+    bool landed = false;
+
+    if (row < lattice.y) {
+      vec2 uv = mix(maskMin, maskMax, (vec2(column, row) + 0.5) / lattice);
+      vec4 texel = texture2D(mask, uv);
+
+      if (texel.a > 0.5) {
+        hit = uv;
+        rgb = texel.rgb;
+        landed = true;
+      }
+    }
+
+    // art with holes in it, and the few particles with no cell, fall back to
+    // rejection sampling. breaks on the first opaque tap
     for (int i = 0; i < MAX_TAPS; i++) {
+      if (landed) {
+        break;
+      }
+
       float seed = float(i);
       vec2 candidate = random2(vUv + vec2(seed * 7.13, seed * 5.29 + 41.0));
 

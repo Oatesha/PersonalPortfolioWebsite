@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import { simVert } from './glsl/common.js';
 import { markSampleFrag } from './glsl/markSample.js';
 
-// turns a company logo into a particle target. the svg rasterises once to a
-// small alpha mask, then one gpu pass rejection samples that mask into a
-// position texture the sim can march towards
+// turns a picture into a particle target. it rasterises to an alpha mask, then
+// one gpu pass samples that mask into a position texture the sim can march
+// towards, carrying the picture's own colours with it
 
-const MASK_SIDE = 512;
+// about a texel per device pixel at the size the stage draws, so the detail
+// ceiling. measure walks it once per url and caches
+const MASK_SIDE = 1024;
 
 // the framing radius a mark is fitted to. same as the attractors
 const MARK_RADIUS = 4;
@@ -16,13 +18,15 @@ let renderer = null;
 let material = null;
 let scene = null;
 let camera = null;
+let side = 0;
 let targets = [];
-let nextTarget = 0;
+let next = 0;
 
 const masks = new Map();
 
-export function initMarkTargets(sharedRenderer, side) {
+export function initMarkTargets(sharedRenderer, textureSide) {
   renderer = sharedRenderer;
+  side = textureSide;
 
   material = new THREE.ShaderMaterial({
     uniforms: {
@@ -31,6 +35,8 @@ export function initMarkTargets(sharedRenderer, side) {
       maskMax: { value: new THREE.Vector2(1, 1) },
       fallback: { value: new THREE.Vector2(0.5, 0.5) },
       extent: { value: new THREE.Vector2(MARK_RADIUS, MARK_RADIUS) },
+      lattice: { value: new THREE.Vector2(1, 1) },
+      simSide: { value: side },
       depth: { value: MARK_RADIUS * MARK_DEPTH },
       tint: { value: new THREE.Color(1, 1, 1) },
     },
@@ -47,8 +53,8 @@ export function initMarkTargets(sharedRenderer, side) {
   targets = [createTarget(side), createTarget(side)];
 }
 
-function createTarget(side) {
-  return new THREE.WebGLRenderTarget(side, side, {
+function createTarget(textureSide) {
+  return new THREE.WebGLRenderTarget(textureSide, textureSide, {
     minFilter: THREE.NearestFilter,
     magFilter: THREE.NearestFilter,
     format: THREE.RGBAFormat,
@@ -67,18 +73,18 @@ function loadImage(url) {
   });
 }
 
-function measure(pixels, side) {
-  let minX = side;
-  let minY = side;
+function measure(pixels, maskSide) {
+  let minX = maskSide;
+  let minY = maskSide;
   let maxX = -1;
   let maxY = -1;
-  let fallbackX = side * 0.5;
-  let fallbackY = side * 0.5;
+  let fallbackX = maskSide * 0.5;
+  let fallbackY = maskSide * 0.5;
   let opaque = 0;
 
-  for (let y = 0; y < side; y++) {
-    for (let x = 0; x < side; x++) {
-      if (pixels[(y * side + x) * 4 + 3] <= 127) {
+  for (let y = 0; y < maskSide; y++) {
+    for (let x = 0; x < maskSide; x++) {
+      if (pixels[(y * maskSide + x) * 4 + 3] <= 127) {
         continue;
       }
 
@@ -100,9 +106,9 @@ function measure(pixels, side) {
 
   return {
     // half a texel in so a nearest sample cannot fall outside
-    min: new THREE.Vector2((minX + 0.5) / side, (minY + 0.5) / side),
-    max: new THREE.Vector2((maxX + 0.5) / side, (maxY + 0.5) / side),
-    fallback: new THREE.Vector2((fallbackX + 0.5) / side, (fallbackY + 0.5) / side),
+    min: new THREE.Vector2((minX + 0.5) / maskSide, (minY + 0.5) / maskSide),
+    max: new THREE.Vector2((maxX + 0.5) / maskSide, (maxY + 0.5) / maskSide),
+    fallback: new THREE.Vector2((fallbackX + 0.5) / maskSide, (fallbackY + 0.5) / maskSide),
     width: maxX - minX + 1,
     height: maxY - minY + 1,
     coverage: opaque / ((maxX - minX + 1) * (maxY - minY + 1)),
@@ -123,7 +129,7 @@ async function rasterise(url) {
 
   const context = canvas.getContext('2d', { willReadFrequently: true });
 
-  // contained so an svg that is not square keeps its shape
+  // contained so a source that is not square keeps its shape
   const scale = Math.min(MASK_SIDE / image.width, MASK_SIDE / image.height);
   const drawWidth = image.width * scale;
   const drawHeight = image.height * scale;
@@ -148,11 +154,24 @@ async function rasterise(url) {
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
   texture.generateMipmaps = false;
+  // measure works in the canvas's own coordinates, top row first, and the
+  // sampler flips to the world's y itself
+  texture.flipY = false;
   texture.needsUpdate = true;
 
   const mask = { texture, ...measured };
   masks.set(url, mask);
   return mask;
+}
+
+// as many cells as there are particles, in the shape of the picture, so the
+// cells come out square
+function lattice(aspect) {
+  const total = side * side;
+  const columns = Math.max(1, Math.floor(Math.sqrt(total * aspect)));
+  const rows = Math.max(1, Math.floor(columns / aspect));
+
+  return new THREE.Vector2(columns, rows);
 }
 
 // resolves to the position texture and the framing the rig needs to fit it
@@ -173,11 +192,12 @@ export async function buildMark(url, accent = '#ffffff') {
   material.uniforms.maskMax.value.copy(mask.max);
   material.uniforms.fallback.value.copy(mask.fallback);
   material.uniforms.extent.value.set(halfWidth, halfHeight);
+  material.uniforms.lattice.value.copy(lattice(mask.width / mask.height));
   material.uniforms.depth.value = MARK_RADIUS * MARK_DEPTH;
   material.uniforms.tint.value.setStyle(accent, THREE.NoColorSpace);
 
-  const target = targets[nextTarget];
-  nextTarget = (nextTarget + 1) % targets.length;
+  const target = targets[next];
+  next = (next + 1) % targets.length;
 
   const previousTarget = renderer.getRenderTarget();
   renderer.setRenderTarget(target);
