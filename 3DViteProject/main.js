@@ -497,18 +497,32 @@ async function initFBO() {
   particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
+  // the count slider draws a prefix of this buffer, and a scene's sampler ties
+  // texel index to position, so in texel order a prefix cuts a band out of the
+  // picture rather than thinning it. shuffled once, any prefix is a fair sample
+  const order = new Uint32Array(w * w);
+  for (let index = 0; index < order.length; index++) {
+    order[index] = index;
+  }
+  for (let index = order.length - 1; index > 0; index--) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    const held = order[index];
+    order[index] = order[swap];
+    order[swap] = held;
+  }
+
   // a particle's "position" is the sim texel it reads. texel centres so
   // NearestFilter cannot land on a boundary
-  for (let j = 0; j < w; j++) {
-    for (let i = 0; i < w; i++) {
+  for (let index = 0; index < order.length; index++) {
+    const texel = order[index];
+    const i = texel % w;
+    const j = (texel - i) / w;
 
-      let index = (i + j * w);
-      positions[index * 3] = (i + 0.5) / w;
-      positions[index * 3 + 1] = (j + 0.5) / w;
-      positions[index * 3 + 2] = 0.0;
-      uvs[index * 2] = (i + 0.5) / w;
-      uvs[index * 2 + 1] = (j + 0.5) / w;
-    }
+    positions[index * 3] = (i + 0.5) / w;
+    positions[index * 3 + 1] = (j + 0.5) / w;
+    positions[index * 3 + 2] = 0.0;
+    uvs[index * 2] = (i + 0.5) / w;
+    uvs[index * 2 + 1] = (j + 0.5) / w;
   }
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particleGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
@@ -586,8 +600,8 @@ export function getDefaultParticleCount() {
   return defaultParticleCount;
 }
 
-// draws a prefix of the particle buffer. samplePositions walks the mesh in
-// random order so a prefix is a fair sample
+// draws a prefix of the particle buffer, which initFBO shuffled so any prefix
+// is spread evenly over the sim texture
 export function setParticleCount(count) {
   if (!particleGeometry) {
     return 0;
