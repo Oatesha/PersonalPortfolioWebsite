@@ -4,6 +4,7 @@ import {
   getParticleTotal,
   getParticleSteps,
   getDefaultParticleCount,
+  getDefaultPointSize,
   setParticleCount,
 } from "./main.js";
 
@@ -141,7 +142,7 @@ export function initViewerControls() {
       "#particleSizeTicks",
       SIZE_STEPS,
       formatSize,
-      nearestIndex(SIZE_STEPS, 2),
+      nearestIndex(SIZE_STEPS, getDefaultPointSize()),
     ),
   );
 

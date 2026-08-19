@@ -88,6 +88,12 @@ function currentPixelRatio() {
   return Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
 }
 
+// gl_PointSize is in device pixels and the grid puts particles about one apart
+// on a retina display, so a 1x display has four times the cell to cover
+export function getDefaultPointSize() {
+  return currentPixelRatio() >= 2 ? 1.0 : 1.5;
+}
+
 function initScene() {
   renderer.setPixelRatio(currentPixelRatio());
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -281,16 +287,17 @@ function loadModelGeometries() {
 
 // side of the sim texture, so the ceiling on particle count. every texel steps
 // every frame whether or not it is drawn
-const DESKTOP_TEXTURE_SIDE = 1024;
+const DESKTOP_TEXTURE_SIDE = 1280;
 const MOBILE_TEXTURE_SIDE = 256;
 
 const PARTICLE_STEPS = [25000, 50000, 100000, 250000, 500000, 750000, 1000000];
 
-function defaultCountForTier(tier) {
-  if (tier >= 3) return 1000000;
-  if (tier === 2) return 500000;
-  if (tier === 1) return 250000;
-  return 100000;
+// every particle drawn is a cell of the grid a scene is laid on, so short of
+// the total is holes in it
+function defaultCountForTier(tier, total) {
+  if (tier >= 2) return total;
+  if (tier === 1) return 1000000;
+  return 250000;
 }
 
 let particleGeometry = null;
@@ -372,7 +379,7 @@ async function initFBO() {
   let gputier = await getGPUTier();
   let w = mobile ? MOBILE_TEXTURE_SIDE : DESKTOP_TEXTURE_SIDE;
   let h = w;
-  defaultParticleCount = defaultCountForTier(gputier.tier);
+  defaultParticleCount = defaultCountForTier(gputier.tier, w * h);
 
   // scattered so the ship assembles itself on load
   let initPos = new Float32Array(w * h * 4);
@@ -477,7 +484,7 @@ async function initFBO() {
     targetTexA: { value: initialShipDataTex },
     targetTexB: { value: initialShipDataTex },
     targetMix: { value: 0 },
-    pointSize: { value: 2.0 },
+    pointSize: { value: getDefaultPointSize() },
     colourMix: { value: 0.0 },
     // filled in by applyCloudPalette. only the type matters here
     rampLow: { value: new THREE.Vector3() },
