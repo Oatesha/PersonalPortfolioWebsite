@@ -1,9 +1,12 @@
-// shot null means the particle model itself is that panel's image
+// shot is what the cloud becomes while a project is selected: it marches into
+// the screenshot and wears its colours. null means the cloud itself is that
+// project's picture. shotMobile is the phone fallback, where the cloud stays a
+// backdrop and the stage holds the image instead
 export const PROJECTS = [
   {
     title: "Minecraftle",
     repo: "https://github.com/Oatesha/minecraftle",
-    shot: "/Minecraftle.png",
+    shot: "/scenes/minecraftle.png",
     shotMobile: "/MinecraftleMob.png",
     blurb:
       "Minecraftle is a daily puzzle game where users have to guess the daily Minecraft recipe. The project scored 100% and achieved over 1,500,000 unique players as of January 2025",
@@ -34,6 +37,7 @@ export const PROJECTS = [
   },
 ];
 
+// the one project the cloud itself stands in for, so nothing is drawn on the stage
 export const MODEL_PROJECT = PROJECTS.findIndex((project) => project.shot === null);
 
 // mark is rasterised into a particle target so it wants bold solid shapes and no

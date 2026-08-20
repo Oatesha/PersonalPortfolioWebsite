@@ -3,8 +3,9 @@ import SplitType from 'split-type'
 import Lenis from "lenis";
 import { rig, setRigTarget } from "./cameraRig.js";
 import { holdShipThenStart, startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
-import { MODEL_PROJECT } from "./content.js";
 import { leaveWork } from "./work.js";
+import { enterProjects, leaveProjects } from "./projects.js";
+import { mobile } from "./main.js";
 
 // on gsap's ticker so everything shares one clock
 export const lenis = new Lenis({ autoRaf: false });
@@ -106,15 +107,24 @@ function applyRoute(route) {
         leaveWork();
     }
 
+    if (route !== 'projects') {
+        leaveProjects();
+    }
+
     if (route === 'projects') {
         settleBobbing();
-        startAttractorMode();
-        if (particleProjectActive) {
+
+        // a desktop frames the cloud into the stage throughout. a phone holds
+        // screenshots there and only hands the box over for the cloud project
+        if (!mobile || particleProjectActive) {
             frameParticleProject();
         } else {
+            startAttractorMode();
             setRigTarget(document.querySelector('.ProjectSection'));
             gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
         }
+
+        enterProjects();
         return;
     }
 
@@ -228,7 +238,7 @@ function settleBobbing() {
 }
 
 function frameParticleProject() {
-    setRigTarget(document.querySelector(`project[pos-index="${MODEL_PROJECT}"] .project-image-section`));
+    setRigTarget(document.querySelector('.ProjectStage'));
     gsap.to(rig, { fit: 1.0, duration: 1.0, overwrite: "auto" });
 }
 
@@ -239,7 +249,8 @@ function InitCameraBobbing() {
     cameraBobbingAnim.play();
 }
 
-// the particle project has no screenshot. the model itself is the image
+// the phone stage holds a screenshot for every project but the cloud one, where
+// the cloud comes forward into the box instead
 export function animateParticlesIn() {
     particleProjectActive = true;
     frameParticleProject();

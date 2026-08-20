@@ -6,16 +6,8 @@ import { getGPUTier } from 'detect-gpu';
 import { cloudPointVert, cloudPointFrag } from './glsl/cloudPoint.js';
 import { simVert } from './glsl/common.js';
 import { cloudSimFrag } from './glsl/cloudSim.js';
-import {
-  initImageParticles,
-  setImageParticleAspect,
-  setImageParticleMouse,
-  setImageParticleTexture,
-  stepImageParticles,
-} from './imageParticles.js';
 import { initAnim } from './animation.js';
 import { rig, initRig, setRigTarget, updateCameraFraming } from './cameraRig.js';
-import { PROJECTS } from './content.js';
 import { initRouter, renderNav } from './router.js';
 import { renderWork } from './work.js';
 import { initMarkTargets } from './markTargets.js';
@@ -24,38 +16,22 @@ import { initProjects } from './projects.js';
 import { initShapeSwitch } from './attractors.js';
 import { initViewerControls } from './viewerControls.js';
 
-let canvasBoundingRect, projectImageSection, renderMaterial, simMaterial,
- shipMesh, renderTargetA, renderTargetB, fbo, img
+let renderMaterial, simMaterial, shipMesh, renderTargetA, renderTargetB, fbo
 
 initTheme();
 
 export const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.001, 1000);
 export const mobile = detectMob();
 
-// the ship's cloud, drawn to a fixed fullscreen canvas
+// the one cloud, drawn to a fixed fullscreen canvas. a project picture is a
+// target it marches to, not a second renderer
 const renderer = new THREE.WebGLRenderer({alpha: true});
 const simScene = new THREE.Scene();
 
-
-// the project screenshot's cloud, drawn to a canvas inside a panel
-const imageRenderer = new THREE.WebGLRenderer({ alpha: true });
-const imageScene = new THREE.Scene();
-const imagecam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
-imagecam.position.z = 1;
-
 const pointer = new THREE.Vector2();
-const imagePointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
-let imagePointerInside = false;
 let pointerActive = false;
-let imageSectionVisible = true;
-
-const textureLoader = new THREE.TextureLoader();
-const loadedTextures = [];
-
-const textures = PROJECTS.map((project) => project.shot);
-const mobileTextures = PROJECTS.map((project) => project.shotMobile);
 
 // the panels and the work list have to exist before anything measures or routes
 // to them
@@ -68,8 +44,6 @@ function main () {
   initShapeSwitch();
   initViewerControls();
   setRigTarget(document.querySelector('.LandingStage'));
-  initImageScene();
-  preloadTextures();
   initEvents()
   initRouter();
   loadModelGeometries();
@@ -103,87 +77,6 @@ function initScene() {
   renderer.setClearColor(0x000000, 0);
 }
 
-function initImageScene() {
-
-  projectImageSection = document.querySelector(".project-image-section.project-section");
-
-  if (mobile) {
-    img = document.createElement("img");
-    img.src = mobileTextures[0];
-    projectImageSection.appendChild(img);
-  }
-  else {
-    imageRenderer.setPixelRatio(currentPixelRatio());
-    projectImageSection.appendChild(imageRenderer.domElement);
-    initImageParticles(imageRenderer, imageScene);
-    setImageRendererSize();
-
-    // all four boxes because projects.js moves the canvas between them
-    const boxes = new ResizeObserver(setImageRendererSize);
-    document.querySelectorAll(".project-image-section").forEach((box) => boxes.observe(box));
-
-    // the canvas, not a panel, so the observer follows the reparenting
-    new IntersectionObserver((entries) => {
-      imageSectionVisible = entries[entries.length - 1].isIntersecting;
-    }).observe(imageRenderer.domElement);
-  }
-}
-
-function preloadTextures() {
-  textures.forEach((textureUrl, index) => {
-    if (textureUrl) {
-      textureLoader.load(
-        textureUrl,
-        (texture) => {
-          // load bearing. the point shader reads an explicit mip level
-          texture.generateMipmaps = true;
-          texture.minFilter = THREE.LinearMipmapLinearFilter;
-          texture.magFilter = THREE.LinearFilter;
-          texture.needsUpdate = true;
-          loadedTextures[index] = texture;
-          if (index === 0) {
-            updateImageTexture(0);
-          }
-        },
-        undefined,
-        (error) => {
-          console.error('Error loading texture:', error);
-        }
-      );
-    } else {
-      loadedTextures[index] = null;
-    }
-  });
-}
-
-function setImageRendererSize() {
-  if (mobile) {
-    return;
-  }
-
-  var box = imageRenderer.domElement.parentElement || projectImageSection;
-
-  var cs = getComputedStyle(box);
-  var paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-  var paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-
-  var borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-  var borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-
-  var elementWidth = box.offsetWidth - paddingX - borderX;
-  var elementHeight = box.offsetHeight - paddingY - borderY;
-
-  if (elementWidth < 1 || elementHeight < 1) {
-    return;
-  }
-
-  imageRenderer.setPixelRatio(currentPixelRatio());
-  imageRenderer.setSize(elementWidth, elementHeight);
-  setImageParticleAspect(elementWidth / elementHeight);
-
-  refreshCanvasBoundingRect();
-}
-
 function onPointerMove( event ) {
 
   pointerActive = true;
@@ -191,22 +84,12 @@ function onPointerMove( event ) {
   pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
   pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-  // the image shader wants the pointer in the canvas's own 0..1 space
-  if (canvasBoundingRect) {
-    imagePointer.x = (((event.clientX - canvasBoundingRect.left) / (canvasBoundingRect.width)));
-    imagePointer.y = (1 - ((event.clientY - canvasBoundingRect.top) / (canvasBoundingRect.height)));
-    imagePointerInside = imagePointer.x >= 0 && imagePointer.x <= 1
-      && imagePointer.y >= 0 && imagePointer.y <= 1;
-  }
-
   moveBackgroundAnim(event.clientX, event.clientY, false);
 }
 
 function initEvents() {
 
   document.addEventListener( 'pointermove', onPointerMove );
-
-  refreshCanvasBoundingRect();
 
   window.addEventListener( 'resize', requestResize, false );
   window.addEventListener('scroll', handleScroll);
@@ -228,26 +111,12 @@ function requestResize() {
 
 function handleScroll() {
   moveBackgroundAnim((pointer.x + 1) / 2 * window.innerWidth, -(pointer.y - 1) / 2 * window.innerHeight, true);
-
-  refreshCanvasBoundingRect();
-}
-
-function refreshCanvasBoundingRect() {
-  if (mobile) {
-    return;
-  }
-
-  var canvas = document.querySelector('[status="active"] .project-image-section canvas');
-  if (canvas) {
-    canvasBoundingRect = canvas.getBoundingClientRect();
-  }
 }
 
 function onWindowResize(){
 
   renderer.setPixelRatio(currentPixelRatio());
   renderer.setSize( window.innerWidth, window.innerHeight );
-  setImageRendererSize();
 
 }
 
@@ -504,6 +373,7 @@ async function initFBO() {
   particleGeometry = new THREE.BufferGeometry();
   let positions = new Float32Array((w * w) * 3);
   let uvs = new Float32Array((w * w) * 2);
+
   // the count slider draws a prefix of this buffer, and a scene's sampler ties
   // texel index to position, so in texel order a prefix cuts a band out of the
   // picture rather than thinning it. shuffled once, any prefix is a fair sample
@@ -558,12 +428,6 @@ async function initFBO() {
     simMaterial.uniforms.cloudRadius.value = rig.radius;
 
     updateCameraFraming(camera);
-
-    if (imageSectionVisible && !mobile) {
-      setImageParticleMouse(imagePointer.x, imagePointer.y, imagePointerInside);
-      stepImageParticles(frameScale);
-      imageRenderer.render(imageScene, imagecam);
-    }
 
     // ping pong. read A, write B, then draw from B
     var temp = renderTargetA;
@@ -649,18 +513,4 @@ export function setCloudTarget(texture, { duration = TARGET_CROSSFADE, graded = 
     ease: 'power2.inOut',
     overwrite: 'auto',
   });
-}
-
-export function updateImageTexture(index) {
-  if (loadedTextures[index] == null || textures[index] == null) {
-    return;
-  }
-
-  if (mobile) {
-    img.src = mobileTextures[index];
-    return;
-  }
-
-  const texture = loadedTextures[index];
-  setImageParticleTexture(texture, texture.image.width / texture.image.height);
 }
