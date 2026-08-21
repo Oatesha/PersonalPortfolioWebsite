@@ -3,7 +3,8 @@ import SplitType from 'split-type'
 import Lenis from "lenis";
 import { rig, setRigTarget } from "./cameraRig.js";
 import { holdShipThenStart, startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
-import { leaveWork } from "./work.js";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { enterWork, leaveWork } from "./work.js";
 import { enterProjects, leaveProjects } from "./projects.js";
 import { mobile } from "./main.js";
 
@@ -11,6 +12,7 @@ import { mobile } from "./main.js";
 export const lenis = new Lenis({ autoRaf: false });
 
 gsap.ticker.add((time) => lenis.raf(time * 1000));
+lenis.on("scroll", ScrollTrigger.update);
 // lenis integrates its own delta
 gsap.ticker.lagSmoothing(0);
 
@@ -132,6 +134,7 @@ function applyRoute(route) {
         settleBobbing();
         setRigTarget(document.querySelector('.WorkStage'));
         gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
+        enterWork();
         return;
     }
 

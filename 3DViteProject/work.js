@@ -1,21 +1,60 @@
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { JOBS } from './content.js';
 import { buildMark } from './markTargets.js';
 import { showMark, clearMark } from './attractors.js';
 
-// the work history list. picking a job expands it and reforms the cloud into
-// that company's mark
+gsap.registerPlugin(ScrollTrigger);
+
+// a dated rail against a pinned cloud. the role crossing the line owns the mark
+
+const ESCAPES = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+};
+
+function escapeHtml(text) {
+  return text.replace(/[&<>"]/g, (character) => ESCAPES[character]);
+}
 
 let selected = null;
+let routed = false;
 // building a mark is async, so only the newest pick reaches the cloud
 let pickToken = 0;
 
-function escapeHtml(text) {
-  return text.replace(/[&<>"]/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-  })[character]);
+export function renderWork() {
+  const section = document.querySelector('.WorkSection');
+
+  if (!section) {
+    return;
+  }
+
+  section.innerHTML = `
+    <div class="WorkStage" aria-hidden="true"></div>
+    <div class="WorkRail">
+      <h4 class="WorkHeading Label">Work &middot; scroll</h4>
+      <ol class="JobList">${JOBS.map(jobItem).join('')}</ol>
+    </div>`;
+
+  section.querySelectorAll('.Job').forEach((item) => {
+    const index = Number(item.dataset.job);
+
+    // the rows still have triggers while the route is hidden
+    const cross = () => routed && select(index);
+
+    item.querySelector('.JobToggle')
+      .addEventListener('click', () => select(selected === index ? null : index));
+
+    ScrollTrigger.create({
+      trigger: item,
+      start: 'top 60%',
+      end: 'bottom 60%',
+      onEnter: cross,
+      onEnterBack: cross,
+    });
+  });
 }
 
 function jobItem(job, index) {
@@ -32,65 +71,48 @@ function jobItem(job, index) {
     </li>`;
 }
 
-function paint(open) {
+function paint() {
   document.querySelectorAll('.Job').forEach((item) => {
-    const isOpen = Number(item.dataset.job) === open;
+    const isOpen = Number(item.dataset.job) === selected;
     item.classList.toggle('is-open', isOpen);
     item.querySelector('.JobToggle').setAttribute('aria-expanded', String(isOpen));
     item.querySelector('.JobDetail').hidden = !isOpen;
   });
 }
 
-async function pick(index) {
-  // pressing the open job closes it
-  const next = selected === index ? null : index;
-  selected = next;
-  paint(next);
+// the rows have no layout while the route is hidden, so the triggers wait
+export function enterWork() {
+  routed = true;
+  ScrollTrigger.refresh();
+}
+
+export function leaveWork() {
+  routed = false;
+
+  if (selected !== null) {
+    select(null);
+  }
+}
+
+async function select(index) {
+  if (index === selected) {
+    return;
+  }
+
+  selected = index;
+  paint();
 
   const token = ++pickToken;
 
-  if (next === null) {
+  if (index === null) {
     clearMark();
     return;
   }
 
-  const job = JOBS[next];
+  const job = JOBS[index];
   const mark = await buildMark(job.mark, job.accent);
 
-  if (!mark || token !== pickToken) {
-    return;
+  if (mark && token === pickToken) {
+    showMark(mark.texture, mark.framing);
   }
-
-  showMark(mark.texture, mark.framing);
-}
-
-// drops the selection and puts the ship back without going through pick
-export function leaveWork() {
-  if (selected === null) {
-    return;
-  }
-
-  selected = null;
-  pickToken++;
-  paint(null);
-  clearMark();
-}
-
-export function renderWork() {
-  const section = document.querySelector('.WorkSection');
-
-  if (!section) {
-    return;
-  }
-
-  section.innerHTML = `
-    <div class="WorkContent">
-      <h4 class="WorkHeading">Work</h4>
-      <ol class="JobList">${JOBS.map(jobItem).join('')}</ol>
-    </div>
-    <div class="WorkStage" aria-hidden="true"></div>`;
-
-  section.querySelectorAll('.JobToggle').forEach((button) => {
-    button.addEventListener('click', () => pick(Number(button.closest('.Job').dataset.job)));
-  });
 }
