@@ -2,7 +2,7 @@ import { gsap } from "gsap";
 import SplitType from 'split-type'
 import Lenis from "lenis";
 import { rig, setRigTarget } from "./cameraRig.js";
-import { holdShipThenStart, startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
+import { startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { enterWork, leaveWork } from "./work.js";
 import { enterProjects, leaveProjects } from "./projects.js";
@@ -74,6 +74,7 @@ function initLoadingAnim() {
 export function initAnim() {
     simReady = true;
     InitCameraBobbing();
+    startAttractorMode();
     applyRoute(pendingRoute || 'home');
 }
 
@@ -139,6 +140,8 @@ function applyRoute(route) {
     }
 
     cameraBobbingAnim?.resume();
+    // a project picture left the cloud on a target with the clock stopped
+    resumeCycle();
     setRigTarget(document.querySelector('.LandingStage'));
 
     if (landingIntroPlayed) {
@@ -152,7 +155,7 @@ function applyRoute(route) {
 
 // pulls the camera out from inside the model until it fills its box
 function playLandingIntro() {
-    const introTl = gsap.timeline({ onComplete: holdShipThenStart });
+    const introTl = gsap.timeline();
 
     introTl.fromTo(introTextFirstLine, { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.75, ease: "power1"});
     introTl.fromTo(rig, { fit: INSIDE_MODEL_FIT }, { fit: 1.0, duration: 1.75 });

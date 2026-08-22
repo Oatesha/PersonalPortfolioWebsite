@@ -1,69 +1,46 @@
 import { gsap } from "gsap";
-import { getSimMaterial, getRenderMaterial, shipFraming, setCloudTarget, getShipTarget } from "./main.js";
+import { getSimMaterial, getRenderMaterial, setCloudTarget } from "./main.js";
 import { rig } from "./cameraRig.js";
 
 // order and indices must match the constants in glsl/cloudSim.js
-export const ATTRACTORS = [
-  { name: "Thomas" },
-  { name: "Lorenz" },
-  { name: "Rössler" },
-  { name: "Halvorsen" },
-  { name: "Dadras" },
-];
+const ATTRACTORS = ["Thomas", "Lorenz", "Rössler", "Halvorsen", "Dadras"];
 
-// not attractors. both are state 0, pulling to a target texture
-const SHIP = -1;
+// not an attractor. state 0, pulling to a target texture
 const MARK = -2;
 
 const PROJECT_ATTRACTOR = 4;
 
-const SHIP_HOLD = 10;
+// the shape the landing settles on once the intro is done
+const START_ATTRACTOR = 1;
 const CYCLE_INTERVAL = 10;
 // the burst is a half sine over this, so the cloud is most scattered halfway
 const MORPH_DURATION = 2.4;
 
-// the ship's own framing comes from the GLB via shipFraming
 const ATTRACTOR_RADIUS = 4;
 
-let current = SHIP;
+// nothing is applied until the sim is up
+let current = -1;
+// what to fall back to when a mark is dropped
+let beforeMark = START_ATTRACTOR;
 // set by the first press of a shape button. the cycle never takes over again
 let manual = false;
 let cycling = false;
 let morphTween = null;
 let cycleCall = null;
-let holdCall = null;
 const buttons = [];
 
-const SHAPES = [{ name: "Ship", index: SHIP }].concat(
-  ATTRACTORS.map((attractor, index) => ({ name: attractor.name, index })),
-);
-
-export function currentShape() {
-  return current;
-}
-
-// called when the landing intro finishes
-export function holdShipThenStart() {
-  if (manual || current !== SHIP) {
-    return;
-  }
-  holdCall?.kill();
-  holdCall = gsap.delayedCall(SHIP_HOLD, () => advance());
-}
-
-// scrolling past the landing is the other way to end the ship's hold
+// the landing settles here as soon as the sim is up
 export function startAttractorMode() {
-  if (manual || current !== SHIP) {
+  if (manual) {
     return;
   }
-  holdCall?.kill();
-  advance();
+  cycling = true;
+  applyShape(START_ATTRACTOR);
 }
 
 export function selectShape(index) {
   manual = true;
   cycling = false;
-  holdCall?.kill();
   cycleCall?.kill();
   cycleCall = null;
   applyShape(index);
@@ -72,13 +49,12 @@ export function selectShape(index) {
 // pins the cloud for the project panel and stops the clock
 export function lockAttractor(index = PROJECT_ATTRACTOR) {
   cycling = false;
-  holdCall?.kill();
   cycleCall?.kill();
   cycleCall = null;
   applyShape(index);
 }
 
-// hands the cloud to a company mark and stops the clock
+// hands the cloud to a mark and stops the clock
 export function showMark(texture, framing) {
   const sim = getSimMaterial();
   const rend = getRenderMaterial();
@@ -88,16 +64,16 @@ export function showMark(texture, framing) {
   }
 
   cycling = false;
-  holdCall?.kill();
   cycleCall?.kill();
   cycleCall = null;
   morphTween?.kill();
 
+  beforeMark = current === MARK ? beforeMark : current;
   current = MARK;
   syncButtons();
 
   sim.uniforms.state.value = 0;
-  // a mark's colours are the company's, so they are left as sampled
+  // a mark's colours are its own, so they are left as sampled
   setCloudTarget(texture, { graded: 0 });
   tweenFraming(rend, framing.radius, framing.extent, 0);
 }
@@ -107,27 +83,12 @@ export function clearMark() {
     return;
   }
 
-  current = SHIP;
-  applyShapeToShip();
-}
-
-function applyShapeToShip() {
-  const sim = getSimMaterial();
-  const rend = getRenderMaterial();
-
-  if (!sim || !rend) {
-    return;
-  }
-
-  syncButtons();
-  sim.uniforms.state.value = 0;
-  setCloudTarget(getShipTarget());
-  tweenFraming(rend, shipFraming.radius, shipFraming.extent, 0);
+  applyShape(beforeMark);
 }
 
 export function resumeCycle() {
   // someone who picked a shape by hand keeps it
-  if (manual || current === SHIP) {
+  if (manual) {
     return;
   }
   cycling = true;
@@ -136,7 +97,7 @@ export function resumeCycle() {
 
 function advance() {
   cycling = true;
-  const next = current === SHIP ? 0 : (current + 1) % ATTRACTORS.length;
+  const next = (current + 1) % ATTRACTORS.length;
   applyShape(next);
 }
 
@@ -149,22 +110,12 @@ function applyShape(index) {
     return;
   }
 
-  const fromShip = current === SHIP;
+  // a mark is a target texture, not a field, so there is nothing to morph from
+  const fromTarget = current === MARK;
   current = index;
   syncButtons();
 
-  if (index === SHIP) {
-    sim.uniforms.state.value = 0;
-    // the target may still be a mark, coming back from the work section
-    setCloudTarget(getShipTarget());
-    tweenFraming(rend, shipFraming.radius, shipFraming.extent, 0);
-    scheduleNext();
-    return;
-  }
-
-  // from the ship there is no previous field, so both ends are the same
-  // attractor and the burst does the work
-  sim.uniforms.attractorFrom.value = fromShip
+  sim.uniforms.attractorFrom.value = fromTarget
     ? index
     : (sim.uniforms.morph.value < 0.5
         ? sim.uniforms.attractorFrom.value
@@ -204,7 +155,7 @@ function scheduleNext() {
 
 function syncButtons() {
   buttons.forEach((button, position) => {
-    button.setAttribute("aria-pressed", String(SHAPES[position].index === current));
+    button.setAttribute("aria-pressed", String(position === current));
   });
 }
 
@@ -214,13 +165,13 @@ export function initShapeSwitch() {
     return;
   }
 
-  SHAPES.forEach((shape) => {
+  ATTRACTORS.forEach((name, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "attractor-option";
-    button.textContent = shape.name;
-    button.setAttribute("aria-pressed", String(shape.index === current));
-    button.addEventListener("click", () => selectShape(shape.index));
+    button.textContent = name;
+    button.setAttribute("aria-pressed", String(index === current));
+    button.addEventListener("click", () => selectShape(index));
     list.appendChild(button);
     buttons.push(button);
   });

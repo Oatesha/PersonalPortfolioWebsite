@@ -52,9 +52,6 @@ function main () {
 // a 3x display costs 9x the fragment work for no visible gain
 const MAX_PIXEL_RATIO = 2;
 
-// kept aside because rig.radius and rig.extent tween away to the attractor's
-export const shipFraming = { radius: 1, extent: { x: 1, y: 1, z: 1 } };
-
 // 60Hz frames of sim per real frame
 const SIM_SPEED = 2.4;
 
@@ -141,9 +138,6 @@ function loadModelGeometries() {
           rig.extent.x = halfExtent.x / radius;
           rig.extent.y = halfExtent.y / radius;
           rig.extent.z = halfExtent.z / radius;
-
-          shipFraming.radius = rig.radius;
-          shipFraming.extent = { x: rig.extent.x, y: rig.extent.y, z: rig.extent.z };
         }
       });
 
@@ -173,7 +167,6 @@ let particleGeometry = null;
 let particleTotal = 0;
 let defaultParticleCount = 250000;
 
-let shipTargetTexture = null;
 // which slot the cloud reads. the other is free to write
 let activeTargetSlot = 0;
 let activeTargetTexture = null;
@@ -345,7 +338,6 @@ async function initFBO() {
   renderer.setRenderTarget(null);
 
 
-  shipTargetTexture = initialShipDataTex;
   activeTargetTexture = initialShipDataTex;
 
   renderMaterial = new THREE.ShaderMaterial({
@@ -484,10 +476,6 @@ export function setParticleCount(count) {
 
 export function getRenderMaterial() {
   return renderMaterial;
-}
-
-export function getShipTarget() {
-  return shipTargetTexture;
 }
 
 // writes a target into the slot the cloud is not reading, then crossfades onto
