@@ -23,6 +23,9 @@ let particleProjectActive = false;
 let simReady = false;
 let pendingRoute = null;
 let landingIntroPlayed = false;
+// the loader and the intro belong to the page load. anything after the first
+// route is a navigation and goes straight to the content
+let routeLanded = false;
 
 // fractions of the distance at which the model fills its box. negatives sit
 // inside the cloud
@@ -39,8 +42,8 @@ new SplitType(".LoadingText");
 new SplitType(".MyName")
 
 const landingText = document.querySelector('.LandingPageSection');
-const introTextFirstLine = landingText.querySelector('h4');
-const introTextThirdLine = landingText.querySelector('p');
+const introTextFirstLine = landingText.querySelector('.MyName');
+const introTextThirdLine = landingText.querySelector('.LandingRole');
 const loadingAnimationTimeline = gsap.timeline();
 
 // behind an async import chain, so load may already have fired
@@ -101,7 +104,10 @@ function retireLoader() {
 }
 
 function applyRoute(route) {
-    if (landingIntroPlayed) {
+    const opening = !routeLanded;
+    routeLanded = true;
+
+    if (landingIntroPlayed || !opening) {
         retireLoader();
     }
 
@@ -144,7 +150,8 @@ function applyRoute(route) {
     resumeCycle();
     setRigTarget(document.querySelector('.LandingStage'));
 
-    if (landingIntroPlayed) {
+    // the intro is the page opening on the landing, not a trip back to it
+    if (landingIntroPlayed || !opening) {
         gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
         return;
     }

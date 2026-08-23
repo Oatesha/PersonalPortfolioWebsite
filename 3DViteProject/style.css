@@ -28,8 +28,9 @@
   --surface: #cbcac7;
   --surface-sunk: #c2c1bd;
   --ink: #1a1917;
-  --ink-muted: #52504b;
-  --ink-faint: #837f78;
+  --ink-muted: #4c4a45;
+  --ink-faint: #6f6b64;
+  --ink-dim: #9a968f;
   --line: color-mix(in srgb, var(--ink) 14%, transparent);
   --line-strong: color-mix(in srgb, var(--ink) 30%, transparent);
   --signal: #b2470d;
@@ -56,8 +57,9 @@
   --surface: #181715;
   --surface-sunk: #131211;
   --ink: #f0eeea;
-  --ink-muted: #a09b93;
-  --ink-faint: #6f6a63;
+  --ink-muted: #b0a9a0;
+  --ink-faint: #7d766e;
+  --ink-dim: #57524c;
   --line: color-mix(in srgb, var(--ink) 16%, transparent);
   --line-strong: color-mix(in srgb, var(--ink) 34%, transparent);
   --signal: #ff8f4a;
@@ -167,10 +169,23 @@ a:hover {
   text-decoration-color: var(--signal);
 }
 
-.Label {
+/* the one small-caps step */
+.Label,
+.NavLink,
+.attractor-option,
+.viewer-control,
+.ProjectRepo,
+.WorkHeading,
+.JobRole,
+.JobDates,
+.SiteFooter p,
+.SiteFooter a {
   font-size: 0.6875rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.Label {
   color: var(--ink-faint);
 }
 
@@ -228,9 +243,6 @@ a:hover {
   position: relative;
   color: var(--ink-faint);
   text-decoration: none;
-  font-size: 0.6875rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   padding: 0.25rem 0;
   transition: color 0.25s;
 }
@@ -366,9 +378,6 @@ a:hover {
   align-items: center;
   gap: 0.75rem;
   color: var(--ink-muted);
-  font-size: 0.6875rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -457,57 +466,101 @@ a:hover {
 .LandingPageSection {
   min-height: 100vh;
   position: relative;
-  padding: 7rem 5vw 5rem;
   box-sizing: border-box;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: 4vw;
-  align-items: center;
 }
 
-.LandingPageContent {
-  position: relative;
+/* the box the cloud is framed into. no painted content of its own, the
+   fullscreen canvas draws into its rect */
+.LandingStage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(46rem, 44vw);
+  height: min(34rem, 66vh);
+}
+
+@media (width < 900px) {
+  .LandingStage {
+    width: 76vw;
+    height: 38vh;
+  }
+}
+
+.LandingLead {
+  position: absolute;
+  left: 5vw;
+  top: 9.75rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1.5rem;
-  text-wrap: wrap;
-  min-width: 0;
+  gap: 1.125rem;
+  max-width: min(32rem, 62vw);
 }
 
 .MyName {
   font-family: 'Epilogue-Black';
-  font-size: clamp(2.5rem, 1rem + 5vw, 5.5rem);
+  font-size: clamp(2.75rem, 1rem + 5.4vw, 5.5rem);
   letter-spacing: -0.045em;
-  line-height: 0.95;
+  line-height: 0.92;
 }
 
 .LandingRole {
-  max-width: 30ch;
+  font-size: clamp(0.8125rem, 0.75rem + 0.3vw, 0.9375rem);
+  max-width: 24ch;
 }
 
-.LandingViewer {
-  position: relative;
-  height: 100%;
-  min-height: 0;
+.LandingBand {
+  position: absolute;
+  left: 5vw;
+  right: 5vw;
+  bottom: 4.25rem;
   display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3rem;
 }
 
-/* the box the particle model is framed into. no painted content of its own,
-   the fullscreen canvas draws into its rect */
-.LandingStage {
-  position: relative;
-  flex: 1;
-  min-height: 45vh;
-}
+@media (width < 900px) {
+  .LandingLead {
+    top: 6.75rem;
+    max-width: none;
+  }
 
-.LandingInstruments {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1rem;
+  .LandingBand {
+    bottom: 1.875rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .attractor-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 0.75rem;
+  }
+
+  .attractor-option {
+    min-height: 2.5rem;
+  }
+
+  .ViewerControls {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .viewer-control {
+    min-height: 2.5rem;
+  }
+
+  .viewer-control input[type="range"] {
+    width: auto;
+    flex-grow: 1;
+  }
+
+  .viewer-control-name {
+    width: 4.25rem;
+  }
 }
 
 .attractor-switch {
@@ -516,15 +569,13 @@ a:hover {
   gap: 0.35rem 1.5rem;
 }
 
+/* font-family not font, the shorthand would undo the shared label size */
 .attractor-option {
   appearance: none;
   background: none;
   border: 0;
   padding: 0.2rem 0;
-  font: inherit;
-  font-size: 0.6875rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: inherit;
   color: var(--ink-faint);
   cursor: pointer;
   position: relative;
@@ -555,24 +606,6 @@ a:hover {
 
 .attractor-option[aria-pressed="true"]::after {
   transform: scaleX(1);
-}
-
-@media (width < 900px) {
-  .LandingPageSection {
-    grid-template-columns: none;
-    grid-template-rows: auto minmax(0, 1fr);
-    align-items: start;
-    gap: 2.5rem;
-    padding: 6rem 5vw 4rem;
-  }
-
-  .LandingViewer {
-    gap: 1.25rem;
-  }
-
-  .LandingStage {
-    min-height: 34vh;
-  }
 }
 
 .ProjectSection {
@@ -880,20 +913,8 @@ a:hover {
 
 .SiteFooter p,
 .SiteFooter a {
-  font-size: 0.6875rem;
   letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--ink-faint);
-}
-
-.SiteFooterCredit {
-  max-width: 46ch;
-  text-align: right;
-}
-
-.SiteFooterCredit a {
-  color: var(--ink-muted);
-  text-decoration-color: var(--line-strong);
 }
 
 .BackgroundAnimation {
