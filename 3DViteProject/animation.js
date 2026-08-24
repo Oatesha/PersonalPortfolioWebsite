@@ -1,11 +1,12 @@
 import { gsap } from "gsap";
-import SplitType from 'split-type'
+import SplitType from 'split-type';
 import Lenis from "lenis";
-import { rig, setRigTarget } from "./cameraRig.js";
-import { startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { rig, setRigTarget, startAttractorMode, lockAttractor, resumeCycle, mobile } from "./cloud.js";
 import { enterWork, leaveWork, enterProjects, leaveProjects } from "./sections.js";
-import { mobile } from "./main.js";
+
+// the page's timelines: the loader intro, the landing intro, the camera bob,
+// the background blob, and what a route does to the cloud and the rig
 
 // on gsap's ticker so everything shares one clock
 export const lenis = new Lenis({ autoRaf: false });
@@ -38,7 +39,7 @@ const circle2 = document.querySelector('#circleTwo');
 const circle3 = document.querySelector('#circleThree');
 
 new SplitType(".LoadingText");
-new SplitType(".MyName")
+new SplitType(".MyName");
 
 const landingText = document.querySelector('.LandingPageSection');
 const introTextFirstLine = landingText.querySelector('.MyName');
@@ -63,19 +64,14 @@ function initLoadingAnim() {
     });
     loadingAnimationTimeline.to(".LoadingText", {
         autoAlpha: 1,
-    }, "<")
+    }, "<");
 
-    const backgroundBlobTimeline = gsap.timeline({
-        repeat: -1,
-        yoyo: true,
-        repeatDelay: 2,
-    });
-    InitBackgroundBlobAnimationTimeline(backgroundBlobTimeline);
+    initBlobDrift();
 }
 
 export function initAnim() {
     simReady = true;
-    InitCameraBobbing();
+    initCameraBobbing();
     startAttractorMode();
     applyRoute(pendingRoute || 'home');
 }
@@ -190,7 +186,41 @@ function scrollDownSmoothly() {
     userInput.forEach((type) => window.addEventListener(type, stop, { passive: true }));
 }
 
-function InitBackgroundBlobAnimationTimeline(timeline) {
+// the blob behind the page follows the cursor and drifts on its own
+
+const backgroundAnim = document.querySelector(".BackgroundAnimation");
+const tweenX = gsap.quickTo(backgroundAnim, "left", { duration: 0.4, ease: "power3" });
+const tweenY = gsap.quickTo(backgroundAnim, "top", { duration: 0.4, ease: "power3" });
+
+let pointerX = window.innerWidth / 2;
+let pointerY = window.innerHeight / 2;
+let scrollLeft = 0;
+let scrollTop = 0;
+
+document.addEventListener('pointermove', (event) => {
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    moveBackgroundAnim();
+});
+
+window.addEventListener('scroll', () => {
+    scrollLeft = window.scrollX;
+    scrollTop = window.scrollY;
+    moveBackgroundAnim();
+});
+
+function moveBackgroundAnim() {
+    tweenX(pointerX + scrollLeft);
+    tweenY(pointerY + scrollTop);
+}
+
+function initBlobDrift() {
+    const timeline = gsap.timeline({
+        repeat: -1,
+        yoyo: true,
+        repeatDelay: 2,
+    });
+
     timeline.to(circle1, {
         duration: 4,
         y: "-=5vh",
@@ -236,12 +266,12 @@ function InitBackgroundBlobAnimationTimeline(timeline) {
         scale: 1.5,
         zIndex: 2,
         ease: "none",
-    })
+    });
     timeline.to(circle1, {
         duration: 3,
         y: "+=15vh",
         ease: "none",
-    }, "<")
+    }, "<");
 }
 
 // seek to the bob's zero. a plain pause leaves the camera off centre
@@ -254,7 +284,7 @@ function frameParticleProject() {
     gsap.to(rig, { fit: 1.0, duration: 1.0, overwrite: "auto" });
 }
 
-function InitCameraBobbing() {
+function initCameraBobbing() {
     cameraBobbingAnim = gsap.timeline({ paused: true, repeat: -1, yoyo: true });
     // absolute not relative. a "+=" tween captures its start value once
     cameraBobbingAnim.to(rig, { bobY: BOB_AMPLITUDE, duration: 3, ease: "sine.inOut" });

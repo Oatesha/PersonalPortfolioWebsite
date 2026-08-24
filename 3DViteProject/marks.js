@@ -1,13 +1,9 @@
 import * as THREE from 'three';
-import { simVert } from './glsl/common.js';
-import { markSampleFrag } from './glsl/markSample.js';
+import { simVert, markSampleFrag } from './shaders.js';
 
-// turns a picture into a particle target. it rasterises to an alpha mask, then
-// one gpu pass samples that mask into a position texture the sim can march
-// towards, carrying the picture's own colours with it
+// turns a picture into a particle target: rasterise to an alpha mask, then one
+// gpu pass samples the mask into a position texture the sim can march towards
 
-// about a texel per device pixel at the size the stage draws, so the detail
-// ceiling. measure walks it once per url and caches
 const MASK_SIDE = 1024;
 
 // the framing radius a mark is fitted to. same as the attractors
@@ -24,7 +20,7 @@ let next = 0;
 
 const masks = new Map();
 
-export function initMarkTargets(sharedRenderer, textureSide) {
+export function initMarks(sharedRenderer, textureSide) {
   renderer = sharedRenderer;
   side = textureSide;
 
@@ -154,8 +150,8 @@ async function rasterise(url) {
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
   texture.generateMipmaps = false;
-  // measure works in the canvas's own coordinates, top row first, and the
-  // sampler flips to the world's y itself
+  // measure works in canvas coordinates, top row first, and the sampler flips
+  // to the world's y itself
   texture.flipY = false;
   texture.needsUpdate = true;
 
@@ -164,8 +160,7 @@ async function rasterise(url) {
   return mask;
 }
 
-// as many cells as there are particles, in the shape of the picture, so the
-// cells come out square
+// as many cells as there are particles, in the shape of the picture
 function lattice(aspect) {
   const total = side * side;
   const columns = Math.max(1, Math.floor(Math.sqrt(total * aspect)));
