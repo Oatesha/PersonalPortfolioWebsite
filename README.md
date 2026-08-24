@@ -1,35 +1,28 @@
 # Personal portfolio
 
-A portfolio site built around two independent GPU particle simulations, written with Three.js, GSAP and Vite.
+My portfolio site built around a particle simulation, written with Three.js, GSAP and Vite.
 
 Live: [personalportfoliowebsite-zi3.pages.dev](https://personalportfoliowebsite-zi3.pages.dev/)
 
 ## What it does
 
-**A million-particle model.** A GLB is sampled into a million surface points, which are stored in a floating point texture and stepped entirely on the GPU. Nothing is read back to the CPU: positions live in a texture that is ping-ponged between two render targets, and each particle's vertex attribute is only the texel it reads from.
+Particle simulation.** Particle positions are ping-ponged between two render targets with the particles previous position at the previous frames render target and it's new position written to the current target. Colour is packed into the alpha channel.
 
-**Five strange attractors.** The cloud holds the ship for ten seconds, then comes apart into Thomas, Lorenz, Rössler, Halvorsen and Dadras in turn, or whichever you pick from the buttons under the tagline. Each attractor is measured offline and normalised in the shader to a common centre, radius and step size, so switching between them never moves the camera and every one drifts at the same rate. Colour follows particle speed through the field.
+**Five chaos attractors.** The particles cycle through Thomas, Rössler, Halvorsen and Dadras chaos attractors every ten seconds.
 
-**Project screenshots drawn as particles.** Each screenshot is a second million-particle system on its own renderer: every particle carries one pixel of the image and holds position with an under-damped spring, so the cursor pushes the picture around and it settles back. Switching projects releases the springs, scatters the image, and hands over the colours while there is nothing legible on screen.
-
-**Framing that follows the DOM.** The canvas is fixed and fullscreen, but the model is framed inside a layout box: `setViewOffset` is run backwards, fitting the frustum to the target element and then widening it out to the viewport. Camera distances are fractions of the distance at which the model exactly fills its box, so the composition holds at any window shape without a single hardcoded z.
-
-**One clock.** Smooth scrolling, tweening and both render passes run inside a single `gsap.ticker` callback, and the simulation advances in 60 Hz-equivalent steps, so it behaves the same on a 60 Hz laptop and a 144 Hz monitor.
-
-**Controls.** Particle size and count are adjustable at the top of the page. The starting count is chosen from the GPU tier; the ceiling is 1,048,576 per system.
+**Project screenshots drawn with particles.** A picture is rasterised to an alpha mask, one GPU pass lays a grid over it and maps each particle to a pixels cell resulting in a second target texture the particles can  crossfade into.
 
 ## Layout
 
 ```
 3DViteProject/
-  main.js             both renderers, the GLB sampling, the ship simulation, the frame loop
-  imageParticles.js   the screenshot simulation
-  cameraRig.js        framing the model inside a DOM element
-  animation.js        scroll timelines, the loading intro, camera distance
-  attractors.js       what the cloud is, and the cycle between shapes
-  menu.js             project panels and the screenshot canvas handover
-  viewerControls.js   size and count sliders
-  glsl/               simulation and draw shaders for both systems
+  main.js       entry
+  cloud.js      renderer, GLB loader, the sim, the camera rig, attractors
+  marks.js      picture to particle target
+  page.js       routes, nav, theme, particle config sliders
+  sections.js   project and job contents
+  animation.js
+  shaders.js
 ```
 
 ## Running it
@@ -40,9 +33,9 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:5173>. `npm run build` produces the static bundle.
+Then open <http://localhost:5173>
 
-Requires a WebGL2 context with float render targets. On mobile the simulation runs at a lower resolution and the screenshots fall back to plain images.
+Requires a WebGL2 context with float render targets. On a phone the simulation runs at a lower resolution and the projects section shows plain screenshots.
 
 ## Credits
 
