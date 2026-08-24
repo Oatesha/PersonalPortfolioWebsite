@@ -4,8 +4,7 @@ import Lenis from "lenis";
 import { rig, setRigTarget } from "./cameraRig.js";
 import { startAttractorMode, lockAttractor, resumeCycle } from "./attractors.js";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { enterWork, leaveWork } from "./work.js";
-import { enterProjects, leaveProjects } from "./projects.js";
+import { enterWork, leaveWork, enterProjects, leaveProjects } from "./sections.js";
 import { mobile } from "./main.js";
 
 // on gsap's ticker so everything shares one clock

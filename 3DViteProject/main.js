@@ -9,10 +9,9 @@ import { cloudSimFrag } from './glsl/cloudSim.js';
 import { initAnim } from './animation.js';
 import { rig, initRig, setRigTarget, updateCameraFraming } from './cameraRig.js';
 import { initRouter, renderNav } from './router.js';
-import { renderWork } from './work.js';
+import { initProjects, renderWork } from './sections.js';
 import { initMarkTargets } from './markTargets.js';
 import { initTheme, applyCloudPalette } from './theme.js';
-import { initProjects } from './projects.js';
 import { initShapeSwitch } from './attractors.js';
 import { initViewerControls } from './viewerControls.js';
 
