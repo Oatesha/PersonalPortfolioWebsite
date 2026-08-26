@@ -47,6 +47,10 @@ export function initRouter() {
   navigate(landing.name, { push: false });
 }
 
+export function hasRoute(name) {
+  return ROUTES.some((route) => route.name === name);
+}
+
 function routeForPath(pathname) {
   const clean = pathname.replace(/\/+$/, '') || '/';
   return ROUTES.find((route) => route.path === clean) || DEFAULT_ROUTE;

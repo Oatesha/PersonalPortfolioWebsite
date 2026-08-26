@@ -1,17 +1,14 @@
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { buildMark } from './marks.js';
-import { showMark, clearMark, lockAttractor, mobile } from './cloud.js';
-import { animateParticlesIn, animateParticlesOut } from './animation.js';
+import { rig, setRigTarget, showMark, clearMark, lockAttractor, resumeCycle, mobile } from './cloud.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// the two routed sections. both hold one selection and hand the cloud the
-// picture that goes with it
+// the two routed sections, each holding one selection
 
-// shot is what the cloud becomes while a project is selected. null means the
-// cloud itself is that project's picture. shotMobile is the phone fallback,
-// where the cloud stays a backdrop and the stage holds the image instead
+// shot is what the cloud becomes while a project is selected, null where the
+// cloud itself is the picture. shotMobile is the phone fallback
 const PROJECTS = [
   {
     title: "Minecraftle",
@@ -47,11 +44,11 @@ const PROJECTS = [
   },
 ];
 
-// the one project the cloud itself stands in for, so nothing is drawn on the stage
+// the project the cloud itself stands in for
 const MODEL_PROJECT = PROJECTS.findIndex((project) => project.shot === null);
 
-// mark is rasterised into a particle target so it wants bold solid shapes and
-// no hairlines. accent paints those particles when the mark is a flat silhouette
+// mark is rasterised into a particle target, so it wants bold solid shapes and
+// no hairlines. accent paints a flat silhouette
 const JOBS = [
   {
     company: "Placeholder One",
@@ -119,7 +116,7 @@ let selectedProject = 0;
 let corners = [];
 let stage = null;
 let shot = null;
-// the corners have no cloud to hand a picture to until the route is on screen
+// no cloud to hand a picture to until the route is on screen
 let projectsRouted = false;
 
 export function initProjects() {
@@ -129,8 +126,7 @@ export function initProjects() {
     return;
   }
 
-  // a phone keeps the screenshots. a desktop shows them in the cloud, so the
-  // stage is an empty box the rig frames into
+  // on a desktop the stage is an empty box the rig frames into
   section.innerHTML = `
     <div class="ProjectStage" aria-hidden="true">${mobile ? '<img class="ProjectShot" alt="">' : ''}</div>
     <ul class="ProjectCorners">${PROJECTS.map(corner).join('')}</ul>`;
@@ -163,8 +159,7 @@ function paintProjects() {
 
   stage.classList.toggle('is-model', selectedProject === MODEL_PROJECT);
 
-  // the cloud project has no screenshot, and the class above hides the stage on
-  // it, so the last one stays loaded underneath
+  // the cloud project has no screenshot, so the last one stays loaded underneath
   if (shot && shotMobile) {
     shot.src = shotMobile;
   }
@@ -174,6 +169,44 @@ function paintProjects() {
     item.classList.toggle('is-active', active);
     item.querySelector('.ProjectPick').setAttribute('aria-pressed', String(active));
   });
+}
+
+// how this section frames the cloud. owned here so this module and animation.js
+// do not import each other
+const FIT_DURATION = 1.0;
+
+// a negative fit puts the camera inside the cloud, leaving it a backdrop
+const BACKDROP_FIT = -0.15;
+
+let particleProjectActive = false;
+
+export function isParticleProjectActive() {
+  return particleProjectActive;
+}
+
+// the cloud comes forward and fills the centre box
+export function frameParticleProject() {
+  setRigTarget(document.querySelector('.ProjectStage'));
+  gsap.to(rig, { fit: 1.0, duration: FIT_DURATION, overwrite: 'auto' });
+}
+
+// the cloud drops behind the whole section instead
+export function frameProjectBackdrop(duration = FIT_DURATION) {
+  setRigTarget(document.querySelector('.ProjectSection'));
+  gsap.to(rig, { fit: BACKDROP_FIT, duration, overwrite: 'auto' });
+}
+
+// on a phone the cloud only comes forward for the cloud project
+function animateParticlesIn() {
+  particleProjectActive = true;
+  frameParticleProject();
+  lockAttractor();
+}
+
+function animateParticlesOut() {
+  particleProjectActive = false;
+  frameProjectBackdrop(0.5);
+  resumeCycle();
 }
 
 // the picture is the cloud itself, so it only runs while the route is on screen
@@ -208,8 +241,7 @@ function showProject() {
 
   const isModel = selectedProject === MODEL_PROJECT;
 
-  // on a phone the screenshot is the panel, so the cloud stays a backdrop
-  // behind it and only comes forward for the cloud project
+  // on a phone the screenshot is the panel, so the cloud stays behind it
   if (mobile) {
     if (isModel) {
       animateParticlesIn();
@@ -229,9 +261,8 @@ function showProject() {
   showPicture(PROJECTS[selectedProject].shot);
 }
 
-// a dated rail against a pinned cloud. the role crossing the line owns the
-// mark. built but not routed to until the jobs and marks are real, at which
-// point the route goes back into page.js
+// a dated rail against a pinned cloud, the role crossing the line owns the mark.
+// not routed to until the jobs and marks are real
 
 let selectedJob = null;
 let workRouted = false;

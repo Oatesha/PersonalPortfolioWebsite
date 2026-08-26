@@ -2,13 +2,19 @@ import { gsap } from "gsap";
 import SplitType from 'split-type';
 import Lenis from "lenis";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { rig, setRigTarget, startAttractorMode, lockAttractor, resumeCycle, mobile } from "./cloud.js";
-import { enterWork, leaveWork, enterProjects, leaveProjects } from "./sections.js";
+import { rig, setRigTarget, startAttractorMode, resumeCycle, mobile } from "./cloud.js";
+import {
+    enterWork,
+    leaveWork,
+    enterProjects,
+    leaveProjects,
+    frameParticleProject,
+    frameProjectBackdrop,
+    isParticleProjectActive,
+} from "./sections.js";
 
-// the page's timelines: the loader intro, the landing intro, the camera bob,
-// the background blob, and what a route does to the cloud and the rig
+// the page's timelines, and what a route does to the cloud and the rig
 
-// on gsap's ticker so everything shares one clock
 export const lenis = new Lenis({ autoRaf: false });
 
 gsap.ticker.add((time) => lenis.raf(time * 1000));
@@ -17,44 +23,46 @@ lenis.on("scroll", ScrollTrigger.update);
 gsap.ticker.lagSmoothing(0);
 
 let cameraBobbingAnim;
-let particleProjectActive = false;
 
 // a route can land before the sim exists
 let simReady = false;
 let pendingRoute = null;
 let landingIntroPlayed = false;
-// the loader and the intro belong to the page load. anything after the first
-// route is a navigation and goes straight to the content
+// the first route is the page load, anything after is a navigation
 let routeLanded = false;
 
-// fractions of the distance at which the model fills its box. negatives sit
-// inside the cloud
+// fractions of the distance at which the model fills its box
 const INSIDE_MODEL_FIT = -0.07;
-const THROUGH_MODEL_FIT = -0.15;
 const BOB_AMPLITUDE = 2;
 const ROUTE_FIT_DURATION = 1.0;
 
-const circle1 = document.querySelector('#circleOne');
-const circle2 = document.querySelector('#circleTwo');
-const circle3 = document.querySelector('#circleThree');
-
-new SplitType(".LoadingText");
-new SplitType(".MyName");
-
-const landingText = document.querySelector('.LandingPageSection');
-const introTextFirstLine = landingText.querySelector('.MyName');
-const introTextThirdLine = landingText.querySelector('.LandingRole');
 const loadingAnimationTimeline = gsap.timeline();
 
-// behind an async import chain, so load may already have fired
-if (document.readyState === "complete") {
-    initLoadingAnim();
-} else {
-    window.addEventListener("load", initLoadingAnim, { once: true });
+let introTextFirstLine = null;
+let introTextThirdLine = null;
+
+// runs from main.js in boot order
+export function initIntro() {
+    new SplitType(".LoadingText");
+    new SplitType(".MyName");
+
+    const landingText = document.querySelector('.LandingPageSection');
+    introTextFirstLine = landingText.querySelector('.MyName');
+    introTextThirdLine = landingText.querySelector('.LandingRole');
+
+    initBlobFollow();
+
+    // behind an async import chain, so load may already have fired
+    if (document.readyState === "complete") {
+        initLoadingAnim();
+    } else {
+        window.addEventListener("load", initLoadingAnim, { once: true });
+    }
 }
 
 function initLoadingAnim() {
-    loadingAnimationTimeline.to(".char", {
+    // the landing name is split into .char too
+    loadingAnimationTimeline.to(".LoadingText .char", {
         y: 0,
         stagger: 0.1,
         delay: 0.2,
@@ -118,14 +126,12 @@ function applyRoute(route) {
     if (route === 'projects') {
         settleBobbing();
 
-        // a desktop frames the cloud into the stage throughout. a phone holds
-        // screenshots there and only hands the box over for the cloud project
-        if (!mobile || particleProjectActive) {
+        // a phone holds screenshots in the stage, except for the cloud project
+        if (!mobile || isParticleProjectActive()) {
             frameParticleProject();
         } else {
             startAttractorMode();
-            setRigTarget(document.querySelector('.ProjectSection'));
-            gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
+            frameProjectBackdrop();
         }
 
         enterProjects();
@@ -145,7 +151,7 @@ function applyRoute(route) {
     resumeCycle();
     setRigTarget(document.querySelector('.LandingStage'));
 
-    // the intro is the page opening on the landing, not a trip back to it
+    // the intro belongs to the page opening on the landing
     if (landingIntroPlayed || !opening) {
         gsap.to(rig, { fit: 1.0, duration: ROUTE_FIT_DURATION, overwrite: "auto" });
         return;
@@ -188,26 +194,39 @@ function scrollDownSmoothly() {
 
 // the blob behind the page follows the cursor and drifts on its own
 
-const backgroundAnim = document.querySelector(".BackgroundAnimation");
-const tweenX = gsap.quickTo(backgroundAnim, "left", { duration: 0.4, ease: "power3" });
-const tweenY = gsap.quickTo(backgroundAnim, "top", { duration: 0.4, ease: "power3" });
+let backgroundAnim = null;
+let tweenX = null;
+let tweenY = null;
 
 let pointerX = window.innerWidth / 2;
 let pointerY = window.innerHeight / 2;
 let scrollLeft = 0;
 let scrollTop = 0;
 
-document.addEventListener('pointermove', (event) => {
-    pointerX = event.clientX;
-    pointerY = event.clientY;
-    moveBackgroundAnim();
-});
+function initBlobFollow() {
+    backgroundAnim = document.querySelector(".BackgroundAnimation");
 
-window.addEventListener('scroll', () => {
-    scrollLeft = window.scrollX;
-    scrollTop = window.scrollY;
+    if (!backgroundAnim) {
+        return;
+    }
+
+    tweenX = gsap.quickTo(backgroundAnim, "left", { duration: 0.4, ease: "power3" });
+    tweenY = gsap.quickTo(backgroundAnim, "top", { duration: 0.4, ease: "power3" });
+
+    document.addEventListener('pointermove', (event) => {
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        moveBackgroundAnim();
+    });
+
+    window.addEventListener('scroll', () => {
+        scrollLeft = window.scrollX;
+        scrollTop = window.scrollY;
+        moveBackgroundAnim();
+    }, { passive: true });
+
     moveBackgroundAnim();
-});
+}
 
 function moveBackgroundAnim() {
     tweenX(pointerX + scrollLeft);
@@ -215,6 +234,10 @@ function moveBackgroundAnim() {
 }
 
 function initBlobDrift() {
+    const circle1 = document.querySelector('#circleOne');
+    const circle2 = document.querySelector('#circleTwo');
+    const circle3 = document.querySelector('#circleThree');
+
     const timeline = gsap.timeline({
         repeat: -1,
         yoyo: true,
@@ -274,34 +297,13 @@ function initBlobDrift() {
     }, "<");
 }
 
-// seek to the bob's zero. a plain pause leaves the camera off centre
+// seek to the bob's zero
 function settleBobbing() {
     cameraBobbingAnim?.pause(0);
 }
 
-function frameParticleProject() {
-    setRigTarget(document.querySelector('.ProjectStage'));
-    gsap.to(rig, { fit: 1.0, duration: 1.0, overwrite: "auto" });
-}
-
 function initCameraBobbing() {
-    cameraBobbingAnim = gsap.timeline({ paused: true, repeat: -1, yoyo: true });
-    // absolute not relative. a "+=" tween captures its start value once
+    cameraBobbingAnim = gsap.timeline({ repeat: -1, yoyo: true });
+    // a "+=" tween captures its start value once
     cameraBobbingAnim.to(rig, { bobY: BOB_AMPLITUDE, duration: 3, ease: "sine.inOut" });
-    cameraBobbingAnim.play();
-}
-
-// the phone stage holds a screenshot for every project but the cloud one, where
-// the cloud comes forward into the box instead
-export function animateParticlesIn() {
-    particleProjectActive = true;
-    frameParticleProject();
-    lockAttractor();
-}
-
-export function animateParticlesOut() {
-    particleProjectActive = false;
-    setRigTarget(document.querySelector('.ProjectSection'));
-    gsap.to(rig, { fit: THROUGH_MODEL_FIT, duration: 0.5, overwrite: "auto" });
-    resumeCycle();
 }
