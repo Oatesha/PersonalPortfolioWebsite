@@ -1,30 +1,31 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Harrison Oates.">
     <link rel="icon" type="image/svg+xml" href="/burger.svg" />
     <link rel="stylesheet" href="style.css">
     <title>Harrison Oates Personal Website</title>
-    <script src="main.js" type="module" defer></script>
+    <script src="main.js" type="module"></script>
   </head>
   <body>
 
-    <div class="NavRoot"></div>
+    <header class="NavRoot"></header>
 
     <div class="scroll-container">
       <section class="LoaderLogoSection" data-route="home">
-        <h1 class="LoadingText">
+        <!-- decorative -->
+        <div class="LoadingText" aria-hidden="true">
           HO
-        </h1>
+        </div>
       </section>
 
       <section class="LandingPageSection" data-route="home">
         <div class="LandingStage" aria-hidden="true"></div>
 
         <div class="LandingLead">
-          <h4 class="MyName">Harrison Oates</h4>
+          <h1 class="MyName">Harrison Oates</h1>
           <p class="LandingRole">Embedded software performance engineer at DroneShield.</p>
         </div>
 

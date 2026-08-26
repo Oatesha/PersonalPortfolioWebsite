@@ -448,6 +448,7 @@ a:hover {
   visibility: hidden;
   font-family: "Epilogue-Black";
   font-size: clamp(4rem, 2rem + 9vw, 9rem);
+  line-height: 1.05;
   letter-spacing: -0.04em;
   position: absolute;
   left: 50%;
@@ -458,9 +459,9 @@ a:hover {
   z-index: 1;
 }
 
+/* its own height, the font size is clamped against the viewport */
 .LoadingText .char {
-  transform: translateY(126px);
-  transition: transform;
+  transform: translateY(110%);
 }
 
 .LandingPageSection {
