@@ -3,6 +3,7 @@ import {
   invalidateRigRect,
   setCloudPalette,
   cloudReady,
+  cloudUnsupported,
   getParticleSteps,
   getDefaultParticleCount,
   getDefaultPointSize,
@@ -219,6 +220,19 @@ function readColour(styles, token) {
   ];
 }
 
+// a missing token reads as empty, and Number('') is 0
+function readNumber(styles, token) {
+  const raw = styles.getPropertyValue(token).trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const value = Number(raw);
+
+  return Number.isFinite(value) ? value : null;
+}
+
 function readPalette() {
   const styles = getComputedStyle(document.documentElement);
   const palette = {};
@@ -236,8 +250,16 @@ function readPalette() {
     }
   });
 
-  palette.gain = Number(styles.getPropertyValue('--particle-gain'));
-  palette.desaturate = Number(styles.getPropertyValue('--particle-desaturate'));
+  [
+    ['gain', '--particle-gain'],
+    ['desaturate', '--particle-desaturate'],
+  ].forEach(([uniform, token]) => {
+    const value = readNumber(styles, token);
+
+    if (value !== null) {
+      palette[uniform] = value;
+    }
+  });
 
   return palette;
 }
@@ -277,6 +299,9 @@ function initTheme() {
 const SIZE_STEPS = [0.5, 1, 1.5, 2, 3, 4, 6, 8];
 
 const READY_POLL = 0.25;
+
+// twenty seconds of polling
+const READY_ATTEMPTS = 80;
 
 let sizeInput = null;
 let countInput = null;
@@ -353,11 +378,23 @@ function nearestIndex(stops, wanted) {
   return nearest;
 }
 
+// nothing to control, so the row goes
+function dropViewerControls() {
+  document.querySelector('.ViewerControls')?.remove();
+}
+
 // the count's stops depend on a texture sized behind the gpu tier probe, so
 // this slider cannot be built until the sim is up. polled off gsap's ticker
 // rather than setTimeout so it stops with the tab
+let readyAttempts = 0;
+
 function waitForSimulation() {
   if (!cloudReady()) {
+    if (cloudUnsupported() || ++readyAttempts > READY_ATTEMPTS) {
+      dropViewerControls();
+      return;
+    }
+
     gsap.delayedCall(READY_POLL, waitForSimulation);
     return;
   }
