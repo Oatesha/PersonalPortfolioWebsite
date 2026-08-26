@@ -65,10 +65,27 @@ let activeTargetTexture = null;
 let targetTween = null;
 
 let onCloudReady = null;
+let unsupported = false;
+
+// three only promotes ShaderMaterial to glsl 3 on webgl2, and the point shader
+// unpacks colour with bitwise ops
+function cloudSupported() {
+  return renderer.capabilities.isWebGL2
+    && renderer.capabilities.floatVertexTextures
+    && renderer.extensions.has('EXT_color_buffer_float');
+}
 
 export function initCloud(onReady) {
   onCloudReady = onReady;
   pointSize = getDefaultPointSize();
+
+  if (!cloudSupported()) {
+    console.warn('No WebGL2 float render targets here, the cloud will not run');
+    unsupported = true;
+    // the page still works, it just has no cloud in it
+    onCloudReady?.();
+    return;
+  }
 
   renderer.setPixelRatio(currentPixelRatio());
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -91,6 +108,10 @@ export function initCloud(onReady) {
 
 export function cloudReady() {
   return Boolean(renderMaterial && particleTotal);
+}
+
+export function cloudUnsupported() {
+  return unsupported;
 }
 
 function currentPixelRatio() {
@@ -192,10 +213,6 @@ function samplePositions(numSamples, mesh) {
 }
 
 async function initFBO() {
-  if (!renderer.capabilities.floatVertexTextures) {
-    console.warn('Browser does not support float vertex textures, particles will not render properly');
-  }
-
   let gputier = await getGPUTier();
   let w = mobile ? MOBILE_TEXTURE_SIDE : DESKTOP_TEXTURE_SIDE;
   let h = w;
