@@ -683,7 +683,13 @@ function advance() {
 
 function applyShape(index) {
   // the buttons exist from first paint. the sim does not
-  if (!simMaterial || !renderMaterial || index === current) {
+  if (!simMaterial || !renderMaterial) {
+    return;
+  }
+
+  // already there, but the cycle still wants arming
+  if (index === current) {
+    scheduleNext();
     return;
   }
 
