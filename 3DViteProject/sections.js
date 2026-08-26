@@ -87,10 +87,11 @@ const ESCAPES = {
   '<': '&lt;',
   '>': '&gt;',
   '"': '&quot;',
+  "'": '&#39;',
 };
 
 function escapeHtml(text) {
-  return text.replace(/[&<>"]/g, (character) => ESCAPES[character]);
+  return text.replace(/[&<>"']/g, (character) => ESCAPES[character]);
 }
 
 // building a mark is async, so only the newest pick reaches the cloud
