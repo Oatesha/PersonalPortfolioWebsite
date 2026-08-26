@@ -238,12 +238,6 @@ a:hover {
   text-decoration: none;
 }
 
-.NavRight {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
-
 .NavPanel {
   display: flex;
   align-items: center;
@@ -309,65 +303,16 @@ a:hover {
   background: linear-gradient(to right, currentColor 50%, transparent 50%);
 }
 
-.NavToggle {
-  appearance: none;
-  background: none;
-  border: 0;
-  padding: 0.5rem 0;
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  width: 1.5rem;
-  cursor: pointer;
-}
-
-.NavBar {
-  display: block;
-  height: 1px;
-  width: 100%;
-  background: var(--ink);
-  transition: transform 0.25s, opacity 0.25s;
-}
-
-.NavToggle[aria-expanded="true"] .NavBar:nth-child(1) {
-  transform: translateY(6px) rotate(45deg);
-}
-
-.NavToggle[aria-expanded="true"] .NavBar:nth-child(2) {
-  opacity: 0;
-}
-
-.NavToggle[aria-expanded="true"] .NavBar:nth-child(3) {
-  transform: translateY(-6px) rotate(-45deg);
-}
-
+/* the same one row on a phone, only tighter. the links are short enough to fit
+   beside the mark, so nothing collapses behind a menu */
 @media (width < 800px) {
   .NavRoot {
     padding: 1.25rem 5vw;
-    align-items: flex-start;
-  }
-
-  .NavRight {
-    flex-direction: column;
-    align-items: flex-end;
     gap: 0.75rem;
-  }
-
-  .NavToggle {
-    display: flex;
   }
 
   .NavPanel {
-    display: none;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.75rem;
-    padding: 0.5rem 0 0.25rem;
-  }
-
-  .NavPanel.is-open {
-    display: flex;
+    gap: 0.875rem;
   }
 }
 

@@ -26,9 +26,6 @@ const DEFAULT_ROUTE = ROUTES[0];
 let active = null;
 const routeListeners = [];
 
-let toggle = null;
-let panel = null;
-
 export function initPage() {
   initTheme();
   renderNav();
@@ -104,16 +101,6 @@ function bindRouteLinks(scope, onNavigate) {
   });
 }
 
-function setOpen(open) {
-  toggle.setAttribute('aria-expanded', String(open));
-  panel.classList.toggle('is-open', open);
-}
-
-function isOpen() {
-  return toggle.getAttribute('aria-expanded') === 'true';
-}
-
-// the links only collapse behind the hamburger on a phone
 function renderNav() {
   const root = document.querySelector('.NavRoot');
 
@@ -123,28 +110,16 @@ function renderNav() {
 
   root.innerHTML = `
     <a class="NavMark" href="/" data-nav-route="home" aria-label="Harrison Oates, home">HO.</a>
-    <div class="NavRight">
-      <button class="NavToggle" type="button" aria-expanded="false" aria-controls="nav-panel" aria-label="Menu">
-        <span class="NavBar"></span>
-        <span class="NavBar"></span>
-        <span class="NavBar"></span>
+    <nav class="NavPanel" aria-label="Sections">
+      ${ROUTES.map(
+        (route) => `<a class="NavLink" href="${route.path}" data-nav-route="${route.name}">${route.label}</a>`,
+      ).join('')}
+      <button class="ThemeToggle" type="button" aria-pressed="false">
+        <span class="ThemeDisc" aria-hidden="true"></span>
       </button>
-      <nav class="NavPanel" id="nav-panel" aria-label="Sections">
-        ${ROUTES.map(
-          (route) => `<a class="NavLink" href="${route.path}" data-nav-route="${route.name}">${route.label}</a>`,
-        ).join('')}
-        <button class="ThemeToggle" type="button" aria-pressed="false">
-          <span class="ThemeDisc" aria-hidden="true"></span>
-        </button>
-      </nav>
-    </div>`;
+    </nav>`;
 
-  toggle = root.querySelector('.NavToggle');
-  panel = root.querySelector('.NavPanel');
-
-  toggle.addEventListener('click', () => setOpen(!isOpen()));
-
-  bindRouteLinks(root, () => setOpen(false));
+  bindRouteLinks(root);
 
   const themeButton = root.querySelector('.ThemeToggle');
   themeButton.addEventListener('click', () => setTheme(activeTheme === 'dark' ? 'light' : 'dark'));
@@ -152,20 +127,6 @@ function renderNav() {
   onTheme((name) => {
     themeButton.setAttribute('aria-pressed', String(name === 'dark'));
     themeButton.setAttribute('aria-label', name === 'dark' ? 'Switch to light' : 'Switch to dark');
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && isOpen()) {
-      setOpen(false);
-      toggle.focus();
-    }
-  });
-
-  // a press anywhere else closes it, but not the press that opened it
-  document.addEventListener('pointerdown', (event) => {
-    if (isOpen() && !root.contains(event.target)) {
-      setOpen(false);
-    }
   });
 
   onRoute((route) => {
