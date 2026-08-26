@@ -54,6 +54,9 @@ let pointerActive = false;
 
 let renderMaterial, simMaterial, modelMesh, renderTargetA, renderTargetB, fbo;
 
+// a fetch, so it runs alongside the model load
+let tierProbe = null;
+
 let particleGeometry = null;
 let particleTotal = 0;
 let defaultParticleCount = 250000;
@@ -103,6 +106,7 @@ export function initCloud(onReady) {
   window.addEventListener('blur', releasePointer);
   window.addEventListener('resize', requestResize, false);
 
+  tierProbe = getGPUTier();
   loadModelGeometry();
 }
 
@@ -188,38 +192,44 @@ function defaultCountForTier(tier, total) {
   return 250000;
 }
 
-// one point per particle spread over the model's surface by area
-function samplePositions(numSamples, mesh) {
-  let positions = [];
+// scratch for the whole run, a vector per sample is a million-odd objects to collect
+const sampleScratch = {
+  position: new THREE.Vector3(),
+  normal: new THREE.Vector3(),
+  colour: new THREE.Vector3(),
+};
+
+// spread over the surface by area
+function samplePositions(numSamples, mesh, out) {
   const sampler = new MeshSurfaceSampler(mesh).build();
+  const { position, normal, colour } = sampleScratch;
 
   for (let i = 0; i < numSamples; i++) {
-    let position = new THREE.Vector4();
-    let normals = new THREE.Vector3();
-    let colour = new THREE.Vector3();
-
-    sampler.sample(position, normals, colour);
+    sampler.sample(position, normal, colour);
 
     // colour packed into w so one RGBA texture carries both
-    let r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
-    let g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255));
-    let b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
+    const r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
+    const g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255));
+    const b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
 
-    let packedRGB = (r << 16) | (g << 8) | b;
-    position.w = packedRGB;
-    positions.push(position);
+    const index = i * 4;
+    out[index] = position.x;
+    out[index + 1] = position.y;
+    out[index + 2] = position.z;
+    out[index + 3] = (r << 16) | (g << 8) | b;
   }
-  return positions;
+
+  return out;
 }
 
 async function initFBO() {
-  let gputier = await getGPUTier();
-  let w = mobile ? MOBILE_TEXTURE_SIDE : DESKTOP_TEXTURE_SIDE;
-  let h = w;
+  const gputier = await tierProbe;
+  const w = mobile ? MOBILE_TEXTURE_SIDE : DESKTOP_TEXTURE_SIDE;
+  const h = w;
   defaultParticleCount = defaultCountForTier(gputier.tier, w * h);
 
   // scattered so the model assembles itself on load
-  let initPos = new Float32Array(w * h * 4);
+  const initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
     for (let j = 0; j < h; j++) {
       const index = (i + j * w) * 4;
@@ -236,17 +246,14 @@ async function initFBO() {
 
   const numInitialPositions = w * h;
 
-  let initialPositions = samplePositions(numInitialPositions, modelMesh);
-  let initialPositionsArray = new Float32Array(numInitialPositions * 4);
-  initialPositions.forEach((position, index) => {
-    initialPositionsArray[index * 4] = position.x;
-    initialPositionsArray[index * 4 + 1] = position.y;
-    initialPositionsArray[index * 4 + 2] = position.z;
-    initialPositionsArray[index * 4 + 3] = position.w;
-  });
+  const initialPositionsArray = samplePositions(
+    numInitialPositions,
+    modelMesh,
+    new Float32Array(numInitialPositions * 4),
+  );
 
-  let scatteredTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
-  let modelTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+  const scatteredTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
+  const modelTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
 
   // a DataTexture sits at version 0 until this is set, and three uploads nothing
   scatteredTex.minFilter = THREE.NearestFilter;
@@ -343,13 +350,14 @@ async function initFBO() {
   applyPalette();
 
   particleGeometry = new THREE.BufferGeometry();
-  let positions = new Float32Array((w * w) * 3);
-  let uvs = new Float32Array((w * w) * 2);
+  // two components: cloudPointVert reads position.xy and three declares
+  // position as a vec3 regardless
+  const positions = new Float32Array((w * h) * 2);
 
   // the count slider draws a prefix of this buffer, and a scene's sampler ties
   // texel index to position, so in texel order a prefix cuts a band out of the
   // picture rather than thinning it. shuffled once, any prefix is a fair sample
-  const order = new Uint32Array(w * w);
+  const order = new Uint32Array(w * h);
   for (let index = 0; index < order.length; index++) {
     order[index] = index;
   }
@@ -367,18 +375,21 @@ async function initFBO() {
     const i = texel % w;
     const j = (texel - i) / w;
 
-    positions[index * 3] = (i + 0.5) / w;
-    positions[index * 3 + 1] = (j + 0.5) / w;
-    positions[index * 3 + 2] = 0.0;
-    uvs[index * 2] = (i + 0.5) / w;
-    uvs[index * 2 + 1] = (j + 0.5) / w;
+    positions[index * 2] = (i + 0.5) / w;
+    positions[index * 2 + 1] = (j + 0.5) / h;
   }
 
-  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  particleGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  particleTotal = w * w;
+  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 2));
 
-  simScene.add(new THREE.Points(particleGeometry, renderMaterial));
+  // the attribute holds texel coordinates, and getZ off a two component buffer
+  // is NaN
+  particleGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 16);
+
+  particleTotal = w * h;
+
+  const points = new THREE.Points(particleGeometry, renderMaterial);
+  points.frustumCulled = false;
+  simScene.add(points);
 
   // on gsap's ticker so everything shares one clock
   gsap.ticker.add(render);
