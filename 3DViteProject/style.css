@@ -76,8 +76,9 @@
   --particle-tint: #ffcfae;
 }
 
+/* clip, so the root does not become a scroll container on both axes */
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* the field colour belongs to body and nothing else. with no background on html
@@ -92,12 +93,23 @@ body {
   align-items: center;
   background-color: var(--surface);
   color: var(--ink);
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
+/* a thin rail, so there is some sign the page scrolls */
 ::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 3px;
 }
 
 ::selection {
@@ -195,9 +207,10 @@ a:hover {
   display: none !important;
 }
 
+/* the scrollbar gutter sits inside 100vw */
 .scroll-container {
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   perspective: 1px;
 }
 
