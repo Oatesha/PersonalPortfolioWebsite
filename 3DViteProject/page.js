@@ -279,8 +279,12 @@ function setTheme(name) {
   themeListeners.forEach((listener) => listener(activeTheme));
 }
 
+function preferredTheme() {
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : DEFAULT_THEME;
+}
+
 function initTheme() {
-  let stored = null;
+  let stored;
 
   try {
     stored = localStorage.getItem(STORAGE_KEY);
@@ -288,7 +292,7 @@ function initTheme() {
     stored = null;
   }
 
-  setTheme(stored || DEFAULT_THEME);
+  setTheme(stored || preferredTheme());
 }
 
 // both sliders run over indices into a list of stops, so every position is a
