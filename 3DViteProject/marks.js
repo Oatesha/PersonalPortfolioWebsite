@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { simVert, markSampleFrag } from './shaders.js';
 
 // turns a picture into a particle target: rasterise to an alpha mask, then one
-// gpu pass samples the mask into a position texture the sim can march towards
+// gpu pass samples it into a position texture
 
 const MASK_SIDE = 1024;
 
-// the framing radius a mark is fitted to. same as the attractors
+// the framing radius a mark is fitted to, same as the attractors
 const MARK_RADIUS = 4;
 const MARK_DEPTH = 0.04;
 
@@ -181,8 +181,7 @@ async function rasterise(url) {
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
   texture.generateMipmaps = false;
-  // measure works in canvas coordinates, top row first, and the sampler flips
-  // to the world's y itself
+  // measure works in canvas coordinates, top row first, and the sampler flips y
   texture.flipY = false;
   texture.needsUpdate = true;
 
@@ -198,7 +197,7 @@ function lattice(aspect) {
   return new THREE.Vector2(columns, rows);
 }
 
-// resolves to the position texture and the framing the rig needs to fit it
+// resolves to the position texture and the framing the rig needs
 export async function buildMark(url, accent = '#ffffff') {
   if (!renderer || !material) {
     return null;

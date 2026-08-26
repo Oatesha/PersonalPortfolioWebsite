@@ -12,7 +12,7 @@ import {
 } from './cloud.js';
 import { enterRoute, lenis } from './animation.js';
 
-// the page around the cloud: routes, the nav bar, the theme and the two sliders
+// the page around the cloud
 
 // work is commented out until it has real marks and copy
 const ROUTES = [
@@ -35,9 +35,8 @@ export function initPage() {
   initViewerControls();
 }
 
-// routes over one document. the canvas, the webgl context and the sim are never
-// torn down. a route only picks which sections are in flow and which box the
-// rig frames the model into
+// routes over one document. the webgl context and the sim are never torn down,
+// a route only picks which sections are in flow and which box the rig frames
 export function initRouter() {
   window.addEventListener('popstate', (event) => {
     navigate(event.state?.route || routeForPath(location.pathname).name, { push: false });
@@ -114,7 +113,7 @@ function isOpen() {
   return toggle.getAttribute('aria-expanded') === 'true';
 }
 
-// the bar across the top. the links only collapse behind the hamburger on a phone
+// the links only collapse behind the hamburger on a phone
 function renderNav() {
   const root = document.querySelector('.NavRoot');
 
@@ -131,11 +130,9 @@ function renderNav() {
         <span class="NavBar"></span>
       </button>
       <nav class="NavPanel" id="nav-panel" aria-label="Sections">
-        ${ROUTES.filter((route) => route.nav !== false)
-          .map(
-            (route) => `<a class="NavLink" href="${route.path}" data-nav-route="${route.name}">${route.label}</a>`,
-          )
-          .join('')}
+        ${ROUTES.map(
+          (route) => `<a class="NavLink" href="${route.path}" data-nav-route="${route.name}">${route.label}</a>`,
+        ).join('')}
         <button class="ThemeToggle" type="button" aria-pressed="false">
           <span class="ThemeDisc" aria-hidden="true"></span>
         </button>
@@ -182,15 +179,14 @@ function renderNav() {
   });
 }
 
-// the palette lives in style.css. the cloud reads the same custom properties
-// through here, so a theme is one token swap
+// the cloud reads the same custom properties, so a theme is one token swap
 
 const THEMES = ['light', 'dark'];
 // namespaced because every project on localhost shares one origin
 const STORAGE_KEY = 'ho-theme';
 
-// the bare :root in style.css carries this same palette so the first paint does
-// not flash the other one
+// the bare :root in style.css carries this palette so the first paint does not
+// flash the other one
 const DEFAULT_THEME = 'dark';
 
 const themeListeners = [];
@@ -202,8 +198,7 @@ function onTheme(listener) {
   listener(activeTheme);
 }
 
-// channels as written. THREE.Color would linearise them and the shader writes
-// its result straight out
+// channels as written, THREE.Color would linearise them
 function readColour(styles, token) {
   const hex = styles.getPropertyValue(token).trim().replace('#', '');
 
@@ -295,11 +290,9 @@ function initTheme() {
   setTheme(stored || preferredTheme());
 }
 
-// both sliders run over indices into a list of stops, so every position is a
-// value you can land on
+// both sliders run over indices into a list of stops
 
-// gl_PointSize in pixels. coarse at the bottom where half a pixel is the
-// difference between a haze and a solid
+// gl_PointSize in pixels, coarse at the bottom where half a pixel shows
 const SIZE_STEPS = [0.5, 1, 1.5, 2, 3, 4, 6, 8];
 
 const READY_POLL = 0.25;
@@ -349,8 +342,7 @@ function reserveWidth(output, labels) {
   output.style.minWidth = `${widest}ch`;
 }
 
-// the stops are not painted onto the track. the index makes the thumb land on
-// one anyway and the datalist is filled in for screen readers
+// the index makes the thumb land on a stop, the datalist is for screen readers
 function buildSlider(input, listId, stops, format, startIndex) {
   input.min = 0;
   input.max = Math.max(0, stops.length - 1);
@@ -387,9 +379,8 @@ function dropViewerControls() {
   document.querySelector('.ViewerControls')?.remove();
 }
 
-// the count's stops depend on a texture sized behind the gpu tier probe, so
-// this slider cannot be built until the sim is up. polled off gsap's ticker
-// rather than setTimeout so it stops with the tab
+// the count's stops depend on the sim texture. polled off gsap's ticker so it
+// stops with the tab
 let readyAttempts = 0;
 
 function waitForSimulation() {
@@ -430,7 +421,7 @@ function initViewerControls() {
   sizeOutput = document.querySelector(`output[for="${sizeInput.id}"]`);
   countOutput = document.querySelector(`output[for="${countInput.id}"]`);
 
-  // size depends on nothing the sim has to resolve, so it is live from first paint
+  // size needs nothing from the sim, so it is live from first paint
   reserveWidth(
     sizeOutput,
     buildSlider(

@@ -81,9 +81,8 @@ html {
   overflow-x: clip;
 }
 
-/* the field colour belongs to body and nothing else. with no background on html
-   it propagates to the viewport and paints behind the canvas at z-index -1. put
-   one on html too and body's own background hides the cloud */
+/* the field colour belongs to body and nothing else. put one on html too and
+   body's own background hides the cloud */
 body {
   font-family: 'Epilogue-Bold';
   margin: 0;
@@ -201,8 +200,7 @@ a:hover {
   color: var(--ink-faint);
 }
 
-/* sections are flex and grid containers, so the attribute alone loses to their
-   own display */
+/* sections are flex and grid containers, so the attribute alone loses */
 [hidden] {
   display: none !important;
 }
@@ -483,8 +481,7 @@ a:hover {
   box-sizing: border-box;
 }
 
-/* the box the cloud is framed into. no painted content of its own, the
-   fullscreen canvas draws into its rect */
+/* the box the cloud is framed into, no painted content of its own */
 .LandingStage {
   position: absolute;
   left: 50%;
@@ -583,7 +580,7 @@ a:hover {
   gap: 0.35rem 1.5rem;
 }
 
-/* font-family not font, the shorthand would undo the shared label size */
+/* the font shorthand would undo the shared label size */
 .attractor-option {
   appearance: none;
   background: none;
@@ -628,8 +625,7 @@ a:hover {
   box-sizing: border-box;
 }
 
-/* a box in the middle, not the whole section, so the picture reads between
-   the corners rather than behind them */
+/* a box in the middle so the picture reads between the corners */
 .ProjectStage {
   position: absolute;
   left: 50%;
@@ -646,7 +642,7 @@ a:hover {
   object-fit: contain;
 }
 
-/* hidden not removed, the rig still frames into this box */
+/* hidden, the rig still frames into this box */
 .ProjectStage.is-model img {
   visibility: hidden;
 }
@@ -658,7 +654,7 @@ a:hover {
   }
 }
 
-/* two rows pushed apart: corners on a desktop, two up two down on a phone */
+/* corners on a desktop, two up two down on a phone */
 .ProjectCorners {
   position: absolute;
   inset: 8.5rem 5vw 4.5rem;

@@ -1,5 +1,5 @@
-// dave hoskins' hashes. the sine hash builds a pair of calls from one dot
-// product, so sampling a square with it lands every particle on a curve
+// dave hoskins' hashes. a sine hash builds a pair from one dot product, so
+// sampling a square with it lands every particle on a curve
 const glslRandom = /* glsl */`
 
   float random(vec2 st) {
@@ -57,19 +57,16 @@ export const cloudSimFrag = /* glsl */`
   // forward euler overshoots badly far from the attractor
   const float MAX_STEP = 0.35;
 
-  // nothing in these fields brings back a particle that lands well outside. set
   // above the largest real excursion, dadras at about 7.7
   const float CONTAIN_RADIUS = WORLD_RADIUS * 2.2;
   const float CONTAIN_PULL = 0.03;
 
   const float BURST_SPEED = 0.022;
 
-  // half angle of the cursor cone, so the dent is the same size on screen at
-  // any framing distance
+  // half angle of the cursor cone, so the dent holds its size on screen
   const float CURSOR_ANGLE = 0.146;
 
-  // a still target keeps the hole, so it is pushed less per frame than it is
-  // pulled back by
+  // a still target keeps the hole, so it is pushed less than it is pulled back by
   const float FIELD_PUSH = 0.25;
   const float TARGET_PUSH = 0.08;
 
@@ -78,8 +75,8 @@ export const cloudSimFrag = /* glsl */`
   // the step every attractor takes on average once normalised
   const float NOMINAL_STEP = 0.0035 * WORLD_RADIUS;
 
-  // measured by integrating each system offline. normalises all five to one
-  // centre, radius and step, so switching moves no camera
+  // measured by integrating each system offline, normalising all five to one
+  // centre, radius and step
   vec3 attractorCentre(int which) {
     if (which == LORENZ) return vec3(0.0, 0.0, 23.52);
     if (which == ROSSLER) return vec3(0.18, -0.89, 0.89);
@@ -88,7 +85,7 @@ export const cloudSimFrag = /* glsl */`
     return vec3(0.33, 0.33, 0.33);
   }
 
-  // 99th percentile distance from the centre, not the maximum
+  // 99th percentile distance from the centre
   float attractorRadius(int which) {
     if (which == LORENZ) return 27.74;
     if (which == ROSSLER) return 17.23;
@@ -135,8 +132,8 @@ export const cloudSimFrag = /* glsl */`
     return vec3(-b * x + sin(y), -b * y + sin(z), -b * z + sin(x));
   }
 
-  // one step in the normalised space positions are stored in. the field is
-  // evaluated in the attractor's own coordinates
+  // one step in the normalised space positions are stored in, evaluated in the
+  // attractor's own coordinates
   vec3 attractorStep(int which, vec3 pos) {
     float k = attractorRadius(which) / WORLD_RADIUS;
     vec3 native = attractorCentre(which) + pos * k;
@@ -152,7 +149,7 @@ export const cloudSimFrag = /* glsl */`
     return normalize(jitter + outward * 0.6);
   }
 
-  // capped rather than cut off short, so a particle arrives on its point
+  // capped, so a particle arrives on its point
   vec3 forceToTarget(vec3 currentPos, vec3 targetPos, float reach) {
     vec3 toHome = targetPos - currentPos;
     float away = length(toHome);
@@ -174,8 +171,7 @@ export const cloudSimFrag = /* glsl */`
       targetMix
     );
 
-    // the cursor is the camera ray through the pointer, split into distance
-    // along it and distance off it
+    // the cursor is the camera ray through the pointer
     vec3 fromCamera = pos - mouseOrigin;
     float alongRay = dot(fromCamera, mouseDir);
 
@@ -196,7 +192,7 @@ export const cloudSimFrag = /* glsl */`
 
     if (state == 1) {
       // swapped outright at the halfway point, where the burst peaks and there
-      // is no coherent shape left to be discontinuous in
+      // is no coherent shape left
       int running = morph < 0.5 ? attractorFrom : attractorTo;
       velocity = attractorStep(running, pos);
 
@@ -218,7 +214,7 @@ export const cloudSimFrag = /* glsl */`
       velocity = step / max(dtScale, 1e-3);
     }
 
-    // alpha carries speed, not colour
+    // alpha carries speed
     gl_FragColor = vec4(pos, length(velocity) / NOMINAL_STEP);
   }
 `;
@@ -230,8 +226,7 @@ export const cloudPointVert = /* glsl */`
   uniform sampler2D targetTexB;
   uniform float targetMix;
   uniform float pointSize;
-  // 1 where a slot's colours are the model's own and want grading to the page,
-  // 0 where they were picked
+  // 1 where a slot's colours want grading to the page, 0 where they were picked
   uniform float gradeA;
   uniform float gradeB;
 
@@ -249,7 +244,7 @@ export const cloudPointVert = /* glsl */`
   }
 
   void main() {
-    // position holds the sim texel this particle owns, not a place in the world
+    // position holds the sim texel this particle owns
     vec4 state = texture2D(posTex, position.xy);
 
     vBaseColour = mix(
@@ -297,8 +292,7 @@ void main() {
 }
 `;
 
-// each particle takes its own cell of a grid over the mark, and the hit is the
-// point state 0 marches it to
+// each particle takes its own cell of a grid over the mark
 export const markSampleFrag = /* glsl */`
 
   ${glslRandom}
@@ -348,8 +342,7 @@ export const markSampleFrag = /* glsl */`
       }
     }
 
-    // art with holes in it, and the few particles with no cell, fall back to
-    // rejection sampling
+    // art with holes, and the few particles with no cell, fall back to rejection
     for (int i = 0; i < MAX_TAPS; i++) {
       if (landed) {
         break;
@@ -368,8 +361,7 @@ export const markSampleFrag = /* glsl */`
       }
     }
 
-    // uv within the opaque box then out to the world box. the mask's y runs
-    // down the image and the world's runs up
+    // uv within the opaque box then out to the world box, flipping y
     vec2 local = (hit - maskMin) / max(maskMax - maskMin, vec2(1e-5));
     vec2 centred = local * 2.0 - 1.0;
 

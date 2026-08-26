@@ -6,16 +6,15 @@ import { getGPUTier } from 'detect-gpu';
 import { simVert, cloudSimFrag, cloudPointVert, cloudPointFrag } from './shaders.js';
 import { initMarks } from './marks.js';
 
-// the one cloud, drawn to a fixed fullscreen canvas. a project picture is a
-// target it marches to, not a second renderer
+// the one cloud, on a fixed fullscreen canvas. a project picture is a target it
+// marches to
 
 const MAX_PIXEL_RATIO = 2;
 
 // 60Hz frames of sim per real frame
 const SIM_SPEED = 2.4;
 
-// side of the sim texture, so the ceiling on particle count. every texel steps
-// every frame whether or not it is drawn
+// side of the sim texture, so the ceiling on particle count
 const DESKTOP_TEXTURE_SIDE = 1280;
 const MOBILE_TEXTURE_SIDE = 256;
 
@@ -62,7 +61,6 @@ let particleTotal = 0;
 let defaultParticleCount = 250000;
 let pointSize = 0;
 
-// which slot the cloud reads. the other is free to write
 let activeTargetSlot = 0;
 let activeTargetTexture = null;
 let targetTween = null;
@@ -122,8 +120,7 @@ function currentPixelRatio() {
   return Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
 }
 
-// gl_PointSize is in device pixels and the grid puts particles about one apart
-// on a retina display, so a 1x display has four times the cell to cover
+// gl_PointSize is in device pixels, so a 1x display has four times the cell to cover
 export function getDefaultPointSize() {
   return currentPixelRatio() >= 2 ? 1.0 : 1.5;
 }
@@ -139,7 +136,7 @@ function releasePointer() {
   pointerActive = false;
 }
 
-// onWindowResize reads layout, so coalesce bursts into one per frame
+// reads layout, so coalesce bursts into one per frame
 let resizePending = false;
 
 function requestResize() {
@@ -164,14 +161,14 @@ function loadModelGeometry() {
         modelMesh.geometry.center()
         modelMesh.geometry.scale(0.085, 0.085, 0.085);
 
-        // the sphere sets the scale the animations tween. the box gives the
-        // silhouette the rig frames against
+        // sphere sets the scale the animations tween, box gives the silhouette
+        // the rig frames against
         modelMesh.geometry.computeBoundingSphere();
         modelMesh.geometry.computeBoundingBox();
         const { radius } = modelMesh.geometry.boundingSphere;
         const halfExtent = modelMesh.geometry.boundingBox.getSize(new THREE.Vector3()).multiplyScalar(0.5);
         rig.radius = radius;
-        // mutated not replaced. tweens write to this object
+        // tweens hold this object, so write through it
         rig.extent.x = halfExtent.x / radius;
         rig.extent.y = halfExtent.y / radius;
         rig.extent.z = halfExtent.z / radius;
@@ -184,8 +181,7 @@ function loadModelGeometry() {
   });
 }
 
-// every particle drawn is a cell of the grid a scene is laid on, so short of
-// the total is holes in it
+// a scene lays one cell per particle, so short of the total is holes in it
 function defaultCountForTier(tier, total) {
   if (tier >= 2) return total;
   if (tier === 1) return 1000000;
@@ -311,8 +307,7 @@ async function initFBO() {
     stencilBuffer: false,
   });
 
-  // a target cannot be read and written in one pass, so state alternates
-  // between this pair every frame
+  // a target cannot be read and written in one pass
   renderTargetB = renderTargetA.clone();
 
   renderer.setRenderTarget(renderTargetA);
@@ -333,7 +328,7 @@ async function initFBO() {
       targetMix: { value: 0 },
       pointSize: { value: pointSize },
       colourMix: { value: 0.0 },
-      // filled in by applyPalette. only the type matters here
+      // filled in by applyPalette
       rampLow: { value: new THREE.Vector3() },
       rampMid: { value: new THREE.Vector3() },
       rampHigh: { value: new THREE.Vector3() },
@@ -354,9 +349,8 @@ async function initFBO() {
   // position as a vec3 regardless
   const positions = new Float32Array((w * h) * 2);
 
-  // the count slider draws a prefix of this buffer, and a scene's sampler ties
-  // texel index to position, so in texel order a prefix cuts a band out of the
-  // picture rather than thinning it. shuffled once, any prefix is a fair sample
+  // a scene's sampler ties texel index to position, so in texel order a prefix
+  // cuts a band out of the picture. shuffled once, any prefix is a fair sample
   const order = new Uint32Array(w * h);
   for (let index = 0; index < order.length; index++) {
     order[index] = index;
@@ -428,7 +422,7 @@ function render() {
   simMaterial.uniforms.mouseActive.value = pointerActive ? 1.0 : 0.0;
 }
 
-// the slider's stops clamped to what this device's texture can supply
+// clamped to what this device's texture can supply
 export function getParticleSteps() {
   const steps = PARTICLE_STEPS.filter((count) => count <= particleTotal);
   if (!steps.length || steps[steps.length - 1] < particleTotal * 0.9) {
@@ -441,8 +435,7 @@ export function getDefaultParticleCount() {
   return defaultParticleCount;
 }
 
-// draws a prefix of the particle buffer, which initFBO shuffled so any prefix
-// is spread evenly over the sim texture
+// draws a prefix of the buffer initFBO shuffled
 export function setParticleCount(count) {
   if (!particleGeometry) {
     return 0;
@@ -459,8 +452,8 @@ export function setPointSize(size) {
   }
 }
 
-// writes a target into the slot the cloud is not reading, then crossfades onto
-// it. graded 1 where the colours are the model's own and want the page palette
+// writes into the slot the cloud is not reading, then crossfades onto it.
+// graded 1 where the colours want the page palette
 function setCloudTarget(texture, { duration = TARGET_CROSSFADE, graded = 1 } = {}) {
   if (!simMaterial || !renderMaterial || !texture || texture === activeTargetTexture) {
     return;
@@ -484,8 +477,8 @@ function setCloudTarget(texture, { duration = TARGET_CROSSFADE, graded = 1 } = {
   });
 }
 
-// the palette lives in style.css and reaches the cloud through page.js. it can
-// land before there is a material to paint
+// lives in style.css, reaches here through page.js, can land before there is a
+// material to paint
 const palette = {};
 
 export function setCloudPalette(next) {
@@ -515,17 +508,15 @@ function applyPalette() {
 
 // frames the model inside a DOM element while the canvas stays fixed and
 // fullscreen. setViewOffset runs backwards: the base frustum is the target box
-// and the sub rect asked for is the viewport in box coordinates, so the frustum
-// widens outwards and the box stays where the DOM put it
+// and the sub rect asked for is the viewport in box coordinates
 
 export const rig = {
-  // element to centre the model in. null means the whole viewport
+  // null means the whole viewport
   target: null,
   radius: 1,
   // half extents as multiples of radius
   extent: { x: 1, y: 1, z: 1 },
-  // fraction of the fitted distance to sit at. below 1 moves in, negative
-  // passes through the model
+  // fraction of the fitted distance. negative passes through the model
   fit: 1,
   margin: 1.05,
   bobY: 0,
@@ -615,8 +606,7 @@ function targetRect() {
 }
 
 // distance at which a box of these half extents fits the frustum on both axes.
-// a box rather than a sphere because the model is flat, so the fit is against
-// the near face with the depth added back
+// the model is flat, so it fits as a box
 function fitDistance(radius, extent, margin) {
   const vFov = THREE.MathUtils.degToRad(camera.fov);
   const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
@@ -628,7 +618,7 @@ function fitDistance(radius, extent, margin) {
 function updateCameraFraming() {
   const rect = targetRect();
 
-  // fitDistance reads camera.aspect, so set it before working out the distance
+  // fitDistance reads camera.aspect
   camera.aspect = rect.width / rect.height;
 
   camera.position.set(0, rig.bobY, fitDistance(rig.radius, rig.extent, rig.margin) * rig.fit);
@@ -639,7 +629,7 @@ function updateCameraFraming() {
 // order and indices must match the constants in shaders.js
 const ATTRACTORS = ["Thomas", "Lorenz", "Rössler", "Halvorsen", "Dadras"];
 
-// not an attractor. state 0, pulling to a target texture
+// state 0, pulling to a target texture
 const MARK = -2;
 
 const PROJECT_ATTRACTOR = 4;
@@ -654,9 +644,8 @@ const ATTRACTOR_RADIUS = 4;
 
 // nothing is applied until the sim is up
 let current = -1;
-// what to fall back to when a mark is dropped
 let beforeMark = START_ATTRACTOR;
-// set by the first press of a shape button. the cycle never takes over again
+// first press of a shape button, the cycle never takes over again
 let manual = false;
 let cycling = false;
 let morphTween = null;
@@ -679,7 +668,7 @@ function selectShape(index) {
   applyShape(index);
 }
 
-// pins the cloud for the project panel and stops the clock
+// pins the cloud and stops the cycle
 export function lockAttractor(index = PROJECT_ATTRACTOR) {
   cycling = false;
   cycleCall?.kill();
@@ -687,7 +676,7 @@ export function lockAttractor(index = PROJECT_ATTRACTOR) {
   applyShape(index);
 }
 
-// hands the cloud to a mark and stops the clock
+// stops the cycle
 export function showMark(texture, framing) {
   if (!simMaterial || !renderMaterial) {
     return;
@@ -703,7 +692,7 @@ export function showMark(texture, framing) {
   syncButtons();
 
   simMaterial.uniforms.state.value = 0;
-  // a mark's colours are its own, so they are left as sampled
+  // a mark's colours are its own
   setCloudTarget(texture, { graded: 0 });
   tweenFraming(framing.radius, framing.extent, 0);
 }
@@ -742,7 +731,7 @@ function applyShape(index) {
     return;
   }
 
-  // a mark is a target texture, not a field, so there is nothing to morph from
+  // a mark is a texture, so there is nothing to morph from
   const fromTarget = current === MARK;
   current = index;
   syncButtons();
@@ -767,8 +756,7 @@ function applyShape(index) {
   scheduleNext();
 }
 
-// overwrite auto throughout so a press part way through a transition takes
-// these over rather than fighting the tween on them
+// overwrite auto so a press part way through a transition takes these over
 function tweenFraming(radius, extent, colourMix) {
   gsap.to(rig, { radius, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
   gsap.to(rig.extent, { ...extent, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
