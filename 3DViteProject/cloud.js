@@ -81,6 +81,9 @@ export function initCloud(onReady) {
   setRigTarget(document.querySelector('.LandingStage'));
 
   document.addEventListener('pointermove', onPointerMove);
+  // otherwise the dent freezes into the cloud
+  document.addEventListener('pointerleave', releasePointer);
+  window.addEventListener('blur', releasePointer);
   window.addEventListener('resize', requestResize, false);
 
   loadModelGeometry();
@@ -105,6 +108,10 @@ function onPointerMove(event) {
 
   pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
   pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}
+
+function releasePointer() {
+  pointerActive = false;
 }
 
 // onWindowResize reads layout, so coalesce bursts into one per frame
