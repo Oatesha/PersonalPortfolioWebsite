@@ -773,6 +773,56 @@ a:hover {
   }
 }
 
+.ProjectSection.is-phone {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 6rem 5vw 3rem;
+}
+
+.ProjectSection.is-phone .ProjectTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ProjectSection.is-phone .ProjectTab {
+  display: flex;
+  justify-content: center;
+}
+
+.ProjectSection.is-phone .ProjectPick {
+  min-height: 2.75rem;
+  justify-content: center;
+}
+
+.ProjectSection.is-phone .ProjectTab.is-active .ProjectName {
+  color: var(--ink);
+  border-bottom-color: var(--signal);
+}
+
+.ProjectSection.is-phone .ProjectStage {
+  position: static;
+  transform: none;
+  width: 100%;
+  height: auto;
+  flex: 1 1 0;
+  min-height: 11rem;
+}
+
+.ProjectSection.is-phone .ProjectDetail {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+.ProjectSection.is-phone .ProjectBlurb {
+  font-size: 0.8125rem;
+  max-width: none;
+}
+
 .WorkSection {
   min-height: 160vh;
   position: relative;

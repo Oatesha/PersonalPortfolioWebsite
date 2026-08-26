@@ -5,8 +5,6 @@ import { rig, setRigTarget, showMark, clearMark, lockAttractor, resumeCycle, mob
 
 gsap.registerPlugin(ScrollTrigger);
 
-// the two routed sections, each holding one selection
-
 // shot is what the cloud becomes while a project is selected, null where the
 // cloud itself is the picture. shotMobile is the phone fallback
 const PROJECTS = [
@@ -47,8 +45,7 @@ const PROJECTS = [
 // the project the cloud itself stands in for
 const MODEL_PROJECT = PROJECTS.findIndex((project) => project.shot === null);
 
-// mark is rasterised into a particle target, so it wants bold solid shapes and
-// no hairlines. accent paints a flat silhouette
+// mark is rasterised into a particle target it looks best with bold solid shapes
 const JOBS = [
   {
     company: "Placeholder One",
@@ -111,13 +108,15 @@ function dropPicture() {
   clearMark();
 }
 
-// every project sits in a corner at once. the centre stage holds one of them
+// every project is on screen at once and the stage in the middle holds one of them
 
 let selectedProject = 0;
-let corners = [];
+let picks = [];
 let stage = null;
 let shot = null;
-// no cloud to hand a picture to until the route is on screen
+// the phone layout has one detail panel the selection paints
+let blurb = null;
+let repo = null;
 let projectsRouted = false;
 
 export function initProjects() {
@@ -127,19 +126,46 @@ export function initProjects() {
     return;
   }
 
-  // on a desktop the stage is an empty box the rig frames into
-  section.innerHTML = `
-    <div class="ProjectStage" aria-hidden="true">${mobile ? '<img class="ProjectShot" alt="">' : ''}</div>
-    <ul class="ProjectCorners">${PROJECTS.map(corner).join('')}</ul>`;
+  // on a phone the names and picture are stacked vertically
+  section.classList.toggle('is-phone', mobile);
+  section.innerHTML = mobile ? phoneLayout() : cornerLayout();
 
   stage = section.querySelector('.ProjectStage');
   shot = section.querySelector('.ProjectShot');
-  corners = [...section.querySelectorAll('.ProjectCorner')];
-  corners.forEach((item, index) => {
+  blurb = mobile ? section.querySelector('.ProjectBlurb') : null;
+  repo = mobile ? section.querySelector('.ProjectRepo') : null;
+  picks = [...section.querySelectorAll('[data-project]')];
+  picks.forEach((item, index) => {
     item.querySelector('.ProjectPick').addEventListener('click', () => selectProject(index));
   });
 
   paintProjects();
+}
+
+// on a desktop the stage is an empty box the rig frames into
+function cornerLayout() {
+  return `
+    <div class="ProjectStage" aria-hidden="true"></div>
+    <ul class="ProjectCorners">${PROJECTS.map(corner).join('')}</ul>`;
+}
+
+function phoneLayout() {
+  return `
+    <ul class="ProjectTabs">${PROJECTS.map(tab).join('')}</ul>
+    <div class="ProjectStage" aria-hidden="true"><img class="ProjectShot" alt=""></div>
+    <div class="ProjectDetail">
+      <p class="ProjectBlurb"></p>
+      <a class="ProjectRepo Label" target="_blank" rel="noreferrer">Repository &#8599;</a>
+    </div>`;
+}
+
+function tab(project, index) {
+  return `
+    <li class="ProjectTab" data-project="${index}">
+      <button class="ProjectPick" type="button" aria-pressed="false">
+        <span class="ProjectName">${escapeHtml(project.title)}</span>
+      </button>
+    </li>`;
 }
 
 function corner(project, index) {
@@ -156,16 +182,21 @@ function corner(project, index) {
 }
 
 function paintProjects() {
-  const { shotMobile } = PROJECTS[selectedProject];
+  const project = PROJECTS[selectedProject];
 
   stage.classList.toggle('is-model', selectedProject === MODEL_PROJECT);
 
   // the cloud project has no screenshot, so the last one stays loaded underneath
-  if (shot && shotMobile) {
-    shot.src = shotMobile;
+  if (shot && project.shotMobile) {
+    shot.src = project.shotMobile;
   }
 
-  corners.forEach((item, index) => {
+  if (blurb) {
+    blurb.textContent = project.blurb;
+    repo.href = project.repo;
+  }
+
+  picks.forEach((item, index) => {
     const active = index === selectedProject;
     item.classList.toggle('is-active', active);
     item.querySelector('.ProjectPick').setAttribute('aria-pressed', String(active));
