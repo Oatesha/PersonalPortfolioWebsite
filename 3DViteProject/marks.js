@@ -18,6 +18,8 @@ let side = 0;
 let targets = [];
 let next = 0;
 
+// each mask holds a 1024 square canvas alive
+const MAX_MASKS = 4;
 const masks = new Map();
 
 export function initMarks(sharedRenderer, textureSide) {
@@ -44,9 +46,9 @@ export function initMarks(sharedRenderer, textureSide) {
   camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
   scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
 
-  // one per slot in the sim's pair, so writing the next mark never touches the
-  // one being crossfaded out of
-  targets = [createTarget(side), createTarget(side)];
+  // a crossfade reads two targets for its full 1.2s, so the next mark written
+  // needs a third
+  targets = [createTarget(side), createTarget(side), createTarget(side)];
 }
 
 function createTarget(textureSide) {
@@ -69,6 +71,8 @@ function loadImage(url) {
   });
 }
 
+// only the opaque bounding box and one point inside it are wanted, so each row
+// is walked in from both ends
 function measure(pixels, maskSide) {
   let minX = maskSide;
   let minY = maskSide;
@@ -76,27 +80,39 @@ function measure(pixels, maskSide) {
   let maxY = -1;
   let fallbackX = maskSide * 0.5;
   let fallbackY = maskSide * 0.5;
-  let opaque = 0;
+  let found = false;
 
   for (let y = 0; y < maskSide; y++) {
-    for (let x = 0; x < maskSide; x++) {
-      if (pixels[(y * maskSide + x) * 4 + 3] <= 127) {
-        continue;
-      }
+    const row = y * maskSide * 4;
 
-      opaque++;
-      if (opaque === 1) {
-        fallbackX = x;
-        fallbackY = y;
-      }
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
+    let left = 0;
+    while (left < maskSide && pixels[row + left * 4 + 3] <= 127) {
+      left++;
     }
+
+    // nothing opaque in this row
+    if (left === maskSide) {
+      continue;
+    }
+
+    let right = maskSide - 1;
+    while (pixels[row + right * 4 + 3] <= 127) {
+      right--;
+    }
+
+    if (!found) {
+      fallbackX = left;
+      fallbackY = y;
+      minY = y;
+      found = true;
+    }
+
+    if (left < minX) minX = left;
+    if (right > maxX) maxX = right;
+    maxY = y;
   }
 
-  if (opaque === 0) {
+  if (!found) {
     return null;
   }
 
@@ -107,14 +123,29 @@ function measure(pixels, maskSide) {
     fallback: new THREE.Vector2((fallbackX + 0.5) / maskSide, (fallbackY + 0.5) / maskSide),
     width: maxX - minX + 1,
     height: maxY - minY + 1,
-    coverage: opaque / ((maxX - minX + 1) * (maxY - minY + 1)),
   };
+}
+
+// least recently used out first
+function remember(url, mask) {
+  masks.set(url, mask);
+
+  while (masks.size > MAX_MASKS) {
+    const [oldestUrl, oldest] = masks.entries().next().value;
+    masks.delete(oldestUrl);
+    oldest.texture.dispose();
+  }
+
+  return mask;
 }
 
 async function rasterise(url) {
   const cached = masks.get(url);
 
   if (cached) {
+    // re-inserted as most recent
+    masks.delete(url);
+    masks.set(url, cached);
     return cached;
   }
 
@@ -155,9 +186,7 @@ async function rasterise(url) {
   texture.flipY = false;
   texture.needsUpdate = true;
 
-  const mask = { texture, ...measured };
-  masks.set(url, mask);
-  return mask;
+  return remember(url, { texture, ...measured });
 }
 
 // as many cells as there are particles, in the shape of the picture
