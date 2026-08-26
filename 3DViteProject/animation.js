@@ -210,8 +210,12 @@ function initBlobFollow() {
         return;
     }
 
-    tweenX = gsap.quickTo(backgroundAnim, "left", { duration: 0.4, ease: "power3" });
-    tweenY = gsap.quickTo(backgroundAnim, "top", { duration: 0.4, ease: "power3" });
+    // xPercent carries the centring, leaving x and y free to move the blob on
+    // the compositor
+    gsap.set(backgroundAnim, { xPercent: -50, yPercent: -50 });
+
+    tweenX = gsap.quickTo(backgroundAnim, "x", { duration: 0.4, ease: "power3" });
+    tweenY = gsap.quickTo(backgroundAnim, "y", { duration: 0.4, ease: "power3" });
 
     document.addEventListener('pointermove', (event) => {
         pointerX = event.clientX;
