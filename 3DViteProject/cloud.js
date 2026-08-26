@@ -531,9 +531,14 @@ export const rig = {
   bobY: 0,
 };
 
+// held in document coordinates so a scroll needs no new layout
 let cachedRect = null;
+let cachedFollowsScroll = false;
 let cachedTarget = null;
 let resizeObserver = null;
+
+// reused, targetRect is read every frame
+const rectOut = { left: 0, top: 0, width: 0, height: 0 };
 
 export function invalidateRigRect() {
   cachedRect = null;
@@ -548,15 +553,39 @@ export function setRigTarget(element) {
 }
 
 function initRig() {
-  // getBoundingClientRect forces layout and gsap writes transforms every frame
-  // during a project transition. only read it when something has changed
+  // getBoundingClientRect forces layout, so only read it when something changed
   resizeObserver = new ResizeObserver(invalidateRigRect);
   window.addEventListener('resize', invalidateRigRect);
-  window.addEventListener('scroll', invalidateRigRect, { passive: true });
 }
 
 function viewportRect() {
   return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+}
+
+function measureRect() {
+  cachedFollowsScroll = false;
+
+  if (!rig.target) {
+    cachedRect = viewportRect();
+    return;
+  }
+
+  const rect = rig.target.getBoundingClientRect();
+
+  // a hidden target gives a degenerate frustum. cached anyway, the observer
+  // fires when it gains a size
+  if (rect.width < 1 || rect.height < 1) {
+    cachedRect = viewportRect();
+    return;
+  }
+
+  cachedFollowsScroll = true;
+  cachedRect = {
+    left: rect.left + window.scrollX,
+    top: rect.top + window.scrollY,
+    width: rect.width,
+    height: rect.height,
+  };
 }
 
 function targetRect() {
@@ -573,24 +602,16 @@ function targetRect() {
     cachedRect = null;
   }
 
-  if (cachedRect) {
-    return cachedRect;
+  if (!cachedRect) {
+    measureRect();
   }
 
-  if (!rig.target) {
-    cachedRect = viewportRect();
-    return cachedRect;
-  }
+  rectOut.width = cachedRect.width;
+  rectOut.height = cachedRect.height;
+  rectOut.left = cachedFollowsScroll ? cachedRect.left - window.scrollX : cachedRect.left;
+  rectOut.top = cachedFollowsScroll ? cachedRect.top - window.scrollY : cachedRect.top;
 
-  const rect = rig.target.getBoundingClientRect();
-
-  // a hidden or not yet laid out target gives a degenerate frustum
-  if (rect.width < 1 || rect.height < 1) {
-    return viewportRect();
-  }
-
-  cachedRect = rect;
-  return cachedRect;
+  return rectOut;
 }
 
 // distance at which a box of these half extents fits the frustum on both axes.
