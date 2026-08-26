@@ -197,16 +197,16 @@ async function initFBO() {
   // scattered so the model assembles itself on load
   let initPos = new Float32Array(w * h * 4);
   for (let i = 0; i < w; i++) {
-    for (let j = 0; j < w; j++) {
-      let index = (i + j * w) * 4;
+    for (let j = 0; j < h; j++) {
+      const index = (i + j * w) * 4;
 
-      const distance = Math.sqrt((Math.random())) * 20.0;
+      const distance = Math.sqrt(Math.random()) * 20.0;
       const theta = THREE.MathUtils.randFloatSpread(360);
       const phi = THREE.MathUtils.randFloatSpread(360);
-      initPos[index] =  distance * Math.sin(theta) * Math.cos(phi)
-      initPos[index + 1] =  distance * Math.sin(theta) * Math.sin(phi);
-      initPos[index + 2] =  1.0 * Math.cos(theta);
-      initPos[index + 3] =  1.0;
+      initPos[index] = distance * Math.sin(theta) * Math.cos(phi);
+      initPos[index + 1] = distance * Math.sin(theta) * Math.sin(phi);
+      initPos[index + 2] = distance * Math.cos(theta);
+      initPos[index + 3] = 1.0;
     }
   }
 
@@ -223,6 +223,11 @@ async function initFBO() {
 
   let scatteredTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
   let modelTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
+
+  // a DataTexture sits at version 0 until this is set, and three uploads nothing
+  scatteredTex.minFilter = THREE.NearestFilter;
+  scatteredTex.magFilter = THREE.NearestFilter;
+  scatteredTex.needsUpdate = true;
 
   modelTex.minFilter = THREE.NearestFilter;
   modelTex.magFilter = THREE.NearestFilter;
