@@ -13,8 +13,8 @@ const PROJECTS = [
   {
     title: "Minecraftle",
     repo: "https://github.com/Oatesha/minecraftle",
-    shot: "/scenes/minecraftle.png",
-    shotMobile: "/MinecraftleMob.png",
+    shot: "/scenes/minecraftle.webp",
+    shotMobile: "/scenes/mobile/minecraftle.webp",
     blurb:
       "Minecraftle is a daily puzzle game where users have to guess the daily Minecraft recipe. The project scored 100% and achieved over 1,500,000 unique players as of January 2025",
   },
@@ -29,16 +29,16 @@ const PROJECTS = [
   {
     title: "QFIN",
     repo: "https://github.com/Oatesha/2022-Mean-Reversion-Buy-Hold",
-    shot: "/QFIN.png",
-    shotMobile: "/QFINMob.png",
+    shot: "/scenes/qfin.webp",
+    shotMobile: "/scenes/mobile/qfin.webp",
     blurb:
       "An algorithmic trading project where we investigated different methods to apply mean reversion to trading common S&P 500 stocks. The project also involved co-authoring a comprehensive report documenting the algorithm design process, key design choices, steps to achieve profitability, as well as recommendations for future iterations",
   },
   {
     title: "Vendetta",
     repo: "https://github.com/Oatesha/FPSGame",
-    shot: "/Vendetta.png",
-    shotMobile: "/VendettaMob.png",
+    shot: "/scenes/vendetta.webp",
+    shotMobile: "/scenes/mobile/vendetta.webp",
     blurb:
       "Vendetta is a networked FPS game developed in C# with Unity. It features a lobby system with Unity's relay service for peer-to-peer UDP player connections without the need for port forwarding and the game also utilizes object pooling and custom curve-based procedural animations",
   },
