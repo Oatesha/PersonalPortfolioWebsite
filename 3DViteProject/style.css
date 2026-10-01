@@ -6,8 +6,7 @@
 
 @font-face {
   font-family: 'Epilogue-Bold';
-  src: url('/fonts/Epilogue-Bold.woff2') format('woff2'),
-       url('/fonts/Epilogue-Bold.woff') format('woff');
+  src: url('/fonts/Epilogue-Bold.woff2') format('woff2');
   font-weight: 700;
   font-display: swap;
   font-style: normal;
@@ -15,47 +14,17 @@
 
 @font-face {
   font-family: 'Epilogue-Black';
-  src: url('/fonts/Epilogue-Black.woff2') format('woff2'),
-       url('/fonts/Epilogue-Black.woff') format('woff');
+  src: url('/fonts/Epilogue-Black.woff2') format('woff2');
   font-weight: 900;
   font-display: swap;
   font-style: normal;
 }
 
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --surface: #cbcac7;
-  --surface-sunk: #c2c1bd;
-  --ink: #1a1917;
-  --ink-muted: #4c4a45;
-  --ink-faint: #6f6b64;
-  --ink-dim: #9a968f;
-  --line: color-mix(in srgb, var(--ink) 14%, transparent);
-  --line-strong: color-mix(in srgb, var(--ink) 30%, transparent);
-  --signal: #b2470d;
-
-  --wash-one: #c1c0bb;
-  --wash-two: #b3b0aa;
-  --wash-three: #cdccc8;
-
-  /* the cloud's speed ramp, read as uniforms by theme.js */
-  --particle-low: #8f8c86;
-  --particle-mid: #c2551a;
-  --particle-high: #1a1917;
-  --particle-gain: 0.42;
-  --particle-desaturate: 0.92;
-  --particle-tint: #ffe2cd;
-}
-
-/* the default, on the bare :root as well as the attribute because theme.js
-   stamps the attribute from a module and there is a paint before it runs */
-:root,
-:root[data-theme="dark"] {
+/* the particle palettes are in cloud.js */
+:root {
   color-scheme: dark;
 
   --surface: #181715;
-  --surface-sunk: #131211;
   --ink: #f0eeea;
   --ink-muted: #b0a9a0;
   --ink-faint: #7d766e;
@@ -67,36 +36,42 @@
   --wash-one: #241f1b;
   --wash-two: #2c2622;
   --wash-three: #1b1815;
-
-  --particle-low: #4a2311;
-  --particle-mid: #ff8a3c;
-  --particle-high: #f7f3ef;
-  --particle-gain: 0.95;
-  --particle-desaturate: 0.88;
-  --particle-tint: #ffcfae;
 }
 
-/* clip, so the root does not become a scroll container on both axes */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --surface: #cbcac7;
+  --ink: #1a1917;
+  --ink-muted: #4c4a45;
+  --ink-faint: #6f6b64;
+  --ink-dim: #9a968f;
+  --line: color-mix(in srgb, var(--ink) 14%, transparent);
+  --line-strong: color-mix(in srgb, var(--ink) 30%, transparent);
+  --signal: #b2470d;
+
+  --wash-one: #c1c0bb;
+  --wash-two: #b3b0aa;
+  --wash-three: #cdccc8;
+}
+
+/* clip, so the root does not become a scroll container */
 html {
   overflow-x: clip;
 }
 
-/* the field colour belongs to body and nothing else. put one on html too and
-   body's own background hides the cloud */
+/* body's background propagates to the root. give html one too and body paints
+   over the cloud */
 body {
   font-family: 'Epilogue-Bold';
   margin: 0;
   position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   background-color: var(--surface);
   color: var(--ink);
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
 }
 
-/* a thin rail, so there is some sign the page scrolls */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -130,36 +105,10 @@ body {
   z-index: -1;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h2 {
   color: var(--ink);
   margin: 0;
   font-weight: normal;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-}
-
-h1 {
-  font-size: clamp(4rem, 2rem + 9vw, 9rem);
-}
-
-h2 {
-  font-size: clamp(1.75rem, 1rem + 2.4vw, 3.25rem);
-}
-
-h3 {
-  font-size: clamp(1.5rem, 1rem + 1.6vw, 2.5rem);
-}
-
-h4 {
-  font-size: clamp(1.25rem, 0.9rem + 1.1vw, 1.875rem);
-}
-
-h5 {
-  font-size: clamp(1.05rem, 0.9rem + 0.5vw, 1.35rem);
-}
-
-h6 {
-  font-size: 0.95rem;
 }
 
 p {
@@ -180,8 +129,6 @@ a:hover {
   text-decoration-color: var(--signal);
 }
 
-/* the one small-caps step */
-.Label,
 .NavLink,
 .attractor-option,
 .viewer-control,
@@ -196,20 +143,9 @@ a:hover {
   text-transform: uppercase;
 }
 
-.Label {
-  color: var(--ink-faint);
-}
-
 /* sections are flex and grid containers, so the attribute alone loses */
 [hidden] {
   display: none !important;
-}
-
-/* the scrollbar gutter sits inside 100vw */
-.scroll-container {
-  min-height: 100vh;
-  width: 100%;
-  perspective: 1px;
 }
 
 .NavRoot {
@@ -303,8 +239,6 @@ a:hover {
   background: linear-gradient(to right, currentColor 50%, transparent 50%);
 }
 
-/* the same one row on a phone, only tighter. the links are short enough to fit
-   beside the mark, so nothing collapses behind a menu */
 @media (width < 800px) {
   .NavRoot {
     padding: 1.25rem 5vw;
@@ -337,11 +271,12 @@ a:hover {
   white-space: nowrap;
 }
 
-.viewer-control-name {
+.viewer-control span {
   color: var(--ink-faint);
 }
 
 .viewer-control output {
+  min-width: 4ch;
   font-variant-numeric: tabular-nums;
   text-align: right;
   letter-spacing: 0.08em;
@@ -386,12 +321,6 @@ a:hover {
   cursor: pointer;
 }
 
-@media (width < 900px) {
-  .ViewerControls {
-    gap: 0.4rem 1.25rem;
-  }
-}
-
 .LoaderLogoSection {
   height: 100vh;
   display: flex;
@@ -415,8 +344,8 @@ a:hover {
   z-index: 1;
 }
 
-/* its own height, the font size is clamped against the viewport */
-.LoadingText .char {
+.LoadingText span {
+  display: inline-block;
   transform: translateY(110%);
 }
 
@@ -426,7 +355,7 @@ a:hover {
   box-sizing: border-box;
 }
 
-/* the box the cloud is framed into, no painted content of its own */
+/* the box the cloud is framed into */
 .LandingStage {
   position: absolute;
   left: 50%;
@@ -514,7 +443,7 @@ a:hover {
     flex-grow: 1;
   }
 
-  .viewer-control-name {
+  .viewer-control span {
     width: 4.25rem;
   }
 }
@@ -525,7 +454,7 @@ a:hover {
   gap: 0.35rem 1.5rem;
 }
 
-/* the font shorthand would undo the shared label size */
+/* the font shorthand would undo the label size */
 .attractor-option {
   appearance: none;
   background: none;
@@ -570,7 +499,6 @@ a:hover {
   box-sizing: border-box;
 }
 
-/* a box in the middle so the picture reads between the corners */
 .ProjectStage {
   position: absolute;
   left: 50%;
@@ -580,14 +508,13 @@ a:hover {
   height: min(32rem, 58vh);
 }
 
-/* only a phone puts anything in the box */
 .ProjectStage img {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
-/* hidden, the rig still frames into this box */
+/* hidden, the cloud still frames into this box */
 .ProjectStage.is-model img {
   visibility: hidden;
 }
@@ -599,7 +526,6 @@ a:hover {
   }
 }
 
-/* corners on a desktop, two up two down on a phone */
 .ProjectCorners {
   position: absolute;
   inset: 8.5rem 5vw 4.5rem;
@@ -664,11 +590,14 @@ a:hover {
   color: var(--ink);
 }
 
+.is-active .ProjectName {
+  color: var(--ink);
+  border-bottom-color: var(--signal);
+}
+
 .ProjectCorner.is-active .ProjectName {
   font-size: clamp(1.75rem, 1rem + 2vw, 2.375rem);
   letter-spacing: -0.035em;
-  color: var(--ink);
-  border-bottom-color: var(--signal);
 }
 
 .ProjectDetail {
@@ -725,7 +654,7 @@ a:hover {
   padding: 6rem 5vw 3rem;
 }
 
-.ProjectSection.is-phone .ProjectTabs {
+.ProjectTabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
@@ -733,7 +662,7 @@ a:hover {
   list-style: none;
 }
 
-.ProjectSection.is-phone .ProjectTab {
+.ProjectTabs li {
   display: flex;
   justify-content: center;
 }
@@ -741,11 +670,6 @@ a:hover {
 .ProjectSection.is-phone .ProjectPick {
   min-height: 2.75rem;
   justify-content: center;
-}
-
-.ProjectSection.is-phone .ProjectTab.is-active .ProjectName {
-  color: var(--ink);
-  border-bottom-color: var(--signal);
 }
 
 .ProjectSection.is-phone .ProjectStage {
@@ -759,12 +683,9 @@ a:hover {
 
 .ProjectSection.is-phone .ProjectDetail {
   display: flex;
-  align-items: flex-start;
-  gap: 0.875rem;
 }
 
 .ProjectSection.is-phone .ProjectBlurb {
-  font-size: 0.8125rem;
   max-width: none;
 }
 
@@ -774,7 +695,6 @@ a:hover {
   box-sizing: border-box;
 }
 
-/* pinned while the rail scrolls past it */
 .WorkStage {
   position: sticky;
   top: 0;
@@ -922,25 +842,17 @@ a:hover {
   color: var(--ink-faint);
 }
 
-/* the centring is gsap's xPercent. blurred on the element itself */
+/* gsap centres this with xPercent */
 .BackgroundAnimation {
   position: absolute;
   top: 0;
   left: 0;
   height: 50vh;
   width: 50vw;
-  display: flex;
-  align-items: center;
   z-index: -9;
   border-radius: 100%;
   overflow: hidden;
   filter: blur(64px);
-}
-
-.SvgContainer {
-  width: 100%;
-  height: 100%;
-  position: relative;
 }
 
 .BackgroundAnimation svg {
@@ -949,42 +861,4 @@ a:hover {
   left: 0;
   width: 100%;
   height: 100%;
-}
-
-#circleOne {
-  --color-stop-1: var(--wash-one);
-  --color-stop-2: var(--wash-two);
-  --color-stop-3: var(--wash-three);
-}
-
-#circleTwo {
-  --color-stop-1: var(--wash-two);
-  --color-stop-2: var(--wash-three);
-  --color-stop-3: var(--wash-one);
-}
-
-#circleThree {
-  --color-stop-1: var(--wash-three);
-  --color-stop-2: var(--wash-one);
-  --color-stop-3: var(--wash-two);
-}
-
-html.lenis, html.lenis body {
-  height: auto;
-}
-
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-
-.lenis.lenis-scrolling iframe {
-  pointer-events: none;
 }

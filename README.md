@@ -6,22 +6,17 @@ Live: [personalportfoliowebsite-zi3.pages.dev](https://personalportfoliowebsite-
 
 ## What it does
 
-Particle simulation.** Particle positions are ping-ponged between two render targets with the particles previous position at the previous frames render target and it's new position written to the current target. Colour is packed into the alpha channel.
+Particle positions live in a float texture that is ping-ponged between two render targets each frame, with colour packed into the alpha channel. The cloud cycles through five chaotic attractors (Thomas, Lorenz, Rössler, Halvorsen and Dadras) every ten seconds.
 
-**Five chaos attractors.** The particles cycle through Thomas, Rössler, Halvorsen and Dadras chaos attractors every ten seconds.
-
-**Project screenshots drawn with particles.** A picture is rasterised to an alpha mask, one GPU pass lays a grid over it and maps each particle to a pixels cell resulting in a second target texture the particles can  crossfade into.
+Project screenshots are drawn with the particles. A picture is rasterised to an alpha mask, one GPU pass gives each particle a cell of a grid over it, and the cloud crossfades onto that target.
 
 ## Layout
 
 ```
 3DViteProject/
-  main.js       entry
-  cloud.js      renderer, GLB loader, the sim, the camera rig, attractors
-  marks.js      picture to particle target
-  page.js       routes, nav, theme, particle config sliders
-  sections.js   project and job contents
-  animation.js
+  main.js      routes, intro, theme, sliders
+  cloud.js     renderer, sim, camera rig, attractors, picture targets
+  sections.js  project and work content
   shaders.js
 ```
 
@@ -39,7 +34,6 @@ Requires a WebGL2 context with float render targets. On a phone the simulation r
 
 ## Credits
 
-Model: "Radiant Pillar BC1" by 44bit, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), via [Sketchfab](https://skfb.ly/onXry).
 Type: [Epilogue](https://www.fontshare.com/fonts/epilogue) by Tyler Finck, Etcetera Type Co.
 
 ## Licence

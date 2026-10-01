@@ -1,5 +1,4 @@
-// dave hoskins' hashes. a sine hash builds a pair from one dot product, so
-// sampling a square with it lands every particle on a curve
+// dave hoskins' hash without sine
 const glslRandom = /* glsl */`
 
   float random(vec2 st) {
@@ -15,8 +14,7 @@ const glslRandom = /* glsl */`
   }
 `;
 
-// every sim pass is one quad over its state texture
-export const simVert = /* glsl */`
+export const quadVert = /* glsl */`
 
   varying vec2 vUv;
 
@@ -26,7 +24,7 @@ export const simVert = /* glsl */`
   }
 `;
 
-export const cloudSimFrag = /* glsl */`
+export const simFrag = /* glsl */`
 
   ${glslRandom}
 
@@ -42,7 +40,6 @@ export const cloudSimFrag = /* glsl */`
   uniform int attractorFrom;
   uniform int attractorTo;
   uniform float morph;
-  uniform float cloudRadius;
 
   varying vec2 vUv;
 
@@ -63,16 +60,14 @@ export const cloudSimFrag = /* glsl */`
 
   const float BURST_SPEED = 0.022;
 
-  // half angle of the cursor cone, so the dent holds its size on screen
   const float CURSOR_ANGLE = 0.146;
 
-  // a still target keeps the hole, so it is pushed less than it is pulled back by
+  // a target is slow to refill the dent, so it gets a smaller push
   const float FIELD_PUSH = 0.25;
   const float TARGET_PUSH = 0.08;
 
   const float PI = 3.14159265;
 
-  // the step every attractor takes on average once normalised
   const float NOMINAL_STEP = 0.0035 * WORLD_RADIUS;
 
   // measured by integrating each system offline, normalising all five to one
@@ -132,8 +127,7 @@ export const cloudSimFrag = /* glsl */`
     return vec3(-b * x + sin(y), -b * y + sin(z), -b * z + sin(x));
   }
 
-  // one step in the normalised space positions are stored in, evaluated in the
-  // attractor's own coordinates
+  // evaluated in the attractor's own coordinates, returned normalised
   vec3 attractorStep(int which, vec3 pos) {
     float k = attractorRadius(which) / WORLD_RADIUS;
     vec3 native = attractorCentre(which) + pos * k;
@@ -149,7 +143,7 @@ export const cloudSimFrag = /* glsl */`
     return normalize(jitter + outward * 0.6);
   }
 
-  // capped, so a particle arrives on its point
+  // capped so it lands without overshooting
   vec3 forceToTarget(vec3 currentPos, vec3 targetPos, float reach) {
     vec3 toHome = targetPos - currentPos;
     float away = length(toHome);
@@ -189,14 +183,11 @@ export const cloudSimFrag = /* glsl */`
       }
     }
 
-
     if (state == 1) {
-      // swapped outright at the halfway point, where the burst peaks and there
-      // is no coherent shape left
+      // swapped at the halfway point, where the burst peaks
       int running = morph < 0.5 ? attractorFrom : attractorTo;
       velocity = attractorStep(running, pos);
 
-      // zero at both ends so each attractor is left and entered under its pull
       float burst = sin(morph * PI);
       velocity += scatterDirection(pos, vUv) * (burst * BURST_SPEED);
 
@@ -206,27 +197,23 @@ export const cloudSimFrag = /* glsl */`
       if (dist > CONTAIN_RADIUS) {
         pos = mix(pos, pos * (CONTAIN_RADIUS / dist), min(CONTAIN_PULL * dtScale, 1.0));
       }
-    }
-
-    else {
+    } else {
       vec3 step = forceToTarget(pos, targetPos, 0.05 * dtScale);
       pos += step;
       velocity = step / max(dtScale, 1e-3);
     }
 
-    // alpha carries speed
     gl_FragColor = vec4(pos, length(velocity) / NOMINAL_STEP);
   }
 `;
 
-export const cloudPointVert = /* glsl */`
+export const pointVert = /* glsl */`
 
   uniform sampler2D posTex;
   uniform sampler2D targetTexA;
   uniform sampler2D targetTexB;
   uniform float targetMix;
   uniform float pointSize;
-  // 1 where a slot's colours want grading to the page, 0 where they were picked
   uniform float gradeA;
   uniform float gradeB;
 
@@ -244,7 +231,6 @@ export const cloudPointVert = /* glsl */`
   }
 
   void main() {
-    // position holds the sim texel this particle owns
     vec4 state = texture2D(posTex, position.xy);
 
     vBaseColour = mix(
@@ -258,17 +244,15 @@ export const cloudPointVert = /* glsl */`
     gl_Position = projectionMatrix * modelViewMatrix * vec4(state.xyz, 1.0);
     gl_PointSize = pointSize;
   }
-
 `;
 
-export const cloudPointFrag = /* glsl */`
+export const pointFrag = /* glsl */`
 
-// 0 paints the target's own colours, 1 paints particle speed
 uniform float colourMix;
 uniform vec3 rampLow;
 uniform vec3 rampMid;
 uniform vec3 rampHigh;
-uniform vec3 baseGain;
+uniform float baseGain;
 uniform float baseDesaturate;
 uniform vec3 baseTint;
 varying vec3 vBaseColour;
@@ -292,15 +276,14 @@ void main() {
 }
 `;
 
-// each particle takes its own cell of a grid over the mark
-export const markSampleFrag = /* glsl */`
+export const markFrag = /* glsl */`
 
   ${glslRandom}
 
   uniform sampler2D mask;
   uniform vec2 maskMin;
   uniform vec2 maskMax;
-  // one uv known to be opaque, where particles that miss every tap land
+  // a known opaque uv for particles that miss every tap
   uniform vec2 fallback;
   uniform vec2 extent;
   uniform float depth;
@@ -310,10 +293,10 @@ export const markSampleFrag = /* glsl */`
 
   varying vec2 vUv;
 
-  // the pass runs once per build, never per frame
+  // runs once per mark, never per frame
   const int MAX_TAPS = 256;
 
-  // matches samplePositions on the cpu
+  // unpacked by pointVert
   float packColour(vec3 colour) {
     vec3 quantised = floor(clamp(colour, 0.0, 1.0) * 255.0 + 0.5);
     return quantised.r * 65536.0 + quantised.g * 256.0 + quantised.b;
@@ -323,7 +306,7 @@ export const markSampleFrag = /* glsl */`
     vec2 hit = fallback;
     vec3 rgb = vec3(1.0);
 
-    // random points clump, and over a picture that reads as fuzz. a cell each
+    // random points clump into fuzz, so each particle gets a grid cell
     vec2 cell = floor(vUv * simSide);
     float index = cell.x + cell.y * simSide;
     float column = mod(index, lattice.x);
@@ -342,7 +325,7 @@ export const markSampleFrag = /* glsl */`
       }
     }
 
-    // art with holes, and the few particles with no cell, fall back to rejection
+    // cells over holes, and particles with no cell, fall back to rejection
     for (int i = 0; i < MAX_TAPS; i++) {
       if (landed) {
         break;
@@ -361,7 +344,7 @@ export const markSampleFrag = /* glsl */`
       }
     }
 
-    // uv within the opaque box then out to the world box, flipping y
+    // mask uv to world, flipping y
     vec2 local = (hit - maskMin) / max(maskMax - maskMin, vec2(1e-5));
     vec2 centred = local * 2.0 - 1.0;
 

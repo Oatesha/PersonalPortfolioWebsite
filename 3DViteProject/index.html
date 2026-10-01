@@ -1,37 +1,35 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Harrison Oates, embedded software performance engineer.">
     <meta name="theme-color" content="#cbcac7" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#181715" media="(prefers-color-scheme: dark)">
-
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Harrison Oates">
-    <meta property="og:description" content="Embedded software performance engineer">
-    <meta property="og:url" content="https://personalportfoliowebsite-zi3.pages.dev/">
-    <meta name="twitter:card" content="summary">
-
-    <link rel="icon" type="image/svg+xml" href="/burger.svg" />
+    <link rel="icon" type="image/svg+xml" href="/burger.svg">
     <link rel="stylesheet" href="style.css">
-    <title>Harrison Oates Personal Website</title>
+    <title>Harrison Oates</title>
     <script src="main.js" type="module"></script>
   </head>
   <body>
+    <header class="NavRoot">
+      <a class="NavMark" href="/" data-route="home" aria-label="Home">HO.</a>
+      <nav class="NavPanel">
+        <a class="NavLink" href="/" data-route="home">Home</a>
+        <a class="NavLink" href="/projects" data-route="projects">Projects</a>
+        <!-- <a class="NavLink" href="/work" data-route="work">Work</a> -->
+        <button class="ThemeToggle" type="button" aria-label="Dark theme" aria-pressed="false">
+          <span class="ThemeDisc"></span>
+        </button>
+      </nav>
+    </header>
 
-    <header class="NavRoot"></header>
-
-    <div class="scroll-container">
+    <main>
       <section class="LoaderLogoSection" data-route="home">
-        <!-- decorative -->
-        <div class="LoadingText" aria-hidden="true">
-          HO
-        </div>
+        <div class="LoadingText" aria-hidden="true"><span>H</span><span>O</span></div>
       </section>
 
       <section class="LandingPageSection" data-route="home">
-        <div class="LandingStage" aria-hidden="true"></div>
+        <div class="LandingStage"></div>
 
         <div class="LandingLead">
           <h1 class="MyName">Harrison Oates</h1>
@@ -39,20 +37,17 @@
         </div>
 
         <div class="LandingBand">
-          <div class="attractor-switch"></div>
+          <div class="attractor-switch" role="group" aria-label="Shape"></div>
           <div class="ViewerControls">
-            <!-- autocomplete off because chrome restores the old value on reload -->
-            <label class="viewer-control" for="particleSizeInput">
-              <span class="viewer-control-name">Size</span>
-              <input type="range" id="particleSizeInput" min="0" max="1" step="1" value="0" list="particleSizeTicks" autocomplete="off">
-              <datalist id="particleSizeTicks"></datalist>
-              <output for="particleSizeInput">1.0</output>
+            <label class="viewer-control">
+              <span>Size</span>
+              <input type="range" id="particleSize" min="0" max="1" value="0">
+              <output>1.0</output>
             </label>
-            <label class="viewer-control" for="particleCountInput">
-              <span class="viewer-control-name">Particles</span>
-              <input type="range" id="particleCountInput" min="0" max="1" step="1" value="0" list="particleCountTicks" autocomplete="off">
-              <datalist id="particleCountTicks"></datalist>
-              <output for="particleCountInput">&hellip;</output>
+            <label class="viewer-control">
+              <span>Particles</span>
+              <input type="range" id="particleCount" min="0" max="1" value="0">
+              <output>&hellip;</output>
             </label>
           </div>
         </div>
@@ -65,44 +60,39 @@
       <footer class="SiteFooter">
         <p>Harrison Oates</p>
       </footer>
+    </main>
 
-
-    </div>
     <div class="BackgroundAnimation">
-      <div class="SvgContainer">
-        <svg id="circleOne" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="gradient1" x1="0" x2="1" y1="1" y2="0">
-              <stop offset="0%" stop-color="var(--color-stop-1)" />
-              <stop offset="50%" stop-color="var(--color-stop-2)" />
-              <stop offset="100%" stop-color="var(--color-stop-3)" />
-            </linearGradient>
-          </defs>
-          <path d="M 0 3 A 3 3 45 0 0 0 -42 A 3 3 0 0 0 0 3 Z" fill="url(#gradient1)" transform="translate(50 50)"></path>
-        </svg>
-
-        <svg id="circleTwo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="gradient2" x1="0" x2="1" y1="1" y2="0">
-              <stop offset="0%" stop-color="var(--color-stop-1)" />
-              <stop offset="50%" stop-color="var(--color-stop-2)" />
-              <stop offset="100%" stop-color="var(--color-stop-3)" />
-            </linearGradient>
-          </defs>
-          <path d="M 0 -3 A 3 3 45 0 0 0 42 A 3 3 45 0 0 0 -3 Z" fill="url(#gradient2)" transform="translate(50 50)"></path>
-        </svg>
-
-        <svg id="circleThree" x="0" y="0" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="gradient3" x1="0" x2="1" y1="1" y2="0">
-              <stop offset="0%" stop-color="var(--color-stop-1)" />
-              <stop offset="50%" stop-color="var(--color-stop-2)" />
-              <stop offset="100%" stop-color="var(--color-stop-3)" />
-            </linearGradient>
-          </defs>
-          <path d="M -54 0 A 3 3 0 0 0 -9 0 A 3 3 0 0 0 -54 0 Z" fill="url(#gradient3)" transform="translate(50 50)"></path>
-        </svg>
-      </div>
+      <svg id="circleOne" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="gradient1" x1="0" x2="1" y1="1" y2="0">
+            <stop offset="0%" stop-color="var(--wash-one)" />
+            <stop offset="50%" stop-color="var(--wash-two)" />
+            <stop offset="100%" stop-color="var(--wash-three)" />
+          </linearGradient>
+        </defs>
+        <path d="M 0 3 A 3 3 45 0 0 0 -42 A 3 3 0 0 0 0 3 Z" fill="url(#gradient1)" transform="translate(50 50)" />
+      </svg>
+      <svg id="circleTwo" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="gradient2" x1="0" x2="1" y1="1" y2="0">
+            <stop offset="0%" stop-color="var(--wash-two)" />
+            <stop offset="50%" stop-color="var(--wash-three)" />
+            <stop offset="100%" stop-color="var(--wash-one)" />
+          </linearGradient>
+        </defs>
+        <path d="M 0 -3 A 3 3 45 0 0 0 42 A 3 3 45 0 0 0 -3 Z" fill="url(#gradient2)" transform="translate(50 50)" />
+      </svg>
+      <svg id="circleThree" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="gradient3" x1="0" x2="1" y1="1" y2="0">
+            <stop offset="0%" stop-color="var(--wash-three)" />
+            <stop offset="50%" stop-color="var(--wash-one)" />
+            <stop offset="100%" stop-color="var(--wash-two)" />
+          </linearGradient>
+        </defs>
+        <path d="M -54 0 A 3 3 0 0 0 -9 0 A 3 3 0 0 0 -54 0 Z" fill="url(#gradient3)" transform="translate(50 50)" />
+      </svg>
     </div>
   </body>
 </html>

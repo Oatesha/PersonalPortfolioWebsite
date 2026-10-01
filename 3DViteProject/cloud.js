@@ -1,429 +1,282 @@
 import * as THREE from 'three';
-import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
-import { GLTFLoader } from 'three/examples/jsm/Addons.js';
 import gsap from 'gsap';
 import { getGPUTier } from 'detect-gpu';
-import { simVert, cloudSimFrag, cloudPointVert, cloudPointFrag } from './shaders.js';
-import { initMarks } from './marks.js';
-
-// the one cloud, on a fixed fullscreen canvas. a project picture is a target it
-// marches to
+import { quadVert, simFrag, pointVert, pointFrag, markFrag } from './shaders.js';
 
 const MAX_PIXEL_RATIO = 2;
 
-// 60Hz frames of sim per real frame
+// sim steps per 60Hz frame
 const SIM_SPEED = 2.4;
 
 // side of the sim texture, so the ceiling on particle count
-const DESKTOP_TEXTURE_SIDE = 1280;
+const TEXTURE_SIDE = 1280;
 const MOBILE_TEXTURE_SIDE = 256;
 
 const PARTICLE_STEPS = [25000, 50000, 100000, 250000, 500000, 750000, 1000000];
 
+// matches WORLD_RADIUS in shaders.js
+const RADIUS = 4;
+
+// the cloud zooms in from this on load
+const INTRO_RADIUS = 24;
+
+const FIT_MARGIN = 1.05;
 const TARGET_CROSSFADE = 1.2;
+const MORPH_DURATION = 2.4;
+const CYCLE_INTERVAL = 10;
 
-// https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
-function detectMob() {
-  const toMatch = [
-      /Android/i,
-      /webOS/i,
-      /iPhone/i,
-      /iPad/i,
-      /iPod/i,
-      /BlackBerry/i,
-      /Windows Phone/i
-  ];
+// order must match the constants in shaders.js
+const ATTRACTORS = ['Thomas', 'Lorenz', 'Rössler', 'Halvorsen', 'Dadras'];
+const START_ATTRACTOR = 1;
+const PROJECT_ATTRACTOR = 4;
+const MARK = -2;
 
-  return toMatch.some((toMatchItem) => {
-      return navigator.userAgent.match(toMatchItem);
-  });
-}
+const MASK_SIDE = 1024;
+const MARK_DEPTH = 0.04;
 
-export const mobile = detectMob();
+// the colours are applied as written, so they skip three's srgb conversion
+const PALETTES = {
+  light: { low: 0x8f8c86, mid: 0xc2551a, high: 0x1a1917, tint: 0xffe2cd, gain: 0.42, desaturate: 0.92 },
+  dark: { low: 0x4a2311, mid: 0xff8a3c, high: 0xf7f3ef, tint: 0xffcfae, gain: 0.95, desaturate: 0.88 },
+};
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({alpha: true});
-const simScene = new THREE.Scene();
+export const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ alpha: true });
+const scene = new THREE.Scene();
 const clock = new THREE.Clock();
-
 const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
-
 let pointerActive = false;
 
-let renderMaterial, simMaterial, modelMesh, renderTargetA, renderTargetB, fbo;
+const quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
 
-// a fetch, so it runs alongside the model load
-let tierProbe = null;
-
-let particleGeometry = null;
+let simMaterial, pointMaterial, simScene, readTarget, writeTarget;
+let geometry = null;
 let particleTotal = 0;
 let defaultParticleCount = 250000;
-let pointSize = 0;
+let theme = 'dark';
 
-let activeTargetSlot = 0;
-let activeTargetTexture = null;
-let targetTween = null;
-
-let onCloudReady = null;
-let unsupported = false;
+export const rig = {
+  target: null,
+  radius: INTRO_RADIUS,
+  // half extents as multiples of radius
+  extent: { x: 1, y: 1, z: 1 },
+  // fraction of the fitted distance. negative passes through the cloud
+  fit: 1,
+  bobY: 0,
+};
 
 // three only promotes ShaderMaterial to glsl 3 on webgl2, and the point shader
 // unpacks colour with bitwise ops
-function cloudSupported() {
+function supported() {
   return renderer.capabilities.isWebGL2
     && renderer.capabilities.floatVertexTextures
     && renderer.extensions.has('EXT_color_buffer_float');
 }
 
 export function initCloud(onReady) {
-  onCloudReady = onReady;
-  pointSize = getDefaultPointSize();
-
-  if (!cloudSupported()) {
-    console.warn('No WebGL2 float render targets here, the cloud will not run');
-    unsupported = true;
-    // the page still works, it just has no cloud in it
-    onCloudReady?.();
+  if (!supported()) {
+    console.warn('no webgl2 float render targets, the cloud will not run');
+    onReady(false);
     return;
   }
 
-  renderer.setPixelRatio(currentPixelRatio());
+  initShapeSwitch();
+
+  renderer.setPixelRatio(pixelRatio());
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.domElement.id = 'threeJSCanvas';
   renderer.setClearColor(0x000000, 0);
+  renderer.domElement.id = 'threeJSCanvas';
   document.body.appendChild(renderer.domElement);
 
-  initRig();
-  initShapeSwitch();
-  setRigTarget(document.querySelector('.LandingStage'));
-
-  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointermove', (event) => {
+    pointerActive = true;
+    pointer.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
+  });
   // otherwise the dent freezes into the cloud
-  document.addEventListener('pointerleave', releasePointer);
-  window.addEventListener('blur', releasePointer);
-  window.addEventListener('resize', requestResize, false);
+  document.addEventListener('pointerleave', () => (pointerActive = false));
+  window.addEventListener('blur', () => (pointerActive = false));
+  window.addEventListener('resize', () => {
+    renderer.setPixelRatio(pixelRatio());
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    rigRect = null;
+  });
 
-  tierProbe = getGPUTier();
-  loadModelGeometry();
+  getGPUTier().then(({ tier }) => {
+    initSim(tier);
+    onReady(true);
+  });
 }
 
-export function cloudReady() {
-  return Boolean(renderMaterial && particleTotal);
-}
-
-export function cloudUnsupported() {
-  return unsupported;
-}
-
-function currentPixelRatio() {
+function pixelRatio() {
   return Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
 }
 
 // gl_PointSize is in device pixels, so a 1x display has four times the cell to cover
-export function getDefaultPointSize() {
-  return currentPixelRatio() >= 2 ? 1.0 : 1.5;
+export function defaultPointSize() {
+  return pixelRatio() >= 2 ? 1.0 : 1.5;
 }
 
-function onPointerMove(event) {
-  pointerActive = true;
-
-  pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-}
-
-function releasePointer() {
-  pointerActive = false;
-}
-
-// reads layout, so coalesce bursts into one per frame
-let resizePending = false;
-
-function requestResize() {
-  if (resizePending) {
-    return;
-  }
-  resizePending = true;
-  requestAnimationFrame(() => {
-    resizePending = false;
-    renderer.setPixelRatio(currentPixelRatio());
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-}
-
-function loadModelGeometry() {
-  const modelLoader = new GLTFLoader();
-  modelLoader.load('models/radiant_pillar_baked.glb', function (gltf) {
-    gltf.scene.traverse((child) => {
-      if (child.isMesh) {
-        modelMesh = child.clone();
-        modelMesh.geometry = child.geometry.clone();
-        modelMesh.geometry.center()
-        modelMesh.geometry.scale(0.085, 0.085, 0.085);
-
-        // sphere sets the scale the animations tween, box gives the silhouette
-        // the rig frames against
-        modelMesh.geometry.computeBoundingSphere();
-        modelMesh.geometry.computeBoundingBox();
-        const { radius } = modelMesh.geometry.boundingSphere;
-        const halfExtent = modelMesh.geometry.boundingBox.getSize(new THREE.Vector3()).multiplyScalar(0.5);
-        rig.radius = radius;
-        // tweens hold this object, so write through it
-        rig.extent.x = halfExtent.x / radius;
-        rig.extent.y = halfExtent.y / radius;
-        rig.extent.z = halfExtent.z / radius;
-      }
-    });
-
-    initFBO();
-  }, undefined, function (error) {
-    console.error(error);
-  });
-}
-
-// a scene lays one cell per particle, so short of the total is holes in it
-function defaultCountForTier(tier, total) {
-  if (tier >= 2) return total;
-  if (tier === 1) return 1000000;
-  return 250000;
-}
-
-// scratch for the whole run, a vector per sample is a million-odd objects to collect
-const sampleScratch = {
-  position: new THREE.Vector3(),
-  normal: new THREE.Vector3(),
-  colour: new THREE.Vector3(),
-};
-
-// spread over the surface by area
-function samplePositions(numSamples, mesh, out) {
-  const sampler = new MeshSurfaceSampler(mesh).build();
-  const { position, normal, colour } = sampleScratch;
-
-  for (let i = 0; i < numSamples; i++) {
-    sampler.sample(position, normal, colour);
-
-    // colour packed into w so one RGBA texture carries both
-    const r = Math.round(gsap.utils.clamp(0, 255, colour.r * 255));
-    const g = Math.round(gsap.utils.clamp(0, 255, colour.g * 255));
-    const b = Math.round(gsap.utils.clamp(0, 255, colour.b * 255));
-
-    const index = i * 4;
-    out[index] = position.x;
-    out[index + 1] = position.y;
-    out[index + 2] = position.z;
-    out[index + 3] = (r << 16) | (g << 8) | b;
-  }
-
-  return out;
-}
-
-async function initFBO() {
-  const gputier = await tierProbe;
-  const w = mobile ? MOBILE_TEXTURE_SIDE : DESKTOP_TEXTURE_SIDE;
-  const h = w;
-  defaultParticleCount = defaultCountForTier(gputier.tier, w * h);
-
-  // scattered so the model assembles itself on load
-  const initPos = new Float32Array(w * h * 4);
-  for (let i = 0; i < w; i++) {
-    for (let j = 0; j < h; j++) {
-      const index = (i + j * w) * 4;
-
-      const distance = Math.sqrt(Math.random()) * 20.0;
-      const theta = THREE.MathUtils.randFloatSpread(360);
-      const phi = THREE.MathUtils.randFloatSpread(360);
-      initPos[index] = distance * Math.sin(theta) * Math.cos(phi);
-      initPos[index + 1] = distance * Math.sin(theta) * Math.sin(phi);
-      initPos[index + 2] = distance * Math.cos(theta);
-      initPos[index + 3] = 1.0;
-    }
-  }
-
-  const numInitialPositions = w * h;
-
-  const initialPositionsArray = samplePositions(
-    numInitialPositions,
-    modelMesh,
-    new Float32Array(numInitialPositions * 4),
-  );
-
-  const scatteredTex = new THREE.DataTexture(initPos, w, h, THREE.RGBAFormat, THREE.FloatType);
-  const modelTex = new THREE.DataTexture(initialPositionsArray, w, h, THREE.RGBAFormat, THREE.FloatType);
-
+function floatTexture(data, side) {
+  const texture = new THREE.DataTexture(data, side, side, THREE.RGBAFormat, THREE.FloatType);
   // a DataTexture sits at version 0 until this is set, and three uploads nothing
-  scatteredTex.minFilter = THREE.NearestFilter;
-  scatteredTex.magFilter = THREE.NearestFilter;
-  scatteredTex.needsUpdate = true;
+  texture.needsUpdate = true;
+  return texture;
+}
 
-  modelTex.minFilter = THREE.NearestFilter;
-  modelTex.magFilter = THREE.NearestFilter;
-  modelTex.needsUpdate = true;
+function floatTarget(side) {
+  return new THREE.WebGLRenderTarget(side, side, {
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+    type: THREE.FloatType,
+    depthBuffer: false,
+  });
+}
 
-  // state 0 pulls every particle to its point on the target. state 1 runs an
-  // attractor
+function quadScene(material) {
+  const quad = new THREE.Scene();
+  quad.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
+  return quad;
+}
+
+function initSim(tier) {
+  const side = mobile ? MOBILE_TEXTURE_SIDE : TEXTURE_SIDE;
+  particleTotal = side * side;
+  // a picture lays one cell per particle, so short of the total is holes in it
+  defaultParticleCount = tier >= 2 ? particleTotal : tier === 1 ? 1000000 : 250000;
+
+  const scattered = new Float32Array(particleTotal * 4);
+  for (let i = 0; i < particleTotal; i++) {
+    const distance = Math.sqrt(Math.random()) * 20.0;
+    const theta = THREE.MathUtils.randFloatSpread(360);
+    const phi = THREE.MathUtils.randFloatSpread(360);
+    scattered[i * 4] = distance * Math.sin(theta) * Math.cos(phi);
+    scattered[i * 4 + 1] = distance * Math.sin(theta) * Math.sin(phi);
+    scattered[i * 4 + 2] = distance * Math.cos(theta);
+    // packed white, so the cloud opens on the page tint
+    scattered[i * 4 + 3] = 0xffffff;
+  }
+  const start = floatTexture(scattered, side);
+  activeTarget = start;
+
   simMaterial = new THREE.ShaderMaterial({
     uniforms: {
+      // 0 pulls every particle to its point on the target, 1 runs an attractor
       state: { value: 0 },
-      dtScale: {value: 1.0},
-      // idle sits at morph 1, fully arrived at attractorTo
-      attractorFrom: {value: 0},
-      attractorTo: {value: 0},
-      morph: {value: 1.0},
-      cloudRadius: {value: 1.0},
-      posTex: { value: scatteredTex },
-      targetTexA: { value: modelTex },
-      targetTexB: { value: modelTex },
+      dtScale: { value: 1 },
+      attractorFrom: { value: 0 },
+      attractorTo: { value: 0 },
+      morph: { value: 1 },
+      posTex: { value: start },
+      targetTexA: { value: start },
+      targetTexB: { value: start },
       targetMix: { value: 0 },
       mouseOrigin: { value: new THREE.Vector3() },
       mouseDir: { value: new THREE.Vector3(0, 0, -1) },
-      mouseActive: { value: 0.0 },
+      mouseActive: { value: 0 },
     },
-    vertexShader: simVert,
-    fragmentShader: cloudSimFrag,
+    vertexShader: quadVert,
+    fragmentShader: simFrag,
   });
-
-  class FBO {
-    constructor(w, simMat) {
-      this.scene = new THREE.Scene();
-      this.camera = new THREE.OrthographicCamera(-w / 2, w / 2, w / 2, -w / 2, -1, 1);
-      var planeGeometry = new THREE.PlaneGeometry(w, w);
-      var planeMesh = new THREE.Mesh(planeGeometry, simMat);
-      this.scene.add(planeMesh);
-    }
-  }
-
-  fbo = new FBO(w, simMaterial);
-
-  initMarks(renderer, w);
-
-  renderTargetA = new THREE.WebGLRenderTarget(w, h, {
-    wrapS: THREE.RepeatWrapping,
-    wrapT: THREE.RepeatWrapping,
-    minFilter: THREE.NearestFilter,
-    magFilter: THREE.NearestFilter,
-    format: THREE.RGBAFormat,
-    type: THREE.FloatType,
-    stencilBuffer: false,
-  });
+  simScene = quadScene(simMaterial);
 
   // a target cannot be read and written in one pass
-  renderTargetB = renderTargetA.clone();
-
-  renderer.setRenderTarget(renderTargetA);
-  renderer.clear();
-  renderer.render(fbo.scene, fbo.camera);
-  renderer.setRenderTarget(renderTargetB);
-  renderer.clear();
-  renderer.render(fbo.scene, fbo.camera);
+  readTarget = floatTarget(side);
+  writeTarget = floatTarget(side);
+  for (const target of [readTarget, writeTarget]) {
+    renderer.setRenderTarget(target);
+    renderer.render(simScene, quadCamera);
+  }
   renderer.setRenderTarget(null);
 
-  activeTargetTexture = modelTex;
-
-  renderMaterial = new THREE.ShaderMaterial({
+  pointMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      posTex: { value: modelTex },
-      targetTexA: { value: modelTex },
-      targetTexB: { value: modelTex },
+      posTex: { value: start },
+      targetTexA: { value: start },
+      targetTexB: { value: start },
       targetMix: { value: 0 },
-      pointSize: { value: pointSize },
-      colourMix: { value: 0.0 },
-      // filled in by applyPalette
-      rampLow: { value: new THREE.Vector3() },
-      rampMid: { value: new THREE.Vector3() },
-      rampHigh: { value: new THREE.Vector3() },
-      baseGain: { value: new THREE.Vector3(1, 1, 1) },
+      pointSize: { value: defaultPointSize() },
+      // 0 paints the target's own colours, 1 paints particle speed
+      colourMix: { value: 0 },
+      rampLow: { value: new THREE.Color() },
+      rampMid: { value: new THREE.Color() },
+      rampHigh: { value: new THREE.Color() },
+      baseTint: { value: new THREE.Color() },
+      baseGain: { value: 1 },
       baseDesaturate: { value: 0 },
-      baseTint: { value: new THREE.Vector3(1, 1, 1) },
+      // 1 where a slot's colours want grading to the page palette
       gradeA: { value: 1 },
       gradeB: { value: 1 },
     },
-    vertexShader: cloudPointVert,
-    fragmentShader: cloudPointFrag,
+    vertexShader: pointVert,
+    fragmentShader: pointFrag,
   });
-
   applyPalette();
 
-  particleGeometry = new THREE.BufferGeometry();
-  // two components: cloudPointVert reads position.xy and three declares
-  // position as a vec3 regardless
-  const positions = new Float32Array((w * h) * 2);
-
-  // a scene's sampler ties texel index to position, so in texel order a prefix
-  // cuts a band out of the picture. shuffled once, any prefix is a fair sample
-  const order = new Uint32Array(w * h);
-  for (let index = 0; index < order.length; index++) {
-    order[index] = index;
-  }
-  for (let index = order.length - 1; index > 0; index--) {
-    const swap = Math.floor(Math.random() * (index + 1));
-    const held = order[index];
-    order[index] = order[swap];
-    order[swap] = held;
+  // texel order is position order in a picture, so a prefix of it cuts a band
+  // out. shuffled once, any prefix is a fair sample
+  const order = new Uint32Array(particleTotal).map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const swap = Math.floor(Math.random() * (i + 1));
+    [order[i], order[swap]] = [order[swap], order[i]];
   }
 
-  // a particle's "position" is the sim texel it reads. texel centres so
-  // NearestFilter cannot land on a boundary
-  for (let index = 0; index < order.length; index++) {
-    const texel = order[index];
-    const i = texel % w;
-    const j = (texel - i) / w;
+  // a particle's position is its sim texel
+  const positions = new Float32Array(particleTotal * 2);
+  order.forEach((texel, i) => {
+    positions[i * 2] = ((texel % side) + 0.5) / side;
+    positions[i * 2 + 1] = (Math.floor(texel / side) + 0.5) / side;
+  });
 
-    positions[index * 2] = (i + 0.5) / w;
-    positions[index * 2 + 1] = (j + 0.5) / h;
-  }
+  geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 2));
+  // getZ off a two component buffer is NaN, and three computes this to sort
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 16);
 
-  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 2));
-
-  // the attribute holds texel coordinates, and getZ off a two component buffer
-  // is NaN
-  particleGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 16);
-
-  particleTotal = w * h;
-
-  const points = new THREE.Points(particleGeometry, renderMaterial);
+  const points = new THREE.Points(geometry, pointMaterial);
   points.frustumCulled = false;
-  simScene.add(points);
+  scene.add(points);
 
-  // on gsap's ticker so everything shares one clock
+  initMarks(side);
+
   gsap.ticker.add(render);
-  onCloudReady?.();
+
+  cycling = !manual;
+  const first = manual ? current : START_ATTRACTOR;
+  current = -1;
+  applyShape(first);
 }
 
 function render() {
-  // a backgrounded tab still gets throttled frames on some browsers
+  // some browsers still tick a backgrounded tab
   if (document.hidden) {
     return;
   }
 
   // capped so a dropped frame cannot blow up the attractor
-  const frameScale = Math.min(clock.getDelta() * 60, 2);
-  simMaterial.uniforms.dtScale.value = frameScale * SIM_SPEED;
-  simMaterial.uniforms.cloudRadius.value = rig.radius;
+  simMaterial.uniforms.dtScale.value = Math.min(clock.getDelta() * 60, 2) * SIM_SPEED;
 
-  updateCameraFraming();
+  updateCamera();
 
-  // ping pong. read A, write B, then draw from B
-  var temp = renderTargetA;
-  renderTargetA = renderTargetB;
-  renderTargetB = temp;
-  simMaterial.uniforms.posTex.value = renderTargetA.texture;
-  renderer.setRenderTarget(renderTargetB);
-  renderer.render(fbo.scene, fbo.camera);
+  [readTarget, writeTarget] = [writeTarget, readTarget];
+  simMaterial.uniforms.posTex.value = readTarget.texture;
+  renderer.setRenderTarget(writeTarget);
+  renderer.render(simScene, quadCamera);
   renderer.setRenderTarget(null);
-  renderMaterial.uniforms.posTex.value = renderTargetB.texture;
+  pointMaterial.uniforms.posTex.value = writeTarget.texture;
 
-  renderer.render(simScene, camera);
+  renderer.render(scene, camera);
 
   // after the render so the view offset is already in the projection
   raycaster.setFromCamera(pointer, camera);
   simMaterial.uniforms.mouseOrigin.value.copy(raycaster.ray.origin);
   simMaterial.uniforms.mouseDir.value.copy(raycaster.ray.direction);
-  simMaterial.uniforms.mouseActive.value = pointerActive ? 1.0 : 0.0;
+  simMaterial.uniforms.mouseActive.value = pointerActive ? 1 : 0;
 }
 
-// clamped to what this device's texture can supply
-export function getParticleSteps() {
+export function particleSteps() {
   const steps = PARTICLE_STEPS.filter((count) => count <= particleTotal);
   if (!steps.length || steps[steps.length - 1] < particleTotal * 0.9) {
     steps.push(particleTotal);
@@ -435,293 +288,163 @@ export function getDefaultParticleCount() {
   return defaultParticleCount;
 }
 
-// draws a prefix of the buffer initFBO shuffled
+// draws a prefix of the shuffled buffer
 export function setParticleCount(count) {
-  if (!particleGeometry) {
-    return 0;
-  }
-  const drawn = Math.max(1, Math.min(Math.round(count), particleTotal));
-  particleGeometry.setDrawRange(0, drawn);
-  return drawn;
+  geometry.setDrawRange(0, count);
 }
 
 export function setPointSize(size) {
-  pointSize = size;
-  if (renderMaterial) {
-    renderMaterial.uniforms.pointSize.value = size;
-  }
+  pointMaterial.uniforms.pointSize.value = size;
 }
 
-// writes into the slot the cloud is not reading, then crossfades onto it.
-// graded 1 where the colours want the page palette
-function setCloudTarget(texture, { duration = TARGET_CROSSFADE, graded = 1 } = {}) {
-  if (!simMaterial || !renderMaterial || !texture || texture === activeTargetTexture) {
-    return;
-  }
-
-  activeTargetTexture = texture;
-
-  const free = activeTargetSlot === 0 ? 'B' : 'A';
-  simMaterial.uniforms[`targetTex${free}`].value = texture;
-  renderMaterial.uniforms[`targetTex${free}`].value = texture;
-  renderMaterial.uniforms[`grade${free}`].value = graded;
-
-  activeTargetSlot = activeTargetSlot === 0 ? 1 : 0;
-
-  targetTween?.kill();
-  targetTween = gsap.to([simMaterial.uniforms.targetMix, renderMaterial.uniforms.targetMix], {
-    value: activeTargetSlot,
-    duration,
-    ease: 'power2.inOut',
-    overwrite: 'auto',
-  });
-}
-
-// lives in style.css, reaches here through page.js, can land before there is a
-// material to paint
-const palette = {};
-
-export function setCloudPalette(next) {
-  Object.assign(palette, next);
+export function setCloudTheme(name) {
+  theme = name;
   applyPalette();
 }
 
 function applyPalette() {
-  if (!renderMaterial) {
+  if (!pointMaterial) {
     return;
   }
+  const palette = PALETTES[theme];
+  const uniforms = pointMaterial.uniforms;
+  uniforms.rampLow.value.setHex(palette.low, THREE.NoColorSpace);
+  uniforms.rampMid.value.setHex(palette.mid, THREE.NoColorSpace);
+  uniforms.rampHigh.value.setHex(palette.high, THREE.NoColorSpace);
+  uniforms.baseTint.value.setHex(palette.tint, THREE.NoColorSpace);
+  uniforms.baseGain.value = palette.gain;
+  uniforms.baseDesaturate.value = palette.desaturate;
+}
 
-  ['rampLow', 'rampMid', 'rampHigh', 'baseTint'].forEach((uniform) => {
-    if (palette[uniform]) {
-      renderMaterial.uniforms[uniform].value.set(...palette[uniform]);
-    }
+// two target slots. the new texture goes in the one the cloud is not reading,
+// then it crossfades over
+let activeSlot = 0;
+let activeTarget = null;
+let targetTween = null;
+
+function setCloudTarget(texture, graded) {
+  if (texture === activeTarget) {
+    return;
+  }
+  activeTarget = texture;
+
+  const free = activeSlot === 0 ? 'B' : 'A';
+  simMaterial.uniforms[`targetTex${free}`].value = texture;
+  pointMaterial.uniforms[`targetTex${free}`].value = texture;
+  pointMaterial.uniforms[`grade${free}`].value = graded;
+  activeSlot = 1 - activeSlot;
+
+  targetTween?.kill();
+  targetTween = gsap.to([simMaterial.uniforms.targetMix, pointMaterial.uniforms.targetMix], {
+    value: activeSlot,
+    duration: TARGET_CROSSFADE,
+    ease: 'power2.inOut',
   });
-
-  if (Number.isFinite(palette.gain)) {
-    renderMaterial.uniforms.baseGain.value.setScalar(palette.gain);
-  }
-
-  if (Number.isFinite(palette.desaturate)) {
-    renderMaterial.uniforms.baseDesaturate.value = palette.desaturate;
-  }
 }
 
-// frames the model inside a DOM element while the canvas stays fixed and
-// fullscreen. setViewOffset runs backwards: the base frustum is the target box
-// and the sub rect asked for is the viewport in box coordinates
+// the canvas is fullscreen but the cloud is framed in a DOM element.
+// setViewOffset runs backwards: the frustum is the element, the sub rect is the viewport
 
-export const rig = {
-  // null means the whole viewport
-  target: null,
-  radius: 1,
-  // half extents as multiples of radius
-  extent: { x: 1, y: 1, z: 1 },
-  // fraction of the fitted distance. negative passes through the model
-  fit: 1,
-  margin: 1.05,
-  bobY: 0,
-};
+// in document coordinates so a scroll needs no new layout
+let rigRect = null;
+const resizeObserver = new ResizeObserver(() => (rigRect = null));
 
-// held in document coordinates so a scroll needs no new layout
-let cachedRect = null;
-let cachedFollowsScroll = false;
-let cachedTarget = null;
-let resizeObserver = null;
-
-// reused, targetRect is read every frame
-const rectOut = { left: 0, top: 0, width: 0, height: 0 };
-
-export function invalidateRigRect() {
-  cachedRect = null;
-}
-
-export function setRigTarget(element) {
-  if (rig.target === element) {
-    return;
-  }
-  rig.target = element;
-  invalidateRigRect();
-}
-
-function initRig() {
-  // getBoundingClientRect forces layout, so only read it when something changed
-  resizeObserver = new ResizeObserver(invalidateRigRect);
-  window.addEventListener('resize', invalidateRigRect);
-}
-
-function viewportRect() {
-  return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-}
-
-function measureRect() {
-  cachedFollowsScroll = false;
-
-  if (!rig.target) {
-    cachedRect = viewportRect();
-    return;
-  }
-
-  const rect = rig.target.getBoundingClientRect();
-
-  // a hidden target gives a degenerate frustum. cached anyway, the observer
-  // fires when it gains a size
-  if (rect.width < 1 || rect.height < 1) {
-    cachedRect = viewportRect();
-    return;
-  }
-
-  cachedFollowsScroll = true;
-  cachedRect = {
-    left: rect.left + window.scrollX,
-    top: rect.top + window.scrollY,
-    width: rect.width,
-    height: rect.height,
-  };
-}
-
-function targetRect() {
-  if (rig.target !== cachedTarget) {
-    if (resizeObserver) {
-      if (cachedTarget) {
-        resizeObserver.unobserve(cachedTarget);
-      }
-      if (rig.target) {
-        resizeObserver.observe(rig.target);
-      }
+export function frame(element, { fit = 1, duration = 1 } = {}) {
+  if (rig.target !== element) {
+    if (rig.target) {
+      resizeObserver.unobserve(rig.target);
     }
-    cachedTarget = rig.target;
-    cachedRect = null;
+    resizeObserver.observe(element);
+    rig.target = element;
   }
-
-  if (!cachedRect) {
-    measureRect();
-  }
-
-  rectOut.width = cachedRect.width;
-  rectOut.height = cachedRect.height;
-  rectOut.left = cachedFollowsScroll ? cachedRect.left - window.scrollX : cachedRect.left;
-  rectOut.top = cachedFollowsScroll ? cachedRect.top - window.scrollY : cachedRect.top;
-
-  return rectOut;
+  rigRect = null;
+  gsap.to(rig, { fit, duration, overwrite: 'auto' });
 }
 
-// distance at which a box of these half extents fits the frustum on both axes.
-// the model is flat, so it fits as a box
-function fitDistance(radius, extent, margin) {
+function measureRig() {
+  const rect = rig.target?.getBoundingClientRect();
+
+  // a hidden target frames the viewport until the observer sees it sized
+  if (!rect || rect.width < 1 || rect.height < 1) {
+    return { left: window.scrollX, top: window.scrollY, width: window.innerWidth, height: window.innerHeight };
+  }
+
+  rigRect = { left: rect.left + window.scrollX, top: rect.top + window.scrollY, width: rect.width, height: rect.height };
+  return rigRect;
+}
+
+function updateCamera() {
+  const { left, top, width, height } = rigRect || measureRig();
+
+  camera.aspect = width / height;
+
+  // the distance at which a box of the rig's half extents fits both axes
   const vFov = THREE.MathUtils.degToRad(camera.fov);
   const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
-  const distV = (radius * extent.y) / Math.tan(vFov / 2);
-  const distH = (radius * extent.x) / Math.tan(hFov / 2);
-  return Math.max(distV, distH) * margin + radius * extent.z;
+  const distance = Math.max(rig.extent.y / Math.tan(vFov / 2), rig.extent.x / Math.tan(hFov / 2)) * FIT_MARGIN + rig.extent.z;
+  camera.position.set(0, rig.bobY, distance * rig.radius * rig.fit);
+
+  camera.setViewOffset(width, height, window.scrollX - left, window.scrollY - top, window.innerWidth, window.innerHeight);
 }
 
-function updateCameraFraming() {
-  const rect = targetRect();
-
-  // fitDistance reads camera.aspect
-  camera.aspect = rect.width / rect.height;
-
-  camera.position.set(0, rig.bobY, fitDistance(rig.radius, rig.extent, rig.margin) * rig.fit);
-
-  camera.setViewOffset(rect.width, rect.height, -rect.left, -rect.top, window.innerWidth, window.innerHeight);
-}
-
-// order and indices must match the constants in shaders.js
-const ATTRACTORS = ["Thomas", "Lorenz", "Rössler", "Halvorsen", "Dadras"];
-
-// state 0, pulling to a target texture
-const MARK = -2;
-
-const PROJECT_ATTRACTOR = 4;
-
-// the shape the landing settles on once the intro is done
-const START_ATTRACTOR = 1;
-const CYCLE_INTERVAL = 10;
-// the burst is a half sine over this, so the cloud is most scattered halfway
-const MORPH_DURATION = 2.4;
-
-const ATTRACTOR_RADIUS = 4;
-
-// nothing is applied until the sim is up
+// -1 until the sim is up
 let current = -1;
 let beforeMark = START_ATTRACTOR;
-// first press of a shape button, the cycle never takes over again
+// set by the first press of a shape button, the cycle never takes over again
 let manual = false;
 let cycling = false;
 let morphTween = null;
 let cycleCall = null;
 const buttons = [];
 
-export function startAttractorMode() {
-  if (manual) {
-    return;
-  }
-  cycling = true;
-  applyShape(START_ATTRACTOR);
+function initShapeSwitch() {
+  const list = document.querySelector('.attractor-switch');
+
+  ATTRACTORS.forEach((name, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'attractor-option';
+    button.textContent = name;
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => {
+      manual = true;
+      stopCycle();
+      applyShape(index);
+    });
+    list.appendChild(button);
+    buttons.push(button);
+  });
 }
 
-function selectShape(index) {
-  manual = true;
+function stopCycle() {
   cycling = false;
   cycleCall?.kill();
-  cycleCall = null;
-  applyShape(index);
 }
 
-// pins the cloud and stops the cycle
-export function lockAttractor(index = PROJECT_ATTRACTOR) {
-  cycling = false;
+function scheduleNext() {
   cycleCall?.kill();
-  cycleCall = null;
-  applyShape(index);
-}
-
-// stops the cycle
-export function showMark(texture, framing) {
-  if (!simMaterial || !renderMaterial) {
-    return;
+  if (cycling) {
+    cycleCall = gsap.delayedCall(CYCLE_INTERVAL, () => applyShape((current + 1) % ATTRACTORS.length));
   }
-
-  cycling = false;
-  cycleCall?.kill();
-  cycleCall = null;
-  morphTween?.kill();
-
-  beforeMark = current === MARK ? beforeMark : current;
-  current = MARK;
-  syncButtons();
-
-  simMaterial.uniforms.state.value = 0;
-  // a mark's colours are its own
-  setCloudTarget(texture, { graded: 0 });
-  tweenFraming(framing.radius, framing.extent, 0);
-}
-
-export function clearMark() {
-  if (current !== MARK) {
-    return;
-  }
-
-  applyShape(beforeMark);
 }
 
 export function resumeCycle() {
-  // someone who picked a shape by hand keeps it
-  if (manual) {
-    return;
+  if (!manual) {
+    cycling = true;
+    scheduleNext();
   }
-  cycling = true;
-  scheduleNext();
 }
 
-function advance() {
-  cycling = true;
-  applyShape((current + 1) % ATTRACTORS.length);
+export function lockAttractor() {
+  pictureToken++;
+  stopCycle();
+  applyShape(PROJECT_ATTRACTOR);
 }
 
 function applyShape(index) {
-  // the buttons exist from first paint. the sim does not
-  if (!simMaterial || !renderMaterial) {
+  if (!simMaterial) {
+    current = index;
+    syncButtons();
     return;
   }
 
@@ -731,70 +454,199 @@ function applyShape(index) {
     return;
   }
 
+  const uniforms = simMaterial.uniforms;
   // a mark is a texture, so there is nothing to morph from
-  const fromTarget = current === MARK;
+  const fromMark = current === MARK;
   current = index;
   syncButtons();
 
-  simMaterial.uniforms.attractorFrom.value = fromTarget
-    ? index
-    : (simMaterial.uniforms.morph.value < 0.5
-        ? simMaterial.uniforms.attractorFrom.value
-        : simMaterial.uniforms.attractorTo.value);
-  simMaterial.uniforms.attractorTo.value = index;
-  simMaterial.uniforms.state.value = 1;
+  uniforms.attractorFrom.value = fromMark ? index
+    : uniforms.morph.value < 0.5 ? uniforms.attractorFrom.value : uniforms.attractorTo.value;
+  uniforms.attractorTo.value = index;
+  uniforms.state.value = 1;
 
   morphTween?.kill();
-  simMaterial.uniforms.morph.value = 0;
-  morphTween = gsap.to(simMaterial.uniforms.morph, {
-    value: 1,
-    duration: MORPH_DURATION,
-    ease: "none",
-  });
+  uniforms.morph.value = 0;
+  morphTween = gsap.to(uniforms.morph, { value: 1, duration: MORPH_DURATION, ease: 'none' });
 
-  tweenFraming(ATTRACTOR_RADIUS, { x: 1, y: 1, z: 1 }, 1);
+  tweenFraming({ x: 1, y: 1, z: 1 }, 1);
   scheduleNext();
 }
 
 // overwrite auto so a press part way through a transition takes these over
-function tweenFraming(radius, extent, colourMix) {
-  gsap.to(rig, { radius, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
-  gsap.to(rig.extent, { ...extent, duration: MORPH_DURATION, ease: "power2.inOut", overwrite: "auto" });
-  // baked colours on the hull, speed on an attractor
-  gsap.to(renderMaterial.uniforms.colourMix, { value: colourMix, duration: MORPH_DURATION, ease: "none", overwrite: "auto" });
-}
-
-function scheduleNext() {
-  cycleCall?.kill();
-  if (!cycling) {
-    cycleCall = null;
-    return;
-  }
-  cycleCall = gsap.delayedCall(CYCLE_INTERVAL, advance);
+function tweenFraming(extent, colourMix) {
+  const tween = { duration: MORPH_DURATION, ease: 'power2.inOut', overwrite: 'auto' };
+  gsap.to(rig, { radius: RADIUS, ...tween });
+  gsap.to(rig.extent, { ...extent, ...tween });
+  gsap.to(pointMaterial.uniforms.colourMix, { value: colourMix, ...tween, ease: 'none' });
 }
 
 function syncButtons() {
-  buttons.forEach((button, position) => {
-    button.setAttribute("aria-pressed", String(position === current));
-  });
+  buttons.forEach((button, index) => button.setAttribute('aria-pressed', String(index === current)));
 }
 
-function initShapeSwitch() {
-  const list = document.querySelector(".attractor-switch");
-  if (!list) {
+// a picture becomes a particle target: rasterise it to an alpha mask, then one
+// gpu pass gives each particle a cell of a grid over the mask
+
+let markMaterial, markScene;
+let markTargets = [];
+let nextMarkTarget = 0;
+// building a mark is async, so only the newest request reaches the cloud
+let pictureToken = 0;
+
+function initMarks(side) {
+  markMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      mask: { value: null },
+      maskMin: { value: new THREE.Vector2() },
+      maskMax: { value: new THREE.Vector2() },
+      fallback: { value: new THREE.Vector2() },
+      extent: { value: new THREE.Vector2() },
+      lattice: { value: new THREE.Vector2() },
+      simSide: { value: side },
+      depth: { value: RADIUS * MARK_DEPTH },
+      tint: { value: new THREE.Color() },
+    },
+    vertexShader: quadVert,
+    fragmentShader: markFrag,
+  });
+  markScene = quadScene(markMaterial);
+
+  // a crossfade reads two targets, so the next mark needs a third
+  markTargets = [floatTarget(side), floatTarget(side), floatTarget(side)];
+}
+
+export async function showPicture(url, accent = '#ffffff') {
+  const token = ++pictureToken;
+  const mark = await buildMark(url, accent);
+
+  if (!mark || token !== pictureToken) {
     return;
   }
 
-  ATTRACTORS.forEach((name, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "attractor-option";
-    button.textContent = name;
-    button.setAttribute("aria-pressed", String(index === current));
-    button.addEventListener("click", () => selectShape(index));
-    list.appendChild(button);
-    buttons.push(button);
-  });
+  stopCycle();
+  morphTween?.kill();
+  beforeMark = current === MARK ? beforeMark : current;
+  current = MARK;
+  syncButtons();
 
-  list.setAttribute("aria-label", "Shape");
+  simMaterial.uniforms.state.value = 0;
+  // a mark's colours are its own
+  setCloudTarget(mark.texture, 0);
+  tweenFraming(mark.extent, 0);
+}
+
+export function clearPicture() {
+  pictureToken++;
+  if (current === MARK) {
+    applyShape(beforeMark);
+  }
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`could not load ${url}`));
+    image.src = url;
+  });
+}
+
+// opaque bounding box and first opaque pixel
+function measureMask(pixels) {
+  let minX = MASK_SIDE;
+  let maxX = -1;
+  let minY = -1;
+  let maxY = -1;
+  let firstX = 0;
+
+  for (let y = 0; y < MASK_SIDE; y++) {
+    const row = y * MASK_SIDE * 4;
+
+    let left = 0;
+    while (left < MASK_SIDE && pixels[row + left * 4 + 3] <= 127) left++;
+    if (left === MASK_SIDE) {
+      continue;
+    }
+
+    let right = MASK_SIDE - 1;
+    while (pixels[row + right * 4 + 3] <= 127) right--;
+
+    if (minY < 0) {
+      minY = y;
+      firstX = left;
+    }
+    minX = Math.min(minX, left);
+    maxX = Math.max(maxX, right);
+    maxY = y;
+  }
+
+  if (minY < 0) {
+    return null;
+  }
+
+  // half a texel in so a nearest sample cannot fall outside
+  const uv = (x, y) => new THREE.Vector2((x + 0.5) / MASK_SIDE, (y + 0.5) / MASK_SIDE);
+  return {
+    min: uv(minX, minY),
+    max: uv(maxX, maxY),
+    fallback: uv(firstX, minY),
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  };
+}
+
+async function buildMark(url, accent) {
+  if (!markMaterial) {
+    return null;
+  }
+
+  const image = await loadImage(url);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = MASK_SIDE;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+
+  // contained so a source that is not square keeps its shape
+  const scale = Math.min(MASK_SIDE / image.width, MASK_SIDE / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+  context.drawImage(image, (MASK_SIDE - width) / 2, (MASK_SIDE - height) / 2, width, height);
+
+  const mask = measureMask(context.getImageData(0, 0, MASK_SIDE, MASK_SIDE).data);
+  if (!mask) {
+    throw new Error(`${url} rasterised to nothing`);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  // measureMask reads top row first
+  texture.flipY = false;
+
+  const longest = Math.max(mask.width, mask.height);
+  const extent = { x: mask.width / longest, y: mask.height / longest, z: MARK_DEPTH };
+
+  // as many grid cells as there are particles, in the shape of the picture
+  const aspect = mask.width / mask.height;
+  const columns = Math.max(1, Math.floor(Math.sqrt(particleTotal * aspect)));
+  const rows = Math.max(1, Math.floor(columns / aspect));
+
+  const uniforms = markMaterial.uniforms;
+  uniforms.mask.value = texture;
+  uniforms.maskMin.value.copy(mask.min);
+  uniforms.maskMax.value.copy(mask.max);
+  uniforms.fallback.value.copy(mask.fallback);
+  uniforms.extent.value.set(extent.x * RADIUS, extent.y * RADIUS);
+  uniforms.lattice.value.set(columns, rows);
+  uniforms.tint.value.setStyle(accent, THREE.NoColorSpace);
+
+  const target = markTargets[nextMarkTarget];
+  nextMarkTarget = (nextMarkTarget + 1) % markTargets.length;
+  renderer.setRenderTarget(target);
+  renderer.render(markScene, quadCamera);
+  renderer.setRenderTarget(null);
+  texture.dispose();
+
+  return { texture: target.texture, extent };
 }
