@@ -1,4 +1,4 @@
-// dave hoskins' hash without sine
+// Hash without Sine by Dave Hoskins: https://www.shadertoy.com/view/4djSRW
 const glslRandom = /* glsl */`
 
   float random(vec2 st) {
@@ -51,10 +51,11 @@ export const simFrag = /* glsl */`
 
   const float WORLD_RADIUS = 4.0;
 
-  // forward euler overshoots badly far from the attractor
+  // Caps each step. Forward Euler overshoots badly far from the attractor.
   const float MAX_STEP = 0.35;
 
-  // above the largest real excursion, dadras at about 7.7
+  // Particles past this radius get pulled back in. It sits above the largest
+  // normal excursion, which is Dadras at about 7.7.
   const float CONTAIN_RADIUS = WORLD_RADIUS * 2.2;
   const float CONTAIN_PULL = 0.03;
 
@@ -62,7 +63,8 @@ export const simFrag = /* glsl */`
 
   const float CURSOR_ANGLE = 0.146;
 
-  // a target is slow to refill the dent, so it gets a smaller push
+  // Particles settling on a target are slow to refill the cursor's dent, so
+  // they get a smaller push.
   const float FIELD_PUSH = 0.25;
   const float TARGET_PUSH = 0.08;
 
@@ -70,8 +72,8 @@ export const simFrag = /* glsl */`
 
   const float NOMINAL_STEP = 0.0035 * WORLD_RADIUS;
 
-  // measured by integrating each system offline, normalising all five to one
-  // centre, radius and step
+  // Measured by integrating each system offline. Used to normalise all five
+  // attractors to the same centre, radius and step size.
   vec3 attractorCentre(int which) {
     if (which == LORENZ) return vec3(0.0, 0.0, 23.52);
     if (which == ROSSLER) return vec3(0.18, -0.89, 0.89);
@@ -80,7 +82,7 @@ export const simFrag = /* glsl */`
     return vec3(0.33, 0.33, 0.33);
   }
 
-  // 99th percentile distance from the centre
+  // 99th percentile distance from the centre.
   float attractorRadius(int which) {
     if (which == LORENZ) return 27.74;
     if (which == ROSSLER) return 17.23;
@@ -127,7 +129,7 @@ export const simFrag = /* glsl */`
     return vec3(-b * x + sin(y), -b * y + sin(z), -b * z + sin(x));
   }
 
-  // evaluated in the attractor's own coordinates, returned normalised
+  // Steps in the attractor's own coordinates and returns the step in world space.
   vec3 attractorStep(int which, vec3 pos) {
     float k = attractorRadius(which) / WORLD_RADIUS;
     vec3 native = attractorCentre(which) + pos * k;
@@ -143,7 +145,7 @@ export const simFrag = /* glsl */`
     return normalize(jitter + outward * 0.6);
   }
 
-  // capped so it lands without overshooting
+  // Moves toward the target by at most reach, so particles land without overshooting.
   vec3 forceToTarget(vec3 currentPos, vec3 targetPos, float reach) {
     vec3 toHome = targetPos - currentPos;
     float away = length(toHome);
@@ -165,7 +167,7 @@ export const simFrag = /* glsl */`
       targetMix
     );
 
-    // the cursor is the camera ray through the pointer
+    // Push particles out of a cone around the camera ray through the pointer.
     vec3 fromCamera = pos - mouseOrigin;
     float alongRay = dot(fromCamera, mouseDir);
 
@@ -184,7 +186,7 @@ export const simFrag = /* glsl */`
     }
 
     if (state == 1) {
-      // swapped at the halfway point, where the burst peaks
+      // Switch attractors halfway through the morph, where the scatter burst peaks.
       int running = morph < 0.5 ? attractorFrom : attractorTo;
       velocity = attractorStep(running, pos);
 
@@ -248,32 +250,34 @@ export const pointVert = /* glsl */`
 
 export const pointFrag = /* glsl */`
 
-uniform float colourMix;
-uniform vec3 rampLow;
-uniform vec3 rampMid;
-uniform vec3 rampHigh;
-uniform float baseGain;
-uniform float baseDesaturate;
-uniform vec3 baseTint;
-varying vec3 vBaseColour;
-varying float vSpeed;
-varying float vGrade;
+  uniform float colourMix;
+  uniform vec3 rampLow;
+  uniform vec3 rampMid;
+  uniform vec3 rampHigh;
+  uniform float baseGain;
+  uniform float baseDesaturate;
+  uniform vec3 baseTint;
 
-// most particles sit near 1.0, so the interesting range is about 0 to 3
-vec3 speedColour(float speed) {
+  varying vec3 vBaseColour;
+  varying float vSpeed;
+  varying float vGrade;
+
+  // Speed is relative to the nominal step, so most particles sit near 1.0 and
+  // the useful range is about 0 to 3.
+  vec3 speedColour(float speed) {
     float t = clamp(speed / 2.6, 0.0, 1.0);
     t = pow(t, 0.65);
 
     return t < 0.5 ? mix(rampLow, rampMid, t * 2.0) : mix(rampMid, rampHigh, (t - 0.5) * 2.0);
-}
+  }
 
-void main() {
+  void main() {
     float luma = dot(vBaseColour, vec3(0.2126, 0.7152, 0.0722));
     vec3 graded = mix(vBaseColour, vec3(luma) * baseTint, baseDesaturate) * baseGain;
     vec3 base = mix(vBaseColour, graded, vGrade);
 
     gl_FragColor = vec4(mix(base, speedColour(vSpeed), colourMix), 1.0);
-}
+  }
 `;
 
 export const markFrag = /* glsl */`
@@ -283,7 +287,7 @@ export const markFrag = /* glsl */`
   uniform sampler2D mask;
   uniform vec2 maskMin;
   uniform vec2 maskMax;
-  // a known opaque uv for particles that miss every tap
+  // A known opaque UV for particles that miss on every sample.
   uniform vec2 fallback;
   uniform vec2 extent;
   uniform float depth;
@@ -293,10 +297,10 @@ export const markFrag = /* glsl */`
 
   varying vec2 vUv;
 
-  // runs once per mark, never per frame
+  // High, but this pass runs once per picture, not every frame.
   const int MAX_TAPS = 256;
 
-  // unpacked by pointVert
+  // Unpacked by unpackColour in pointVert.
   float packColour(vec3 colour) {
     vec3 quantised = floor(clamp(colour, 0.0, 1.0) * 255.0 + 0.5);
     return quantised.r * 65536.0 + quantised.g * 256.0 + quantised.b;
@@ -306,7 +310,7 @@ export const markFrag = /* glsl */`
     vec2 hit = fallback;
     vec3 rgb = vec3(1.0);
 
-    // random points clump into fuzz, so each particle gets a grid cell
+    // Random sampling clumps, so each particle first tries its own grid cell.
     vec2 cell = floor(vUv * simSide);
     float index = cell.x + cell.y * simSide;
     float column = mod(index, lattice.x);
@@ -325,7 +329,8 @@ export const markFrag = /* glsl */`
       }
     }
 
-    // cells over holes, and particles with no cell, fall back to rejection
+    // Particles whose cell is transparent, or that have no cell, rejection
+    // sample the mask instead.
     for (int i = 0; i < MAX_TAPS; i++) {
       if (landed) {
         break;
@@ -344,7 +349,7 @@ export const markFrag = /* glsl */`
       }
     }
 
-    // mask uv to world, flipping y
+    // Mask UV to world space. Image rows run top down, so y is flipped.
     vec2 local = (hit - maskMin) / max(maskMax - maskMin, vec2(1e-5));
     vec2 centred = local * 2.0 - 1.0;
 

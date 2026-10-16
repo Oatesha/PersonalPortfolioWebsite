@@ -20,7 +20,7 @@
   font-style: normal;
 }
 
-/* the particle palettes are in cloud.js */
+/* Particle colours are in PALETTES in cloud.js. */
 :root {
   color-scheme: dark;
 
@@ -55,13 +55,14 @@
   --wash-three: #cdccc8;
 }
 
-/* clip, so the root does not become a scroll container */
+/* clip rather than hidden, which would make the root a scroll container. */
 html {
   overflow-x: clip;
 }
 
-/* body's background propagates to the root. give html one too and body paints
-   over the cloud */
+/* html has no background, so body's background paints the root canvas behind
+   the WebGL canvas. Giving html a background would make body paint over the
+   cloud. */
 body {
   font-family: 'Epilogue-Bold';
   margin: 0;
@@ -143,7 +144,7 @@ a:hover {
   text-transform: uppercase;
 }
 
-/* sections are flex and grid containers, so the attribute alone loses */
+/* Sections set display: flex or grid, which would override the hidden attribute. */
 [hidden] {
   display: none !important;
 }
@@ -355,7 +356,7 @@ a:hover {
   box-sizing: border-box;
 }
 
-/* the box the cloud is framed into */
+/* The cloud is framed to fit this box. */
 .LandingStage {
   position: absolute;
   left: 50%;
@@ -454,7 +455,7 @@ a:hover {
   gap: 0.35rem 1.5rem;
 }
 
-/* the font shorthand would undo the label size */
+/* font-family only, since `font: inherit` would override the shared label size. */
 .attractor-option {
   appearance: none;
   background: none;
@@ -514,7 +515,7 @@ a:hover {
   object-fit: contain;
 }
 
-/* hidden, the cloud still frames into this box */
+/* Hide the image but keep the box, since the cloud still frames into it. */
 .ProjectStage.is-model img {
   visibility: hidden;
 }
@@ -842,7 +843,7 @@ a:hover {
   color: var(--ink-faint);
 }
 
-/* gsap centres this with xPercent */
+/* Positioned on the pointer by initBlob in main.js. */
 .BackgroundAnimation {
   position: absolute;
   top: 0;

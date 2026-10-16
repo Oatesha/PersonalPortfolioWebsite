@@ -18,19 +18,20 @@ import { initProjects, enterProjects, leaveProjects, initWork, enterWork, leaveW
 
 gsap.registerPlugin(ScrollTrigger);
 
-// work is off until it has real marks and copy. its nav link is in index.html
+// The work route is disabled until it has real logos and copy. Its nav link is
+// commented out in index.html.
 const ROUTES = { home: '/', projects: '/projects' /* , work: '/work' */ };
 
-// gl_PointSize in pixels
+// Point sizes in device pixels.
 const SIZE_STEPS = [0.5, 1, 1.5, 2, 3, 4, 6, 8];
 
-// negative starts the camera inside the cloud
+// Negative starts the camera inside the cloud.
 const INTRO_FIT = -0.07;
 
 const lenis = new Lenis({ autoRaf: false });
 gsap.ticker.add((time) => lenis.raf(time * 1000));
 lenis.on('scroll', ScrollTrigger.update);
-// lenis integrates its own delta
+// Lenis handles its own frame timing, so GSAP's lag smoothing is turned off.
 gsap.ticker.lagSmoothing(0);
 
 let route = null;
@@ -60,7 +61,7 @@ initCloud((supported) => {
 function initRouter() {
   document.querySelectorAll('a[data-route]').forEach((link) => {
     link.addEventListener('click', (event) => {
-      // the href stays real so a modified click still opens the url
+      // Let modified clicks (new tab, new window) follow the real href.
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
         return;
       }
@@ -110,12 +111,12 @@ function navigate(name, push) {
 }
 
 function applyRoute() {
-  // the loader only belongs to the page opening
+  // The loader only plays on first load.
   if (opened) {
     document.querySelector('.LoaderLogoSection')?.remove();
   }
 
-  // a mark holds the sim on a target and would stop the attractors starting
+  // Clear any picture the route left on the cloud, so the attractors can run.
   if (route !== 'work') {
     leaveWork();
   }
@@ -132,7 +133,7 @@ function applyRoute() {
       playLandingIntro();
     }
   } else {
-    // seek to the bob's zero
+    // Pause the bob at its rest position.
     bob.pause(0);
     if (route === 'projects') {
       enterProjects();
@@ -160,7 +161,7 @@ function initIntro() {
       .to('.LoadingText', { autoAlpha: 1 }, '<');
   };
 
-  // behind an async import chain, so load may already have fired
+  // Module scripts can run after the load event has already fired.
   if (document.readyState === 'complete') {
     play();
   } else {
@@ -173,7 +174,7 @@ function scrollToLanding() {
     return;
   }
 
-  // any input cancels the auto scroll
+  // Any user input cancels the automatic scroll.
   const inputs = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
   const release = () => inputs.forEach((type) => window.removeEventListener(type, stop));
   const stop = () => {
@@ -192,7 +193,7 @@ function scrollToLanding() {
 function initBlob() {
   const blob = document.querySelector('.BackgroundAnimation');
 
-  // xPercent carries the centring, leaving x and y free for the follow
+  // Centre with xPercent/yPercent so x and y are free to follow the pointer.
   gsap.set(blob, { xPercent: -50, yPercent: -50 });
   const toX = gsap.quickTo(blob, 'x', { duration: 0.4, ease: 'power3' });
   const toY = gsap.quickTo(blob, 'y', { duration: 0.4, ease: 'power3' });
@@ -233,7 +234,7 @@ function initTheme() {
     try {
       localStorage.setItem('ho-theme', name);
     } catch {
-      // private browsing
+      // Storage can be unavailable, e.g. in private browsing.
     }
   };
 
@@ -241,7 +242,7 @@ function initTheme() {
   try {
     stored = localStorage.getItem('ho-theme');
   } catch {
-    // private browsing
+    // Same as above.
   }
 
   const preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
@@ -258,7 +259,7 @@ function abbreviate(count) {
   return String(count);
 }
 
-// sliders run over indices so the thumb lands on a stop
+// Slider values are indices into stops, so the thumb snaps to each stop.
 function initSlider(input, stops, start, format, apply) {
   const output = input.parentElement.querySelector('output');
   const nearest = stops.reduce((best, stop, i) => (Math.abs(stop - start) < Math.abs(stops[best] - start) ? i : best), 0);

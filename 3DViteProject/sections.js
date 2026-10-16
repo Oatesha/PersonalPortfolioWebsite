@@ -1,8 +1,8 @@
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { frame, lockAttractor, resumeCycle, showPicture, clearPicture, mobile } from './cloud.js';
 
-// shot is what the cloud becomes while a project is selected, null where the
-// cloud itself is the picture
+// shot is the image the cloud forms while a project is selected. It is null for
+// this site, which shows the cloud itself.
 const PROJECTS = [
   {
     title: 'Minecraftle',
@@ -38,7 +38,7 @@ const PROJECTS = [
   },
 ];
 
-// marks read best as bold solid shapes
+// Logos read best in particles as bold, solid shapes.
 const JOBS = [
   {
     company: 'Placeholder One',
@@ -66,7 +66,7 @@ const JOBS = [
   },
 ];
 
-// negative puts the camera inside the cloud
+// Negative puts the camera inside the cloud.
 const BACKDROP_FIT = -0.15;
 
 let selectedProject = 0;
@@ -109,7 +109,7 @@ function paintProjects() {
   stage.classList.toggle('is-model', !project.shot);
 
   if (mobile) {
-    // the cloud project keeps the last screenshot, hidden
+    // For this site the previous screenshot stays in place, hidden by is-model.
     if (project.shotMobile) {
       section.querySelector('.ProjectShot').src = project.shotMobile;
     }
@@ -146,7 +146,7 @@ export function leaveProjects() {
 function showProject() {
   const project = PROJECTS[selectedProject];
 
-  // on a phone the screenshot is the picture, so the cloud goes behind it
+  // Phones show the screenshot as an image, with the cloud as a backdrop.
   if (mobile && project.shot) {
     frame(section, { fit: BACKDROP_FIT, duration: 0.5 });
     resumeCycle();
@@ -187,7 +187,7 @@ export function initWork() {
   work.querySelectorAll('.Job').forEach((item, index) => {
     item.querySelector('.JobToggle').addEventListener('click', () => selectJob(selectedJob === index ? null : index));
 
-    // the triggers still fire while the route is hidden
+    // ScrollTriggers still fire while this route is hidden, hence workShown.
     const cross = () => workShown && selectJob(index);
     ScrollTrigger.create({ trigger: item, start: 'top 60%', end: 'bottom 60%', onEnter: cross, onEnterBack: cross });
   });
@@ -196,7 +196,7 @@ export function initWork() {
 export function enterWork() {
   workShown = true;
   frame(document.querySelector('.WorkStage'));
-  // the rows had no layout while the route was hidden
+  // The rows had no layout while hidden, so trigger positions need recomputing.
   ScrollTrigger.refresh();
 }
 

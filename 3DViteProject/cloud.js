@@ -5,19 +5,20 @@ import { quadVert, simFrag, pointVert, pointFrag, markFrag } from './shaders.js'
 
 const MAX_PIXEL_RATIO = 2;
 
-// sim steps per 60Hz frame
+// Simulation steps per frame at 60 Hz.
 const SIM_SPEED = 2.4;
 
-// side of the sim texture, so the ceiling on particle count
+// Width and height of the simulation texture. Each texel is one particle, so
+// this sets the maximum particle count.
 const TEXTURE_SIDE = 1280;
 const MOBILE_TEXTURE_SIDE = 256;
 
 const PARTICLE_STEPS = [25000, 50000, 100000, 250000, 500000, 750000, 1000000];
 
-// matches WORLD_RADIUS in shaders.js
+// Must match WORLD_RADIUS in shaders.js.
 const RADIUS = 4;
 
-// the cloud zooms in from this on load
+// The camera starts this far out and zooms in on load.
 const INTRO_RADIUS = 24;
 
 const FIT_MARGIN = 1.05;
@@ -25,7 +26,7 @@ const TARGET_CROSSFADE = 1.2;
 const MORPH_DURATION = 2.4;
 const CYCLE_INTERVAL = 10;
 
-// order must match the constants in shaders.js
+// Order must match the attractor constants in shaders.js.
 const ATTRACTORS = ['Thomas', 'Lorenz', 'Rössler', 'Halvorsen', 'Dadras'];
 const START_ATTRACTOR = 1;
 const PROJECT_ATTRACTOR = 4;
@@ -34,7 +35,7 @@ const MARK = -2;
 const MASK_SIDE = 1024;
 const MARK_DEPTH = 0.04;
 
-// the colours are applied as written, so they skip three's srgb conversion
+// Passed to the shaders as written, without three.js's sRGB conversion.
 const PALETTES = {
   light: { low: 0x8f8c86, mid: 0xc2551a, high: 0x1a1917, tint: 0xffe2cd, gain: 0.42, desaturate: 0.92 },
   dark: { low: 0x4a2311, mid: 0xff8a3c, high: 0xf7f3ef, tint: 0xffcfae, gain: 0.95, desaturate: 0.88 },
@@ -61,15 +62,17 @@ let theme = 'dark';
 export const rig = {
   target: null,
   radius: INTRO_RADIUS,
-  // half extents as multiples of radius
+  // Half extents of the framed volume, as multiples of radius.
   extent: { x: 1, y: 1, z: 1 },
-  // fraction of the fitted distance. negative passes through the cloud
+  // Camera distance as a fraction of the distance that fits the cloud in frame.
+  // Values at or below zero put the camera inside the cloud.
   fit: 1,
   bobY: 0,
 };
 
-// three only promotes ShaderMaterial to glsl 3 on webgl2, and the point shader
-// unpacks colour with bitwise ops
+// The simulation renders into float targets, and the point shader unpacks colour
+// with bitwise ops, which needs GLSL 3. three.js only compiles ShaderMaterial as
+// GLSL 3 on WebGL2.
 function supported() {
   return renderer.capabilities.isWebGL2
     && renderer.capabilities.floatVertexTextures
@@ -95,7 +98,7 @@ export function initCloud(onReady) {
     pointerActive = true;
     pointer.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
   });
-  // otherwise the dent freezes into the cloud
+  // Otherwise the dent the cursor pushes into the cloud stays after it leaves.
   document.addEventListener('pointerleave', () => (pointerActive = false));
   window.addEventListener('blur', () => (pointerActive = false));
   window.addEventListener('resize', () => {
@@ -114,14 +117,15 @@ function pixelRatio() {
   return Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
 }
 
-// gl_PointSize is in device pixels, so a 1x display has four times the cell to cover
+// gl_PointSize is in device pixels, so points need to be larger on 1x displays
+// to fill the same space.
 export function defaultPointSize() {
   return pixelRatio() >= 2 ? 1.0 : 1.5;
 }
 
 function floatTexture(data, side) {
   const texture = new THREE.DataTexture(data, side, side, THREE.RGBAFormat, THREE.FloatType);
-  // a DataTexture sits at version 0 until this is set, and three uploads nothing
+  // three.js doesn't upload a DataTexture until this is set.
   texture.needsUpdate = true;
   return texture;
 }
@@ -144,7 +148,8 @@ function quadScene(material) {
 function initSim(tier) {
   const side = mobile ? MOBILE_TEXTURE_SIDE : TEXTURE_SIDE;
   particleTotal = side * side;
-  // a picture lays one cell per particle, so short of the total is holes in it
+  // Pictures give each particle one grid cell, so drawing fewer than the total
+  // leaves holes. Only GPUs that can handle it get every particle by default.
   defaultParticleCount = tier >= 2 ? particleTotal : tier === 1 ? 1000000 : 250000;
 
   const scattered = new Float32Array(particleTotal * 4);
@@ -155,7 +160,7 @@ function initSim(tier) {
     scattered[i * 4] = distance * Math.sin(theta) * Math.cos(phi);
     scattered[i * 4 + 1] = distance * Math.sin(theta) * Math.sin(phi);
     scattered[i * 4 + 2] = distance * Math.cos(theta);
-    // packed white, so the cloud opens on the page tint
+    // Colour is packed into alpha as 0xRRGGBB. White grades to the theme tint.
     scattered[i * 4 + 3] = 0xffffff;
   }
   const start = floatTexture(scattered, side);
@@ -163,7 +168,7 @@ function initSim(tier) {
 
   simMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      // 0 pulls every particle to its point on the target, 1 runs an attractor
+      // 0 moves each particle to its point on the target, 1 runs an attractor.
       state: { value: 0 },
       dtScale: { value: 1 },
       attractorFrom: { value: 0 },
@@ -182,7 +187,8 @@ function initSim(tier) {
   });
   simScene = quadScene(simMaterial);
 
-  // a target cannot be read and written in one pass
+  // Two targets to ping-pong between, since a pass can't read and write the
+  // same texture.
   readTarget = floatTarget(side);
   writeTarget = floatTarget(side);
   for (const target of [readTarget, writeTarget]) {
@@ -198,7 +204,7 @@ function initSim(tier) {
       targetTexB: { value: start },
       targetMix: { value: 0 },
       pointSize: { value: defaultPointSize() },
-      // 0 paints the target's own colours, 1 paints particle speed
+      // 0 shows the target's own colours, 1 colours by particle speed.
       colourMix: { value: 0 },
       rampLow: { value: new THREE.Color() },
       rampMid: { value: new THREE.Color() },
@@ -206,7 +212,7 @@ function initSim(tier) {
       baseTint: { value: new THREE.Color() },
       baseGain: { value: 1 },
       baseDesaturate: { value: 0 },
-      // 1 where a slot's colours want grading to the page palette
+      // 1 grades the target in that slot to the theme palette, 0 keeps its colours.
       gradeA: { value: 1 },
       gradeB: { value: 1 },
     },
@@ -215,15 +221,16 @@ function initSim(tier) {
   });
   applyPalette();
 
-  // texel order is position order in a picture, so a prefix of it cuts a band
-  // out. shuffled once, any prefix is a fair sample
+  // The particle slider draws a prefix of this buffer. Texel order follows the
+  // picture's rows, so a prefix would only cover a band of it. Shuffling makes
+  // any prefix an even sample of the whole picture.
   const order = new Uint32Array(particleTotal).map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) {
     const swap = Math.floor(Math.random() * (i + 1));
     [order[i], order[swap]] = [order[swap], order[i]];
   }
 
-  // a particle's position is its sim texel
+  // Each vertex holds the UV of its particle's texel in the simulation texture.
   const positions = new Float32Array(particleTotal * 2);
   order.forEach((texel, i) => {
     positions[i * 2] = ((texel % side) + 0.5) / side;
@@ -232,7 +239,7 @@ function initSim(tier) {
 
   geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 2));
-  // getZ off a two component buffer is NaN, and three computes this to sort
+  // Set by hand: computing it from a 2D position attribute gives NaN.
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 16);
 
   const points = new THREE.Points(geometry, pointMaterial);
@@ -250,12 +257,12 @@ function initSim(tier) {
 }
 
 function render() {
-  // some browsers still tick a backgrounded tab
+  // Some browsers keep ticking in background tabs.
   if (document.hidden) {
     return;
   }
 
-  // capped so a dropped frame cannot blow up the attractor
+  // Capped so a long frame can't make the integration blow up.
   simMaterial.uniforms.dtScale.value = Math.min(clock.getDelta() * 60, 2) * SIM_SPEED;
 
   updateCamera();
@@ -269,7 +276,7 @@ function render() {
 
   renderer.render(scene, camera);
 
-  // after the render so the view offset is already in the projection
+  // After rendering, so the projection matrix includes this frame's view offset.
   raycaster.setFromCamera(pointer, camera);
   simMaterial.uniforms.mouseOrigin.value.copy(raycaster.ray.origin);
   simMaterial.uniforms.mouseDir.value.copy(raycaster.ray.direction);
@@ -288,7 +295,7 @@ export function getDefaultParticleCount() {
   return defaultParticleCount;
 }
 
-// draws a prefix of the shuffled buffer
+// Draws the first `count` particles of the shuffled buffer.
 export function setParticleCount(count) {
   geometry.setDrawRange(0, count);
 }
@@ -316,8 +323,8 @@ function applyPalette() {
   uniforms.baseDesaturate.value = palette.desaturate;
 }
 
-// two target slots. the new texture goes in the one the cloud is not reading,
-// then it crossfades over
+// Two target slots. A new target goes into the slot not in use, then targetMix
+// crossfades over to it.
 let activeSlot = 0;
 let activeTarget = null;
 let targetTween = null;
@@ -342,10 +349,11 @@ function setCloudTarget(texture, graded) {
   });
 }
 
-// the canvas is fullscreen but the cloud is framed in a DOM element.
-// setViewOffset runs backwards: the frustum is the element, the sub rect is the viewport
+// The canvas covers the viewport, but the cloud is framed to fit a DOM element
+// (rig.target). setViewOffset is used in reverse: the full view is the element,
+// and the part rendered is the viewport.
 
-// in document coordinates so a scroll needs no new layout
+// Cached in document coordinates, so scrolling doesn't need a fresh layout read.
 let rigRect = null;
 const resizeObserver = new ResizeObserver(() => (rigRect = null));
 
@@ -364,7 +372,7 @@ export function frame(element, { fit = 1, duration = 1 } = {}) {
 function measureRig() {
   const rect = rig.target?.getBoundingClientRect();
 
-  // a hidden target frames the viewport until the observer sees it sized
+  // Frame the viewport until the target is visible and laid out.
   if (!rect || rect.width < 1 || rect.height < 1) {
     return { left: window.scrollX, top: window.scrollY, width: window.innerWidth, height: window.innerHeight };
   }
@@ -378,7 +386,8 @@ function updateCamera() {
 
   camera.aspect = width / height;
 
-  // the distance at which a box of the rig's half extents fits both axes
+  // Distance at which a box with the rig's half extents fits both horizontally
+  // and vertically.
   const vFov = THREE.MathUtils.degToRad(camera.fov);
   const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
   const distance = Math.max(rig.extent.y / Math.tan(vFov / 2), rig.extent.x / Math.tan(hFov / 2)) * FIT_MARGIN + rig.extent.z;
@@ -387,10 +396,11 @@ function updateCamera() {
   camera.setViewOffset(width, height, window.scrollX - left, window.scrollY - top, window.innerWidth, window.innerHeight);
 }
 
-// -1 until the sim is up
+// Index of the active attractor, MARK while a picture is shown, or -1 before the
+// first shape is applied.
 let current = -1;
 let beforeMark = START_ATTRACTOR;
-// set by the first press of a shape button, the cycle never takes over again
+// Set once the user picks a shape. Auto-cycling never resumes after that.
 let manual = false;
 let cycling = false;
 let morphTween = null;
@@ -448,14 +458,14 @@ function applyShape(index) {
     return;
   }
 
-  // already there, but the cycle still wants arming
+  // Already on this shape, but the cycle timer may still need starting.
   if (index === current) {
     scheduleNext();
     return;
   }
 
   const uniforms = simMaterial.uniforms;
-  // a mark is a texture, so there is nothing to morph from
+  // A picture has no attractor to morph from, so start on the new one directly.
   const fromMark = current === MARK;
   current = index;
   syncButtons();
@@ -473,7 +483,8 @@ function applyShape(index) {
   scheduleNext();
 }
 
-// overwrite auto so a press part way through a transition takes these over
+// overwrite: 'auto' lets a click part way through a transition take over the
+// running tweens.
 function tweenFraming(extent, colourMix) {
   const tween = { duration: MORPH_DURATION, ease: 'power2.inOut', overwrite: 'auto' };
   gsap.to(rig, { radius: RADIUS, ...tween });
@@ -485,13 +496,13 @@ function syncButtons() {
   buttons.forEach((button, index) => button.setAttribute('aria-pressed', String(index === current)));
 }
 
-// a picture becomes a particle target: rasterise it to an alpha mask, then one
-// gpu pass gives each particle a cell of a grid over the mask
+// Marks turn a picture into a particle target: the image is rasterised to an
+// alpha mask, then one GPU pass gives each particle a cell in a grid over it.
 
 let markMaterial, markScene;
 let markTargets = [];
 let nextMarkTarget = 0;
-// building a mark is async, so only the newest request reaches the cloud
+// Building a mark is async. Each request bumps this so only the newest is shown.
 let pictureToken = 0;
 
 function initMarks(side) {
@@ -512,7 +523,7 @@ function initMarks(side) {
   });
   markScene = quadScene(markMaterial);
 
-  // a crossfade reads two targets, so the next mark needs a third
+  // A crossfade reads two targets, so building the next mark needs a third.
   markTargets = [floatTarget(side), floatTarget(side), floatTarget(side)];
 }
 
@@ -531,7 +542,7 @@ export async function showPicture(url, accent = '#ffffff') {
   syncButtons();
 
   simMaterial.uniforms.state.value = 0;
-  // a mark's colours are its own
+  // Keep the picture's own colours rather than grading them.
   setCloudTarget(mark.texture, 0);
   tweenFraming(mark.extent, 0);
 }
@@ -552,7 +563,7 @@ function loadImage(url) {
   });
 }
 
-// opaque bounding box and first opaque pixel
+// Bounding box of the opaque pixels, plus the first opaque pixel.
 function measureMask(pixels) {
   let minX = MASK_SIDE;
   let maxX = -1;
@@ -585,7 +596,7 @@ function measureMask(pixels) {
     return null;
   }
 
-  // half a texel in so a nearest sample cannot fall outside
+  // Texel centres, so nearest sampling can't land outside the mask.
   const uv = (x, y) => new THREE.Vector2((x + 0.5) / MASK_SIDE, (y + 0.5) / MASK_SIDE);
   return {
     min: uv(minX, minY),
@@ -606,7 +617,7 @@ async function buildMark(url, accent) {
   canvas.width = canvas.height = MASK_SIDE;
   const context = canvas.getContext('2d', { willReadFrequently: true });
 
-  // contained so a source that is not square keeps its shape
+  // Fit inside the square canvas, keeping the aspect ratio.
   const scale = Math.min(MASK_SIDE / image.width, MASK_SIDE / image.height);
   const width = image.width * scale;
   const height = image.height * scale;
@@ -621,13 +632,13 @@ async function buildMark(url, accent) {
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
   texture.generateMipmaps = false;
-  // measureMask reads top row first
+  // measureMask's coordinates start at the top row.
   texture.flipY = false;
 
   const longest = Math.max(mask.width, mask.height);
   const extent = { x: mask.width / longest, y: mask.height / longest, z: MARK_DEPTH };
 
-  // as many grid cells as there are particles, in the shape of the picture
+  // About one grid cell per particle, with the picture's aspect ratio.
   const aspect = mask.width / mask.height;
   const columns = Math.max(1, Math.floor(Math.sqrt(particleTotal * aspect)));
   const rows = Math.max(1, Math.floor(columns / aspect));
