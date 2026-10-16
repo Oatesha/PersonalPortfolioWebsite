@@ -1,5 +1,4 @@
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import {
@@ -14,13 +13,9 @@ import {
   setParticleCount,
   setPointSize,
 } from './cloud.js';
-import { initProjects, enterProjects, leaveProjects, initWork, enterWork, leaveWork } from './sections.js';
+import { initProjects, enterProjects, leaveProjects } from './sections.js';
 
-gsap.registerPlugin(ScrollTrigger);
-
-// The work route is disabled until it has real logos and copy. Its nav link is
-// commented out in index.html.
-const ROUTES = { home: '/', projects: '/projects' /* , work: '/work' */ };
+const ROUTES = { home: '/', projects: '/projects' };
 
 // Point sizes in device pixels.
 const SIZE_STEPS = [0.5, 1, 1.5, 2, 3, 4, 6, 8];
@@ -30,7 +25,6 @@ const INTRO_FIT = -0.07;
 
 const lenis = new Lenis({ autoRaf: false });
 gsap.ticker.add((time) => lenis.raf(time * 1000));
-lenis.on('scroll', ScrollTrigger.update);
 // Lenis handles its own frame timing, so GSAP's lag smoothing is turned off.
 gsap.ticker.lagSmoothing(0);
 
@@ -41,9 +35,6 @@ let bob = null;
 
 initTheme();
 initProjects();
-if (ROUTES.work) {
-  initWork();
-}
 initIntro();
 initBlob();
 initRouter();
@@ -117,9 +108,6 @@ function applyRoute() {
   }
 
   // Clear any picture the route left on the cloud, so the attractors can run.
-  if (route !== 'work') {
-    leaveWork();
-  }
   if (route !== 'projects') {
     leaveProjects();
   }
@@ -135,11 +123,7 @@ function applyRoute() {
   } else {
     // Pause the bob at its rest position.
     bob.pause(0);
-    if (route === 'projects') {
-      enterProjects();
-    } else {
-      enterWork();
-    }
+    enterProjects();
   }
 
   opened = true;

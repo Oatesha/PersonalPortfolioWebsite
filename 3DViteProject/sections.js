@@ -1,4 +1,3 @@
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { frame, lockAttractor, resumeCycle, showPicture, clearPicture, mobile } from './cloud.js';
 
 // shot is the image the cloud forms while a project is selected. It is null for
@@ -35,34 +34,6 @@ const PROJECTS = [
     shotMobile: '/scenes/mobile/vendetta.webp',
     blurb:
       "Vendetta is a networked FPS game developed in C# with Unity. It features a lobby system with Unity's relay service for peer-to-peer UDP player connections without the need for port forwarding and the game also utilizes object pooling and custom curve-based procedural animations",
-  },
-];
-
-// Logos read best in particles as bold, solid shapes.
-const JOBS = [
-  {
-    company: 'Placeholder One',
-    role: 'Placeholder role',
-    dates: '2025 &ndash; Present',
-    mark: '/marks/placeholder-one.svg',
-    accent: '#C2551A',
-    blurb: 'Placeholder.',
-  },
-  {
-    company: 'Placeholder Two',
-    role: 'Placeholder role',
-    dates: '2024 &ndash; 2025',
-    mark: '/marks/placeholder-two.svg',
-    accent: '#495A78',
-    blurb: 'Placeholder.',
-  },
-  {
-    company: 'Placeholder Three',
-    role: 'Placeholder role',
-    dates: '2023 &ndash; 2024',
-    mark: '/marks/placeholder-three.svg',
-    accent: '#8C5A44',
-    blurb: 'Placeholder.',
   },
 ];
 
@@ -159,67 +130,5 @@ function showProject() {
     showPicture(project.shot);
   } else {
     lockAttractor();
-  }
-}
-
-let selectedJob = null;
-let workShown = false;
-
-export function initWork() {
-  const work = document.querySelector('.WorkSection');
-
-  work.innerHTML = `
-    <div class="WorkStage" aria-hidden="true"></div>
-    <div class="WorkRail">
-      <h2 class="WorkHeading">Work &middot; scroll</h2>
-      <ol class="JobList">${JOBS.map((job, index) => `
-        <li class="Job">
-          <button class="JobToggle" type="button" aria-expanded="false" aria-controls="job-detail-${index}">
-            <span class="JobCompany">${job.company}</span>
-            <span class="JobRole">${job.role}</span>
-            <span class="JobDates">${job.dates}</span>
-          </button>
-          <div class="JobDetail" id="job-detail-${index}" hidden><p>${job.blurb}</p></div>
-        </li>`).join('')}
-      </ol>
-    </div>`;
-
-  work.querySelectorAll('.Job').forEach((item, index) => {
-    item.querySelector('.JobToggle').addEventListener('click', () => selectJob(selectedJob === index ? null : index));
-
-    // ScrollTriggers still fire while this route is hidden, hence workShown.
-    const cross = () => workShown && selectJob(index);
-    ScrollTrigger.create({ trigger: item, start: 'top 60%', end: 'bottom 60%', onEnter: cross, onEnterBack: cross });
-  });
-}
-
-export function enterWork() {
-  workShown = true;
-  frame(document.querySelector('.WorkStage'));
-  // The rows had no layout while hidden, so trigger positions need recomputing.
-  ScrollTrigger.refresh();
-}
-
-export function leaveWork() {
-  workShown = false;
-  selectJob(null);
-}
-
-function selectJob(index) {
-  if (index === selectedJob) {
-    return;
-  }
-  selectedJob = index;
-
-  document.querySelectorAll('.Job').forEach((item, i) => {
-    item.classList.toggle('is-open', i === index);
-    item.querySelector('.JobToggle').setAttribute('aria-expanded', String(i === index));
-    item.querySelector('.JobDetail').hidden = i !== index;
-  });
-
-  if (index === null) {
-    clearPicture();
-  } else {
-    showPicture(JOBS[index].mark, JOBS[index].accent);
   }
 }
