@@ -17,7 +17,7 @@ const PROJECTS = [
     shot: null,
     shotMobile: null,
     blurb:
-      'My personal website showcases my past projects built with Three.js and GSAP. It features GPU particle rendering using FBO to animate lots of particles and custom shaders for interactive images',
+      'My personal website showcases my past projects built with Three.js and GSAP. It simulates up to 1.6 million particles on the GPU and uses custom shaders to form them into interactive images',
   },
   {
     title: 'QFIN',
