@@ -408,12 +408,12 @@ let cycleCall = null;
 const buttons = [];
 
 function initShapeSwitch() {
-  const list = document.querySelector('.attractor-switch');
+  const list = document.querySelector('.AttractorSwitch');
 
   ATTRACTORS.forEach((name, index) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'attractor-option';
+    button.className = 'AttractorOption';
     button.textContent = name;
     button.setAttribute('aria-pressed', 'false');
     button.addEventListener('click', () => {

@@ -131,8 +131,8 @@ a:hover {
 }
 
 .NavLink,
-.attractor-option,
-.viewer-control,
+.AttractorOption,
+.ViewerControl,
 .ProjectRepo,
 .SiteFooter p,
 .SiteFooter a {
@@ -261,7 +261,7 @@ a:hover {
   opacity: 1;
 }
 
-.viewer-control {
+.ViewerControl {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -269,11 +269,11 @@ a:hover {
   white-space: nowrap;
 }
 
-.viewer-control span {
+.ViewerControl span {
   color: var(--ink-faint);
 }
 
-.viewer-control output {
+.ViewerControl output {
   min-width: 4ch;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -281,7 +281,7 @@ a:hover {
   color: var(--ink);
 }
 
-.viewer-control input[type="range"] {
+.ViewerControl input[type="range"] {
   appearance: none;
   width: clamp(4.5rem, 9vw, 8rem);
   height: 10px;
@@ -289,17 +289,17 @@ a:hover {
   cursor: pointer;
 }
 
-.viewer-control input[type="range"]::-webkit-slider-runnable-track {
+.ViewerControl input[type="range"]::-webkit-slider-runnable-track {
   height: 10px;
   background: linear-gradient(var(--line-strong) 0 0) no-repeat center / 100% 1px;
 }
 
-.viewer-control input[type="range"]::-moz-range-track {
+.ViewerControl input[type="range"]::-moz-range-track {
   height: 10px;
   background: linear-gradient(var(--line-strong) 0 0) no-repeat center / 100% 1px;
 }
 
-.viewer-control input[type="range"]::-webkit-slider-thumb {
+.ViewerControl input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 8px;
   height: 8px;
@@ -310,7 +310,7 @@ a:hover {
   cursor: pointer;
 }
 
-.viewer-control input[type="range"]::-moz-range-thumb {
+.ViewerControl input[type="range"]::-moz-range-thumb {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -417,13 +417,13 @@ a:hover {
     gap: 0;
   }
 
-  .attractor-switch {
+  .AttractorSwitch {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0 0.75rem;
   }
 
-  .attractor-option {
+  .AttractorOption {
     min-height: 2.5rem;
   }
 
@@ -432,28 +432,28 @@ a:hover {
     gap: 0;
   }
 
-  .viewer-control {
+  .ViewerControl {
     min-height: 2.5rem;
   }
 
-  .viewer-control input[type="range"] {
+  .ViewerControl input[type="range"] {
     width: auto;
     flex-grow: 1;
   }
 
-  .viewer-control span {
+  .ViewerControl span {
     width: 4.25rem;
   }
 }
 
-.attractor-switch {
+.AttractorSwitch {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 1.5rem;
 }
 
 /* font-family only, since `font: inherit` would override the shared label size. */
-.attractor-option {
+.AttractorOption {
   appearance: none;
   background: none;
   border: 0;
@@ -465,12 +465,12 @@ a:hover {
   transition: color 0.25s;
 }
 
-.attractor-option:hover,
-.attractor-option:focus-visible {
+.AttractorOption:hover,
+.AttractorOption:focus-visible {
   color: var(--ink);
 }
 
-.attractor-option::after {
+.AttractorOption::after {
   content: "";
   position: absolute;
   left: 0;
@@ -483,11 +483,11 @@ a:hover {
   transition: transform 0.25s;
 }
 
-.attractor-option[aria-pressed="true"] {
+.AttractorOption[aria-pressed="true"] {
   color: var(--ink);
 }
 
-.attractor-option[aria-pressed="true"]::after {
+.AttractorOption[aria-pressed="true"]::after {
   transform: scaleX(1);
 }
 
