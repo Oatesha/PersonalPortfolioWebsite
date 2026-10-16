@@ -33,14 +33,13 @@ The canvas is fixed to the viewport, but the cloud is framed to fit a DOM elemen
 ## Layout
 
 ```
-3DViteProject/
-  index.html
-  main.js      routing, intro animation, theme, viewer controls
-  cloud.js     renderer, simulation, camera framing, attractor cycle, picture targets
-  sections.js  project section content
-  shaders.js   GLSL for the simulation, points and picture targets
-  style.css
-  public/      fonts, screenshots, Cloudflare Pages redirects
+index.html
+main.js      routing, intro animation, theme, viewer controls
+cloud.js     renderer, simulation, camera framing, attractor cycle, picture targets
+sections.js  project section content
+shaders.js   GLSL for the simulation, points and picture targets
+style.css
+public/      fonts, screenshots, Cloudflare Pages redirects
 ```
 
 ## Running locally
@@ -48,7 +47,6 @@ The canvas is fixed to the viewport, but the cloud is framed to fit a DOM elemen
 Requires Node 22 (see `.nvmrc`).
 
 ```
-cd 3DViteProject
 npm install
 npm run dev
 ```
