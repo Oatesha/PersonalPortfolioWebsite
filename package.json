@@ -1,7 +1,9 @@
 {
-  "name": "3dviteproject",
+  "name": "harrison-oates-portfolio",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Portfolio site built around a GPU particle simulation",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
