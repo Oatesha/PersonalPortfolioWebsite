@@ -8,7 +8,7 @@ My portfolio site, built around a GPU particle simulation of up to 1.6 million p
 
 ### Simulation on the GPU
 
-Each particle is one texel of a 1280×1280 float texture: position in RGB, colour packed into alpha as `0xRRGGBB`. Every frame, a full-screen fragment shader reads the positions from one render target and writes the next step into another, then the two swap. The CPU never touches particle data after startup, so there is no per-frame upload. The point shader reads its position straight from the texture.
+Each particle is one texel of a square float texture, up to 1280×1280: position in RGB, colour packed into alpha as `0xRRGGBB`. Every frame, a full-screen fragment shader reads the positions from one render target and writes the next step into another, then the two swap. The CPU never touches particle data after startup, so there is no per-frame upload. The point shader reads its position straight from the texture.
 
 ### Attractors
 
@@ -28,7 +28,7 @@ The canvas is fixed to the viewport, but the cloud is framed to fit a DOM elemen
 
 ### Scaling to the device
 
-[detect-gpu](https://github.com/pmndrs/detect-gpu) sets the default particle count, and sliders let visitors change it and the point size. Phones use a 256×256 simulation and show plain screenshots on the projects page. Browsers without WebGL2 float render targets get the page without the cloud.
+The simulation starts at 1280×1280 and times its first frames. If they run slow, a copy pass resamples every texture into a smaller one, sized from the measured frame time, so an even subset of the particles carries on where it was. Sliders let visitors change the drawn particle count and the point size. Phones use a 256×256 simulation and show plain screenshots on the projects page. Browsers without WebGL2 float render targets get the page without the cloud.
 
 ## Layout
 

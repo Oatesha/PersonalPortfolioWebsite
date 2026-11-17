@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { getGPUTier } from 'detect-gpu';
-import { quadVert, simFrag, pointVert, pointFrag, markFrag } from './shaders.js';
+import { quadVert, simFrag, pointVert, pointFrag, markFrag, copyFrag } from './shaders.js';
 
 const MAX_PIXEL_RATIO = 2;
 
@@ -9,9 +8,18 @@ const MAX_PIXEL_RATIO = 2;
 const SIM_SPEED = 2.4;
 
 // Width and height of the simulation texture. Each texel is one particle, so
-// this sets the maximum particle count.
-const TEXTURE_SIDE = 1280;
+// this sets the particle count. The sim starts at the first and steps down
+// while frames run slow.
+const TEXTURE_SIDES = [1280, 1024, 768, 512, 384, 256];
 const MOBILE_TEXTURE_SIDE = 256;
+
+// Median frame time that triggers a step down. A step aims for 60 fps,
+// assuming frame time scales with particle count.
+const FRAME_BUDGET_MS = 22;
+const TARGET_FRAME_MS = 1000 / 60;
+// Skipped after startup and each step, for shader compiles and uploads.
+const WARMUP_FRAMES = 10;
+const SAMPLE_FRAMES = 20;
 
 const PARTICLE_STEPS = [25000, 50000, 100000, 250000, 500000, 750000, 1000000];
 
@@ -54,10 +62,11 @@ let pointerActive = false;
 
 const quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
 
-let simMaterial, pointMaterial, simScene, readTarget, writeTarget;
-let geometry = null;
+let simMaterial, pointMaterial, copyMaterial, simScene, copyScene, readTarget, writeTarget;
+let points = null;
+let side = 0;
 let particleTotal = 0;
-let defaultParticleCount = 250000;
+let onRescale = null;
 let theme = 'dark';
 
 export const rig = {
@@ -80,7 +89,8 @@ function supported() {
     && renderer.extensions.has('EXT_color_buffer_float');
 }
 
-export function initCloud(onReady) {
+// onRescaled runs after the sim steps down to a smaller texture.
+export function initCloud(onReady, onRescaled) {
   try {
     renderer = new THREE.WebGLRenderer({ alpha: true });
   } catch {
@@ -95,6 +105,7 @@ export function initCloud(onReady) {
     return;
   }
 
+  onRescale = onRescaled;
   initShapeSwitch();
 
   renderer.setPixelRatio(pixelRatio());
@@ -116,10 +127,8 @@ export function initCloud(onReady) {
     rigRect = null;
   });
 
-  getGPUTier().then(({ tier }) => {
-    initSim(tier);
-    onReady(true);
-  });
+  initSim();
+  onReady(true);
 }
 
 function pixelRatio() {
@@ -154,13 +163,7 @@ function quadScene(material) {
   return quad;
 }
 
-function initSim(tier) {
-  const side = mobile ? MOBILE_TEXTURE_SIDE : TEXTURE_SIDE;
-  particleTotal = side * side;
-  // Pictures give each particle one grid cell, so drawing fewer than the total
-  // leaves holes. Only GPUs that can handle it get every particle by default.
-  defaultParticleCount = tier >= 2 ? particleTotal : tier === 1 ? 1000000 : 250000;
-
+function scatterTexture() {
   const scattered = new Float32Array(particleTotal * 4);
   for (let i = 0; i < particleTotal; i++) {
     const distance = Math.sqrt(Math.random()) * 20.0;
@@ -172,9 +175,10 @@ function initSim(tier) {
     // Colour is packed into alpha as 0xRRGGBB. White grades to the theme tint.
     scattered[i * 4 + 3] = 0xffffff;
   }
-  const start = floatTexture(scattered, side);
-  activeTarget = start;
+  return floatTexture(scattered, side);
+}
 
+function initSim() {
   simMaterial = new THREE.ShaderMaterial({
     uniforms: {
       // 0 moves each particle to its point on the target, 1 runs an attractor.
@@ -183,9 +187,9 @@ function initSim(tier) {
       attractorFrom: { value: 0 },
       attractorTo: { value: 0 },
       morph: { value: 1 },
-      posTex: { value: start },
-      targetTexA: { value: start },
-      targetTexB: { value: start },
+      posTex: { value: null },
+      targetTexA: { value: null },
+      targetTexB: { value: null },
       targetMix: { value: 0 },
       mouseOrigin: { value: new THREE.Vector3() },
       mouseDir: { value: new THREE.Vector3(0, 0, -1) },
@@ -196,21 +200,18 @@ function initSim(tier) {
   });
   simScene = quadScene(simMaterial);
 
-  // Two targets to ping-pong between, since a pass can't read and write the
-  // same texture.
-  readTarget = floatTarget(side);
-  writeTarget = floatTarget(side);
-  for (const target of [readTarget, writeTarget]) {
-    renderer.setRenderTarget(target);
-    renderer.render(simScene, quadCamera);
-  }
-  renderer.setRenderTarget(null);
+  copyMaterial = new THREE.ShaderMaterial({
+    uniforms: { source: { value: null } },
+    vertexShader: quadVert,
+    fragmentShader: copyFrag,
+  });
+  copyScene = quadScene(copyMaterial);
 
   pointMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      posTex: { value: start },
-      targetTexA: { value: start },
-      targetTexB: { value: start },
+      posTex: { value: null },
+      targetTexA: { value: null },
+      targetTexB: { value: null },
       targetMix: { value: 0 },
       pointSize: { value: defaultPointSize() },
       // 0 shows the target's own colours, 1 colours by particle speed.
@@ -230,6 +231,22 @@ function initSim(tier) {
   });
   applyPalette();
 
+  points = new THREE.Points(new THREE.BufferGeometry(), pointMaterial);
+  points.frustumCulled = false;
+  scene.add(points);
+
+  initMarks();
+  allocateParticles(mobile ? MOBILE_TEXTURE_SIDE : TEXTURE_SIDES[0]);
+
+  gsap.ticker.add(render);
+
+  cycling = !manual;
+  const first = manual ? current : START_ATTRACTOR;
+  current = -1;
+  applyShape(first);
+}
+
+function particleGeometry() {
   // The particle slider draws a prefix of this buffer. Texel order follows the
   // picture's rows, so a prefix would only cover a band of it. Shuffling makes
   // any prefix an even sample of the whole picture.
@@ -246,23 +263,117 @@ function initSim(tier) {
     positions[i * 2 + 1] = (Math.floor(texel / side) + 0.5) / side;
   });
 
-  geometry = new THREE.BufferGeometry();
+  const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 2));
   // Set by hand: computing it from a 2D position attribute gives NaN.
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 16);
+  return geometry;
+}
 
-  const points = new THREE.Points(geometry, pointMaterial);
-  points.frustumCulled = false;
-  scene.add(points);
+function copyTexture(source, target) {
+  copyMaterial.uniforms.source.value = source;
+  renderer.setRenderTarget(target);
+  renderer.render(copyScene, quadCamera);
+}
 
-  initMarks(side);
+// Sizes every particle texture to nextSide. On a resize, the copy pass samples
+// the old textures at the new texel centres, which keeps an even subset of the
+// particles where they are.
+function allocateParticles(nextSide) {
+  const uniforms = simMaterial.uniforms;
+  const old = readTarget && {
+    positions: writeTarget.texture,
+    slots: [uniforms.targetTexA.value, uniforms.targetTexB.value],
+    targets: [readTarget, writeTarget, ...markTargets],
+  };
 
-  gsap.ticker.add(render);
+  side = nextSide;
+  particleTotal = side * side;
 
-  cycling = !manual;
-  const first = manual ? current : START_ATTRACTOR;
-  current = -1;
-  applyShape(first);
+  // Two targets to ping-pong between, since a pass can't read and write the
+  // same texture.
+  readTarget = floatTarget(side);
+  writeTarget = floatTarget(side);
+  // A crossfade reads two targets, so building the next mark needs a third.
+  markTargets = [floatTarget(side), floatTarget(side), floatTarget(side)];
+
+  if (old) {
+    copyTexture(old.positions, readTarget);
+    copyTexture(old.positions, writeTarget);
+    copyTexture(old.slots[0], markTargets[0]);
+    copyTexture(old.slots[1], markTargets[1]);
+    old.targets.forEach((target) => target.dispose());
+  } else {
+    const start = scatterTexture();
+    for (const target of [readTarget, writeTarget, markTargets[0], markTargets[1]]) {
+      copyTexture(start, target);
+    }
+    start.dispose();
+  }
+  renderer.setRenderTarget(null);
+
+  // Both slots hold the copies, so the crossfade carries on where it was.
+  for (const material of [simMaterial, pointMaterial]) {
+    material.uniforms.targetTexA.value = markTargets[0].texture;
+    material.uniforms.targetTexB.value = markTargets[1].texture;
+  }
+  activeTarget = markTargets[activeSlot].texture;
+  nextMarkTarget = 2;
+  markMaterial.uniforms.simSide.value = side;
+
+  points.geometry.dispose();
+  points.geometry = particleGeometry();
+
+  if (old) {
+    // A picture's grid is laid out for the old particle count.
+    if (current === MARK) {
+      showPicture(pictureUrl);
+    }
+    onRescale?.();
+  }
+}
+
+let lastFrame = 0;
+let warmup = WARMUP_FRAMES;
+let frameTimes = [];
+let lastMedian = Infinity;
+let measuring = true;
+
+// Times frames until they fit the budget, stepping the texture down if not.
+function measureFrame() {
+  const now = performance.now();
+  const interval = now - lastFrame;
+  lastFrame = now;
+
+  // Unfocused windows can be throttled, which would read as a slow GPU.
+  if (!measuring || !document.hasFocus() || interval > 1000) {
+    return;
+  }
+  if (warmup > 0) {
+    warmup--;
+    return;
+  }
+
+  frameTimes.push(interval);
+  if (frameTimes.length < SAMPLE_FRAMES) {
+    return;
+  }
+
+  const median = frameTimes.sort((a, b) => a - b)[frameTimes.length >> 1];
+  frameTimes = [];
+
+  const wanted = side * Math.sqrt(TARGET_FRAME_MS / median);
+  const next = TEXTURE_SIDES.find((candidate) => candidate <= wanted) ?? TEXTURE_SIDES.at(-1);
+
+  // If the last step barely helped, the frame rate is capped by the display.
+  if (median <= FRAME_BUDGET_MS || next >= side || median > lastMedian * 0.85) {
+    measuring = false;
+    return;
+  }
+
+  lastMedian = median;
+  warmup = WARMUP_FRAMES;
+  allocateParticles(next);
 }
 
 function render() {
@@ -270,6 +381,8 @@ function render() {
   if (document.hidden) {
     return;
   }
+
+  measureFrame();
 
   // Capped so a long frame can't make the integration blow up.
   simMaterial.uniforms.dtScale.value = Math.min(clock.getDelta() * 60, 2) * SIM_SPEED;
@@ -293,20 +406,13 @@ function render() {
 }
 
 export function particleSteps() {
-  const steps = PARTICLE_STEPS.filter((count) => count <= particleTotal);
-  if (!steps.length || steps[steps.length - 1] < particleTotal * 0.9) {
-    steps.push(particleTotal);
-  }
-  return steps;
-}
-
-export function getDefaultParticleCount() {
-  return defaultParticleCount;
+  // Ends on the total, dropping any step too close to it.
+  return [...PARTICLE_STEPS.filter((count) => count < particleTotal * 0.9), particleTotal];
 }
 
 // Draws the first `count` particles of the shuffled buffer.
 export function setParticleCount(count) {
-  geometry.setDrawRange(0, count);
+  points.geometry.setDrawRange(0, count);
 }
 
 export function setPointSize(size) {
@@ -513,8 +619,9 @@ let markTargets = [];
 let nextMarkTarget = 0;
 // Building a mark is async. Each request bumps this so only the newest is shown.
 let pictureToken = 0;
+let pictureUrl = null;
 
-function initMarks(side) {
+function initMarks() {
   markMaterial = new THREE.ShaderMaterial({
     uniforms: {
       mask: { value: null },
@@ -523,7 +630,7 @@ function initMarks(side) {
       fallback: { value: new THREE.Vector2() },
       extent: { value: new THREE.Vector2() },
       lattice: { value: new THREE.Vector2() },
-      simSide: { value: side },
+      simSide: { value: 0 },
       depth: { value: RADIUS * MARK_DEPTH },
       tint: { value: new THREE.Color() },
     },
@@ -531,13 +638,11 @@ function initMarks(side) {
     fragmentShader: markFrag,
   });
   markScene = quadScene(markMaterial);
-
-  // A crossfade reads two targets, so building the next mark needs a third.
-  markTargets = [floatTarget(side), floatTarget(side), floatTarget(side)];
 }
 
 export async function showPicture(url, accent = '#ffffff') {
   const token = ++pictureToken;
+  pictureUrl = url;
   const mark = await buildMark(url, accent);
 
   if (!mark || token !== pictureToken) {

@@ -8,7 +8,6 @@ import {
   resumeCycle,
   setCloudTheme,
   particleSteps,
-  getDefaultParticleCount,
   defaultPointSize,
   setParticleCount,
   setPointSize,
@@ -32,6 +31,7 @@ let route = null;
 let simReady = false;
 let opened = false;
 let bob = null;
+let setCountStops = null;
 
 initTheme();
 initProjects();
@@ -47,7 +47,7 @@ initCloud((supported) => {
   bob = gsap.to(rig, { bobY: 2, duration: 3, ease: 'sine.inOut', repeat: -1, yoyo: true });
   simReady = true;
   applyRoute();
-});
+}, resetParticleCount);
 
 function initRouter() {
   document.querySelectorAll('a[data-route]').forEach((link) => {
@@ -244,12 +244,11 @@ function abbreviate(count) {
 }
 
 // Slider values are indices into stops, so the thumb snaps to each stop.
-function initSlider(input, stops, start, format, apply) {
+// Returns a function that sets the stops and moves the thumb to the one
+// nearest start.
+function initSlider(input, format, apply) {
   const output = input.parentElement.querySelector('output');
-  const nearest = stops.reduce((best, stop, i) => (Math.abs(stop - start) < Math.abs(stops[best] - start) ? i : best), 0);
-
-  input.max = stops.length - 1;
-  input.value = nearest;
+  let stops = [];
 
   const update = () => {
     const value = stops[input.value];
@@ -257,10 +256,24 @@ function initSlider(input, stops, start, format, apply) {
     apply(value);
   };
   input.addEventListener('input', update);
-  update();
+
+  return (nextStops, start) => {
+    stops = nextStops;
+    input.max = stops.length - 1;
+    input.value = stops.reduce((best, stop, i) => (Math.abs(stop - start) < Math.abs(stops[best] - start) ? i : best), 0);
+    update();
+  };
 }
 
 function initViewerControls() {
-  initSlider(document.querySelector('#particleSize'), SIZE_STEPS, defaultPointSize(), (size) => size.toFixed(1), setPointSize);
-  initSlider(document.querySelector('#particleCount'), particleSteps(), getDefaultParticleCount(), abbreviate, setParticleCount);
+  initSlider(document.querySelector('#particleSize'), (size) => size.toFixed(1), setPointSize)(SIZE_STEPS, defaultPointSize());
+  setCountStops = initSlider(document.querySelector('#particleCount'), abbreviate, setParticleCount);
+  resetParticleCount();
+}
+
+// Pictures give each particle one grid cell, so every particle is drawn by
+// default.
+function resetParticleCount() {
+  const steps = particleSteps();
+  setCountStops(steps, steps.at(-1));
 }
