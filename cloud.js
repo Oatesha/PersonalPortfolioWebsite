@@ -44,7 +44,8 @@ const PALETTES = {
 export const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ alpha: true });
+// Created in initCloud, since the constructor throws without WebGL.
+let renderer = null;
 const scene = new THREE.Scene();
 const clock = new THREE.Clock();
 const pointer = new THREE.Vector2();
@@ -80,8 +81,16 @@ function supported() {
 }
 
 export function initCloud(onReady) {
-  if (!supported()) {
+  try {
+    renderer = new THREE.WebGLRenderer({ alpha: true });
+  } catch {
+    renderer = null;
+  }
+
+  if (!renderer || !supported()) {
     console.warn('no webgl2 float render targets, the cloud will not run');
+    renderer?.dispose();
+    renderer = null;
     onReady(false);
     return;
   }
