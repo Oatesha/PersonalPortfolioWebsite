@@ -1,4 +1,5 @@
 // Hash without Sine by Dave Hoskins: https://www.shadertoy.com/view/4djSRW
+// Needs pixel-scale input. UVs give neighbouring texels near-equal values.
 const glslRandom = /* glsl */`
 
   float random(vec2 st) {
@@ -139,8 +140,8 @@ export const simFrag = /* glsl */`
     return len > MAX_STEP ? delta * (MAX_STEP / len) : delta;
   }
 
-  vec3 scatterDirection(vec3 pos, vec2 uv) {
-    vec3 jitter = vec3(random2(uv), random(uv + 27.7)) * 2.0 - 1.0;
+  vec3 scatterDirection(vec3 pos, vec2 seed) {
+    vec3 jitter = vec3(random2(seed), random(seed + 27.7)) * 2.0 - 1.0;
     vec3 outward = pos / max(length(pos), 0.001);
     return normalize(jitter + outward * 0.6);
   }
@@ -180,7 +181,7 @@ export const simFrag = /* glsl */`
         float shove = radius * (state == 1 ? FIELD_PUSH : TARGET_PUSH);
         vec3 push = distToRay > 1e-4
           ? offRay / distToRay
-          : normalize(cross(mouseDir, vec3(random2(vUv), random(vUv + 9.3)) * 2.0 - 1.0));
+          : normalize(cross(mouseDir, vec3(random2(gl_FragCoord.xy), random(gl_FragCoord.xy + 9.3)) * 2.0 - 1.0));
         pos += push * shove * smoothstep(1.0, 0.0, distToRay / radius);
       }
     }
@@ -191,7 +192,7 @@ export const simFrag = /* glsl */`
       velocity = attractorStep(running, pos);
 
       float burst = sin(morph * PI);
-      velocity += scatterDirection(pos, vUv) * (burst * BURST_SPEED);
+      velocity += scatterDirection(pos, gl_FragCoord.xy) * (burst * BURST_SPEED);
 
       pos += velocity * dtScale;
 
@@ -337,7 +338,7 @@ export const markFrag = /* glsl */`
       }
 
       float seed = float(i);
-      vec2 candidate = random2(vUv + vec2(seed * 7.13, seed * 5.29 + 41.0));
+      vec2 candidate = random2(gl_FragCoord.xy + vec2(seed * 7.13, seed * 5.29 + 41.0));
 
       vec2 uv = mix(maskMin, maskMax, candidate);
       vec4 texel = texture2D(mask, uv);
@@ -353,7 +354,7 @@ export const markFrag = /* glsl */`
     vec2 local = (hit - maskMin) / max(maskMax - maskMin, vec2(1e-5));
     vec2 centred = local * 2.0 - 1.0;
 
-    float z = (random(vUv + vec2(97.3, 13.1)) * 2.0 - 1.0) * depth;
+    float z = (random(gl_FragCoord.xy + vec2(97.3, 13.1)) * 2.0 - 1.0) * depth;
 
     gl_FragColor = vec4(
       centred.x * extent.x,
