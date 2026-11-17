@@ -9,7 +9,7 @@ const PROJECTS = [
     shot: '/scenes/minecraftle.webp',
     shotMobile: '/scenes/mobile/minecraftle.webp',
     blurb:
-      'Minecraftle is a daily puzzle game where users have to guess the daily Minecraft recipe. The project scored 100% and achieved over 1,500,000 unique players as of January 2025',
+      'Minecraftle is a daily puzzle game where users have to guess the daily Minecraft recipe. Built as a university project, it scored 100% and has had 3,422,788 unique players as of November 2026',
   },
   {
     title: 'Personal Project',
